@@ -1,0 +1,3 @@
+COMMAND_NAME=Restore Wifi Config (NAND)
+COMMAND_TYPE=EXTERNAL
+COMMAND_STR=sh %script_dir%/restore_settings.sh nand cmd

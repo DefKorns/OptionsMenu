@@ -1,0 +1,4 @@
+COMMAND_NAME=Restore Wifi Config (USB)
+COMMAND_TYPE=EXTERNAL
+USB_ONLY=TRUE
+COMMAND_STR=sh %script_dir%/restore_settings.sh usb

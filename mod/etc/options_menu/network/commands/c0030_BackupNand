@@ -1,0 +1,3 @@
+COMMAND_NAME=Backup Wifi Config (NAND)
+COMMAND_TYPE=EXTERNAL
+COMMAND_STR=sh %script_dir%/backup-wifi.sh nand backup
