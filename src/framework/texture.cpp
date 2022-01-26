@@ -8,7 +8,7 @@
   */
 
 #include "texture.h"
-#include "font8x8_basic.h"
+#include "font8x8.h"
 
 #include <iostream>
 #include <cstring>
@@ -119,7 +119,7 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
     int pitch = 8*text.size();
     for(unsigned int i = 0; i < text.size(); ++i)
     {
-        auto bitmap = font8x8_basic[text[i]];
+        auto bitmap = font8x8[text[i]];
         int offset = i*8;
         for(int y = 0; y < 8; ++y)
         {
