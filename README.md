@@ -183,7 +183,10 @@ The options menu can be compiled using the makefile provided. To compile the opt
 ## Contributions and Thanks
 ### Contributions
 - Hibernate Mod and Hakchi-Option-Pack scripts courtesy of Swingflip  
-- Retroarch Configuration scripts courtesy of BsLeNuL  
+- Retroarch Configuration scripts courtesy of BsLeNuL
+- Network commands courtesy by Advokaten and DefKorns
+- Wifi Backup courtesy of DefKorns   
+- Preview image aspect ratio courtesy of DefKorns   
 - Thanks to ThanosRD for assistance with UI Layout/Design
 ### Testing
 Extra thanks to DNA64 (viral_dna) and Swingflip for always testing features.
