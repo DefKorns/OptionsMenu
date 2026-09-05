@@ -1,0 +1,10 @@
+# The mod's scripts and command config files are parsed/executed by the
+# console's BusyBox shell and this project's own line-based parsers, neither
+# of which tolerate CRLF (a stray \r ends up embedded in paths/values,
+# e.g. COMMAND_STR=sh %script_dir%/om_network\r causes "No such file").
+# Force LF regardless of platform checkout settings (core.autocrlf, etc.).
+* text=auto eol=lf
+
+*.png binary
+*.xz binary
+*.hmod binary
