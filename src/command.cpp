@@ -39,6 +39,10 @@ Command::Command(std::ifstream & in)
             ignoreInterrupt = (value == "TRUE");
         else if(param.compare("COMMAND_STR")==0)
             command = value;
+        else if(param.compare("DELETE_STR")==0)
+            deleteCommand = value;
+        else if(param.compare("DELETE_CONFIRM_KEY")==0)
+            deleteConfirmKey = value;
         else if(param.compare("USB_ONLY")==0)
             usbOnly = (value == "TRUE");
         else if(param.compare("PREVIEW_IMAGE")==0)

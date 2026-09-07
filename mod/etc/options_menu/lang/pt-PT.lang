@@ -42,3 +42,7 @@ LANG_ENGLISH=Inglês
 LANG_PORTUGUESE=Português
 WIFI_BACKUP_SPLASH_LINE1=Cópia de Segurança Wifi
 WIFI_BACKUP_SPLASH_LINE2=Aguarde Por Favor . . .
+DELETE_BACKUP_CONFIRM=Apagar esta cópia de segurança?
+DELETE_CONFIRM_HINT=A = Sim     B = Não
+DELETE_CONFIRM_GENERIC=Apagar este item?
+WIFI_DELETE_HINT_FOOTER=X = Apagar     A = Restaurar

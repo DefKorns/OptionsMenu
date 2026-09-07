@@ -22,6 +22,8 @@ struct Command
 
     std::string name;
     std::string command;
+    std::string deleteCommand;
+    std::string deleteConfirmKey;
     bool runInternal = true;
     bool restartUI = false;
     bool ignoreInterrupt = false;

@@ -200,6 +200,10 @@ Overwrites your wifi config with a backup located at:
 
 and reconnects to the network.
 
+While browsing the list of saved backups, press **X** to delete the
+selected backup (you will be asked to confirm with **A**, or cancel with
+**B**). The list refreshes automatically after deleting.
+
 #### Restore Wifi Config (USB)
 
 Overwrites your wifi config with a backup located at:
@@ -207,6 +211,10 @@ Overwrites your wifi config with a backup located at:
     /media/data/wifi_backup/
 
 and reconnects to the network.
+
+While browsing the list of saved backups, press **X** to delete the
+selected backup (you will be asked to confirm with **A**, or cancel with
+**B**). The list refreshes automatically after deleting.
 
 ## Developer Information
 
@@ -239,11 +247,15 @@ Command Files should contain the following fields:
 |COMMAND_TYPE|Specifies whether command is run inside the options menu pseudo terminal (internally) or run externally. Possible values `INTERNAL` or `EXTERNAL`|
 |RESTART_UI|Specifies if the paused UI should be resumed after running command (external commands only). If you set this value to `FALSE` you must manually resume the UI using `/bin/sh /etc/options_menu/script/ResumeUI.sh` after executing your code.|
 |COMMAND_STR|Command string to be executed. Commands must be single line only. To execute multi-line scripts use a script file.|
+|USB_ONLY|If set to `TRUE`, the command is only loaded when a USB/SD card is mounted.|
+|IGNORE_INTERRUPT|If set to `TRUE`, pressing B will not interrupt an internal command while its output is being displayed.|
 |PREVIEW_IMAGE|Specifies the path to a thumbnail/icon to the oprion menu.|
 |PREVIEW_IMAGE_X|Position the thumbnail/icon on the X axys|
 |PREVIEW_IMAGE_Y|Position the thumbnail/icon on the Y axys.|
 |PREVIEW_IMAGE_WIDTH|Sets the width for the thumbnail/icon.|
 |PREVIEW_IMAGE_HEIGHT|Sets the height for the thumbnail/icon.|
+|DELETE_STR|Optional command string to run when the user presses X on this entry and confirms. Used to make list entries deletable (e.g. the wifi backup restore list).|
+|DELETE_CONFIRM_KEY|Optional translation key for the confirmation prompt shown before running DELETE_STR. Falls back to a generic "Delete this item?" if not set.|
 
 >Note: Fields and values are case sensitive. Values should be separated from fields using '=' without spaces.
 
@@ -259,15 +271,6 @@ The command string supports the use of the following variables:
 ### Compiling Options Menu
 
 The options menu can be compiled using the makefile provided. To compile the options menu you must have the SDL2 and libpng libraries as well as GNU Make installed. To cross-compile the options menu call `make` with the `CROSS_PREFIX` set to the prefix of your cross-compiler toolchain eg. `make CROSS_PREFIX=arm-linux-gnueabihf-`.
-
-#### Cross-compiling for the console (Docker)
-
-The console's Buildroot 2016.11.2 rootfs only supports up to `GLIBC_2.23` and `GLIBCXX_3.4.20`. A modern host toolchain (e.g. Ubuntu 22.04+/24.04's `gcc-arm-linux-gnueabihf`) links against newer symbol versions and will produce binaries that fail to run on the console. `Dockerfile.jessie-armhf` provides a Debian Jessie based build environment (GCC 4.9 / glibc 2.19) that matches the console's ABI:
-
-    docker build -t optionsmenu-jessie-armhf -f Dockerfile.jessie-armhf .
-    docker run --rm -v "$(pwd):/src" optionsmenu-jessie-armhf
-
-This runs `make CROSS_PREFIX=arm-linux-gnueabihf-` inside the container and writes the `.hmod` files to `out/` on the host.
 
 ## Contributions and Thanks
 

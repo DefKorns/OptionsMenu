@@ -33,7 +33,9 @@ find "$backup_path/." -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -n 1 ba
   echo "COMMAND_NAME=$ssid
 COMMAND_TYPE=INTERNAL
 RESTART_UI=FALSE
-COMMAND_STR=sh $omNetworkScripts/backup-wifi.sh $dst restore $ssid_lower" >"$omWifiRestoreCmds/c0001_$ssid_lower"
+COMMAND_STR=sh $omNetworkScripts/backup-wifi.sh $dst restore $ssid_lower
+DELETE_STR=rm -rf $backup_path/$wifi_network && sh $omNetworkScripts/restore_settings.sh $1
+DELETE_CONFIRM_KEY=DELETE_BACKUP_CONFIRM" >"$omWifiRestoreCmds/c0001_$ssid_lower"
 done
 
 $optionsMenu/options --commandPath $omWifiRestoreCmds/ --scriptPath $omWifiRestoreScripts --title "RESTORE_WIFI_CONFIG" &

@@ -115,6 +115,8 @@ int main(int argc, char * argv[])
                     {
                         sReplace(c.command, "%options_path%", optionsLocation);
                         sReplace(c.command, "%script_dir%", scriptLocation);
+                        sReplace(c.deleteCommand, "%options_path%", optionsLocation);
+                        sReplace(c.deleteCommand, "%script_dir%", scriptLocation);
                         commands.push_back(c);
                     }
                 }
@@ -150,6 +152,7 @@ int main(int argc, char * argv[])
     Texture pointerText("->", 16, renderer, 20, 260, false, 0xFF00FF00);
     SDL_Rect & pointerRect = pointerText.rect;
     Texture CompComText("created by CompCom", 16, renderer, 1100, 620, true);
+    Texture deleteHint(Translate("WIFI_DELETE_HINT_FOOTER"), 16, renderer, 30, 612);
     Texture scrollUp("^", 16, renderer, 30, 248);
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = 252+DisplayItemCount*18;
@@ -261,6 +264,37 @@ int main(int argc, char * argv[])
         }
         else if(controller.GetButtonStatus(B))
             SetCurrentCommand(commands.size()-1);
+        else if(controller.GetButtonStatus(X) && !commands[currentCommandId].deleteCommand.empty())
+        {
+            const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
+            Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true);
+            Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true);
+            bool confirmed = false;
+            for(;;)
+            {
+                controller.Update();
+                if(controller.GetButtonStatus(B))
+                    break;
+                if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
+                {
+                    confirmed = true;
+                    break;
+                }
+                sdl_context.StartFrame();
+                banner.Draw(renderer);
+                menuU.Draw(renderer);
+                menuL.Draw(renderer);
+                confirmTitle.Draw(renderer);
+                confirmHint.Draw(renderer);
+                sdl_context.EndFrame();
+            }
+            if(confirmed)
+            {
+                system(commands[currentCommandId].deleteCommand.c_str());
+                _exitManager.runExitCommand = false;
+                break;
+            }
+        }
 
         //Draw all textures
         banner.Draw(renderer);
@@ -275,6 +309,8 @@ int main(int argc, char * argv[])
             PreviewImage->Draw(renderer);
         pointerText.Draw(renderer);
         CompComText.Draw(renderer);
+        if(commands[currentCommandId].deleteCommand.size())
+            deleteHint.Draw(renderer);
 
         // Display Scroll Arrows when needed
         if(topListItemNumber != 0)

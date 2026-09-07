@@ -42,3 +42,7 @@ LANG_ENGLISH=English
 LANG_PORTUGUESE=Portuguese
 WIFI_BACKUP_SPLASH_LINE1=Backup Wifi Config File
 WIFI_BACKUP_SPLASH_LINE2=Please Wait . . .
+DELETE_BACKUP_CONFIRM=Delete this backup?
+DELETE_CONFIRM_HINT=A = Yes     B = No
+DELETE_CONFIRM_GENERIC=Delete this item?
+WIFI_DELETE_HINT_FOOTER=X = Delete     A = Restore
