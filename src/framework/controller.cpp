@@ -21,7 +21,18 @@ Controller::Controller(int id)
 #ifdef __arm__
     std::stringstream s;
     s << "/dev/input/by-path/platform-twi." << id << "-event-joystick";
-    fd = open(s.str().c_str(), O_RDONLY | O_NONBLOCK);
+
+    //Right after boot this node sometimes doesn't exist yet (input driver
+    //still enumerating) and optiond, started from init.d, hits it before
+    //it's there. Retry for ~10s instead of exiting immediately.
+    const int maxAttempts = 50;
+    const useconds_t retryDelay = 200000;
+    for(int attempt = 0; fd == -1 && attempt < maxAttempts; ++attempt)
+    {
+        fd = open(s.str().c_str(), O_RDONLY | O_NONBLOCK);
+        if(fd == -1)
+            usleep(retryDelay);
+    }
     if(fd == -1)
     {
       std::cerr << "Cannot access controller.\n";
