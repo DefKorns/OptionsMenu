@@ -158,8 +158,9 @@ int main(int argc, char * argv[])
     scrollDown.rect.y = 252+DisplayItemCount*18;
 
     //Create Command Texture
+    const int ChildIndent = 4*16;
     for(Command & c : commands)
-        c.texture = Texture(Translate(c.name), 16, renderer, 50, 0);
+        c.texture = Texture(Translate(c.name), 16, renderer, 50 + (c.child ? ChildIndent : 0), 0);
 
     int topListItemNumber = 1;
     std::shared_ptr<Texture> PreviewImage;

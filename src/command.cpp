@@ -45,6 +45,8 @@ Command::Command(std::ifstream & in)
             deleteConfirmKey = value;
         else if(param.compare("USB_ONLY")==0)
             usbOnly = (value == "TRUE");
+        else if(param.compare("CHILD")==0)
+            child = (value == "TRUE");
         else if(param.compare("PREVIEW_IMAGE")==0)
             previewImage = value;
         else if(param.compare("PREVIEW_IMAGE_X")==0)

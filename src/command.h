@@ -28,6 +28,7 @@ struct Command
     bool restartUI = false;
     bool ignoreInterrupt = false;
     bool usbOnly = false;
+    bool child = false;
     Texture texture;
     std::string previewImage;
     int previewImageX = 0;
