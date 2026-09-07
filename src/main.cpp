@@ -57,7 +57,7 @@ int main(int argc, char * argv[])
     in.close();
     if(langCode.empty())
         langCode = "en-US";
-    LoadLanguage(optionsLocation + "lang/", langCode);
+    LoadLanguage(optionsLocation, langCode);
 
     std::string titleString(Translate("OPTIONS_TITLE"));
 

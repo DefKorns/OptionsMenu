@@ -9,6 +9,7 @@
 
 #include "localization.h"
 
+#include <dirent.h>
 #include <fstream>
 #include <map>
 
@@ -31,12 +32,31 @@ static void LoadLanguageFile(const std::string & path)
     }
 }
 
-void LoadLanguage(const std::string & langDir, const std::string & langCode)
+static void LoadLanguageDir(const std::string & langDir, const std::string & langCode)
 {
-    strings.clear();
     LoadLanguageFile(langDir + "en-US.lang");
     if(langCode != "en-US")
         LoadLanguageFile(langDir + langCode + ".lang");
+}
+
+void LoadLanguage(const std::string & optionsRoot, const std::string & langCode)
+{
+    strings.clear();
+    LoadLanguageDir(optionsRoot + "lang/", langCode);
+
+    if(auto dir = opendir(optionsRoot.c_str()))
+    {
+        while(auto entry = readdir(dir))
+        {
+            if(entry->d_type != DT_DIR || entry->d_name[0] == '.')
+                continue;
+            std::string pluginLangDir = optionsRoot + entry->d_name + "/lang/";
+            std::ifstream check(pluginLangDir + "en-US.lang");
+            if(check.good())
+                LoadLanguageDir(pluginLangDir, langCode);
+        }
+        closedir(dir);
+    }
 }
 
 std::string Translate(const std::string & key)

@@ -126,7 +126,7 @@ int main(int argc, char * argv[])
     in.close();
     if (langCode.empty())
         langCode = "en-US";
-    LoadLanguage("/etc/options_menu/lang/", langCode);
+    LoadLanguage("/etc/options_menu/", langCode);
 
     std::vector<unsigned char> pixels(Width * Height * 3, 0);
     int blockHeight = lineCount * Cell + (lineCount - 1) * (Cell/2);
