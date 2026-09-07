@@ -42,7 +42,7 @@ static void LoadLanguageDir(const std::string & langDir, const std::string & lan
 void LoadLanguage(const std::string & optionsRoot, const std::string & langCode)
 {
     strings.clear();
-    LoadLanguageDir(optionsRoot + "lang/", langCode);
+    LoadLanguageDir(optionsRoot + "language/", langCode);
 
     if(auto dir = opendir(optionsRoot.c_str()))
     {
