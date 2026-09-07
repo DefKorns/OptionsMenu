@@ -13,11 +13,12 @@ $(TARGET_NAME)_b_down.hmod: $(TARGET_NAME).hmod
 	cp button.cfg mod/etc/options_menu/
 	cd mod/; tar -czvf "../$(TARGET_NAME)_b_down.hmod" *
 
-$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog
+$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/options
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/optiond
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/mod_uninstall/mod_uninstall
 	$(CROSS_PREFIX)$(STRIP) mod/bin/standby_watchdog
+	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/gen_splash
 	rm -f mod/etc/options_menu/button.cfg
 	cd mod/; tar -czvf "../$(TARGET_NAME).hmod" *
 
@@ -33,11 +34,14 @@ mod/etc/options_menu/mod_uninstall/mod_uninstall: src/mod_uninstall.o
 mod/bin/standby_watchdog: src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o
 	$(CROSS_PREFIX)$(CXX) src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o -o mod/bin/standby_watchdog
 
+mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o
+	$(CROSS_PREFIX)$(CXX) src/gen_splash.o src/localization.o $(LDLIBS) $(LDFLAGS) -o mod/etc/options_menu/scripts/gen_splash
+
 %.o: %.cpp
 	$(CROSS_PREFIX)$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	find -name "*.o" -type f -delete
-	rm -f mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/button.cfg $(TARGET_NAME).hmod $(TARGET_NAME)_b_down.hmod
+	rm -f mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/button.cfg $(TARGET_NAME).hmod $(TARGET_NAME)_b_down.hmod
 
 .PHONY: clean

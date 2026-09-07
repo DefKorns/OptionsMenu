@@ -1,4 +1,4 @@
 COMMAND_NAME=LANG_PORTUGUESE
 COMMAND_TYPE=EXTERNAL
 RESTART_UI=FALSE
-COMMAND_STR=echo pt > /etc/options_menu/language.cfg && usleep 50000 && %options_path%/options --commandPath %options_path%/language/commands/ --title "LANGUAGE_OPTIONS" &
+COMMAND_STR=echo pt-PT > /etc/options_menu/language.cfg && usleep 50000 && %options_path%/options --commandPath %options_path%/language/commands/ --title "LANGUAGE_OPTIONS" &

@@ -51,12 +51,12 @@ int main(int argc, char * argv[])
     std::getline(in, spriteSheetLocation);
     in.close();
 
-    std::string langCode("en");
+    std::string langCode("en-US");
     in.open("/etc/options_menu/language.cfg");
     std::getline(in, langCode);
     in.close();
     if(langCode.empty())
-        langCode = "en";
+        langCode = "en-US";
     LoadLanguage(optionsLocation + "lang/", langCode);
 
     std::string titleString(Translate("OPTIONS_TITLE"));

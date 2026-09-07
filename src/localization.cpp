@@ -34,8 +34,8 @@ static void LoadLanguageFile(const std::string & path)
 void LoadLanguage(const std::string & langDir, const std::string & langCode)
 {
     strings.clear();
-    LoadLanguageFile(langDir + "en.lang");
-    if(langCode != "en")
+    LoadLanguageFile(langDir + "en-US.lang");
+    if(langCode != "en-US")
         LoadLanguageFile(langDir + langCode + ".lang");
 }
 
