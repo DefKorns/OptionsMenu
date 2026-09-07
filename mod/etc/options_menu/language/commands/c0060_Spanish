@@ -1,0 +1,4 @@
+COMMAND_NAME=LANG_SPANISH
+COMMAND_TYPE=EXTERNAL
+RESTART_UI=FALSE
+COMMAND_STR=echo es-ES > /etc/options_menu/language.cfg && usleep 50000 && %options_path%/options --commandPath %options_path%/language/commands/ --title "LANGUAGE_OPTIONS" &
