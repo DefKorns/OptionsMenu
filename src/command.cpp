@@ -1,14 +1,15 @@
 /**
-  * Copyright (C) 2017-2018 CompCom
-  *
-  * This program is free software; you can redistribute it and/or
-  * modify it under the terms of the GNU General Public License
-  * as published by the Free Software Foundation; either version 3
-  * of the License, or (at your option) any later version.
-  */
+ * Copyright (C) 2017-2018 CompCom
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ */
 
 #include "command.h"
 #include "framework/controller.h"
+#include "localization.h"
 
 #include <fstream>
 #include <list>
@@ -22,6 +23,8 @@ Command::Command(std::ifstream & in)
     while(in.good())
     {
         std::getline(in, temp);
+        if(!temp.empty() && temp.back() == '\r')
+            temp.pop_back();
         if(temp[0]=='#')
             continue;
         int index = temp.find('=');
@@ -81,7 +84,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
 
         while(!feof(pipe))
         {
-            if(fgets(buffer, 128, pipe) > 0)
+            if(fgets(buffer, 128, pipe) != nullptr)
             {
                 std::string sBuffer(buffer);
                 int pos = sBuffer.find('\n');
@@ -102,7 +105,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
             render();
         }
         pclose(pipe);
-        Texture closeText("Press B to exit.", 12, renderer, 30, 610);
+        Texture closeText(Translate("PRESS_B_EXIT"), 12, renderer, 30, 610);
 
         while (!controller->GetButtonStatus(B))
         {

@@ -1,4 +1,4 @@
-COMMAND_NAME=Backup Wifi Config  (USB)
+COMMAND_NAME=WIFI_BACKUP_USB
 COMMAND_TYPE=EXTERNAL
 USB_ONLY=TRUE
 COMMAND_STR=sh %script_dir%/backup-wifi.sh usb backup

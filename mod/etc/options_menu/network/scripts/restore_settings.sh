@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2154,SC1091,SC1090
-#  Copyright 2022 DefKorns (https://gitlab.com/DefKorns/om-wifi-backup/LICENSE)
+#  Copyright (C) 2026 DefKorns (https://gitlab.com/DefKorns/om-wifi-backup/LICENSE)
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -36,4 +36,4 @@ RESTART_UI=FALSE
 COMMAND_STR=sh $omNetworkScripts/backup-wifi.sh $dst restore $ssid_lower" >"$omWifiRestoreCmds/c0001_$ssid_lower"
 done
 
-$optionsMenu/options --commandPath $omWifiRestoreCmds/ --scriptPath $omWifiRestoreScripts --title "Restore WIFI Config" &
+$optionsMenu/options --commandPath $omWifiRestoreCmds/ --scriptPath $omWifiRestoreScripts --title "RESTORE_WIFI_CONFIG" &

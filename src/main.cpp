@@ -11,6 +11,7 @@
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "command.h"
+#include "localization.h"
 
 #include <iostream>
 #include <fstream>
@@ -49,7 +50,16 @@ int main(int argc, char * argv[])
     std::ifstream in("/tmp/spritesheet");
     std::getline(in, spriteSheetLocation);
     in.close();
-    std::string titleString("Options");
+
+    std::string langCode("en");
+    in.open("/etc/options_menu/language.cfg");
+    std::getline(in, langCode);
+    in.close();
+    if(langCode.empty())
+        langCode = "en";
+    LoadLanguage(optionsLocation + "lang/", langCode);
+
+    std::string titleString(Translate("OPTIONS_TITLE"));
 
     //Check for external drive
     bool usbReady = false;
@@ -74,7 +84,7 @@ int main(int argc, char * argv[])
         }
         else if(strcmp(argv[i], "--title") == 0)
         {
-            titleString = argv[i+1];
+            titleString = Translate(argv[i+1]);
             ++i;
         }
     }
@@ -146,7 +156,7 @@ int main(int argc, char * argv[])
 
     //Create Command Texture
     for(Command & c : commands)
-        c.texture = Texture(c.name, 16, renderer, 50, 0);
+        c.texture = Texture(Translate(c.name), 16, renderer, 50, 0);
 
     int topListItemNumber = 1;
     std::shared_ptr<Texture> PreviewImage;

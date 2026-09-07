@@ -162,6 +162,10 @@ This option will allow you to change the button combo used to launch the options
 
 This option will force the kernel to clear the page cache and free up unused memory. You should not need to call this as the system should manage memory fine on it's own.
 
+#### Language Options
+
+This option opens a submenu where you can choose the display language for the Options Menu. Currently available: English and Portuguese. The Options Menu automatically restarts in the selected language.
+
 ## Network Options
 
 #### Display IP Address

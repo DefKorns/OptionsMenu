@@ -1,4 +1,4 @@
-COMMAND_NAME=Module Uninstaller
+COMMAND_NAME=MODULE_UNINSTALLER
 COMMAND_TYPE=EXTERNAL
 RESTART_UI=FALSE
 COMMAND_STR=%options_path%/mod_uninstall/mod_uninstall && sh %script_dir%/ResumeUI.sh &

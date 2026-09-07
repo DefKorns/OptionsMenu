@@ -1,0 +1,4 @@
+COMMAND_NAME=LANGUAGE_OPTIONS
+COMMAND_TYPE=EXTERNAL
+RESTART_UI=FALSE
+COMMAND_STR=usleep 50000 && %options_path%/options --commandPath %options_path%/language/commands/ --title "LANGUAGE_OPTIONS" &

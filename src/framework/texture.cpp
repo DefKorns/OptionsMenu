@@ -1,29 +1,30 @@
 /**
-  * Copyright (C) 2017-2018 CompCom
-  *
-  * This program is free software; you can redistribute it and/or
-  * modify it under the terms of the GNU General Public License
-  * as published by the Free Software Foundation; either version 3
-  * of the License, or (at your option) any later version.
-  */
+ * Copyright (C) 2017-2018 CompCom
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 3
+ * of the License, or (at your option) any later version.
+ */
 
 #include "texture.h"
-#include "font8x8_basic.h"
+#include "font8x8.h"
 
 #include <iostream>
 #include <cstring>
+#include <vector>
 #include <png.h>
 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    #define rmask 0xff000000
-    #define gmask 0x00ff0000
-    #define bmask 0x0000ff00
-    #define amask 0x000000ff
+#define rmask 0xff000000
+#define gmask 0x00ff0000
+#define bmask 0x0000ff00
+#define amask 0x000000ff
 #else
-    #define rmask 0x000000ff
-    #define gmask 0x0000ff00
-    #define bmask 0x00ff0000
-    #define amask 0xff000000
+#define rmask 0x000000ff
+#define gmask 0x0000ff00
+#define bmask 0x00ff0000
+#define amask 0xff000000
 #endif
 
 Texture::Texture() {}
@@ -45,13 +46,13 @@ Texture::Texture(const std::string & pngFilePath, SDL_Renderer* renderer, int x,
 void Texture::Draw(SDL_Renderer* renderer)
 {
     if(texture.get())
-      SDL_RenderCopyEx(renderer, texture.get(), NULL, &rect, 0, NULL, SDL_FLIP_NONE);
+        SDL_RenderCopyEx(renderer, texture.get(), NULL, &rect, 0, NULL, SDL_FLIP_NONE);
 }
 
 void Texture::Draw(SDL_Renderer* renderer, SDL_RendererFlip flip_enum)
 {
     if(texture.get())
-      SDL_RenderCopyEx(renderer, texture.get(), NULL, &rect, 0, NULL, flip_enum);
+        SDL_RenderCopyEx(renderer, texture.get(), NULL, &rect, 0, NULL, flip_enum);
 }
 
 void Sprite::Draw(SDL_Renderer * renderer)
@@ -112,14 +113,59 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
 {
     if(text.size()==0)
         return nullptr;
-    textureWidth = fontSize*text.size();
-    textureHeight = fontSize;
-    auto surface = SDL_CreateRGBSurface(0, 8*text.size(), 8, 32, rmask, gmask, bmask, amask);
-    uint* pixels = reinterpret_cast<uint*>(surface->pixels);
-    int pitch = 8*text.size();
-    for(unsigned int i = 0; i < text.size(); ++i)
+
+    std::vector<unsigned int> codepoints;
+    for (size_t i = 0; i < text.size();)
     {
-        auto bitmap = font8x8_basic[text[i]];
+        unsigned char firstByte = static_cast<unsigned char>(text[i]);
+        unsigned int codepoint = 0xFFFD;
+        size_t sequenceLength = 1;
+
+        if (firstByte < 0x80)
+        {
+            codepoint = firstByte;
+        }
+        else if (firstByte >= 0xC2 && firstByte <= 0xDF && i + 1 < text.size())
+        {
+            unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
+            if ((secondByte & 0xC0) == 0x80)
+            {
+                codepoint = ((firstByte & 0x1F) << 6) | (secondByte & 0x3F);
+                sequenceLength = 2;
+            }
+        }
+        else if (firstByte >= 0xE0 && firstByte <= 0xEF && i + 2 < text.size())
+        {
+            unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
+            unsigned char thirdByte = static_cast<unsigned char>(text[i + 2]);
+            if ((secondByte & 0xC0) == 0x80 && (thirdByte & 0xC0) == 0x80)
+            {
+                codepoint = ((firstByte & 0x0F) << 12) |
+                            ((secondByte & 0x3F) << 6) | (thirdByte & 0x3F);
+                sequenceLength = 3;
+            }
+        }
+
+        codepoints.push_back(codepoint);
+        i += sequenceLength;
+    }
+
+    textureWidth = fontSize*codepoints.size();
+    textureHeight = fontSize;
+    auto surface = SDL_CreateRGBSurface(0, 8 * codepoints.size(), 8, 32, rmask, gmask, bmask, amask);
+    uint* pixels = reinterpret_cast<uint*>(surface->pixels);
+    int pitch = 8*codepoints.size();
+    for (unsigned int i = 0; i < codepoints.size(); ++i)
+    {
+        const char *bitmap = font8x8_basic[0x3F];
+        unsigned int codepoint = codepoints[i];
+        if (codepoint < 0x80)
+            bitmap = font8x8_basic[codepoint];
+        else if (codepoint >= 0xA0 && codepoint <= 0xFF)
+            bitmap = font8x8_ext_latin[codepoint - 0xA0];
+        else if (codepoint >= 0x3040 && codepoint <= 0x309F)
+            bitmap = font8x8_hiragana[codepoint - 0x3040];
+
         int offset = i*8;
         for(int y = 0; y < 8; ++y)
         {
