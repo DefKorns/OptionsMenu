@@ -10,6 +10,7 @@
 #include "texture.h"
 #include "font8x8.h"
 
+#include <algorithm>
 #include <iostream>
 #include <cstring>
 #include <vector>
@@ -109,6 +110,15 @@ SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect 
     return texture;
 }
 
+static const char * LookupKanjiGlyph(unsigned int codepoint)
+{
+    auto it = std::lower_bound(std::begin(font8x8_kanji), std::end(font8x8_kanji), codepoint,
+        [](const Font8x8KanjiEntry & entry, unsigned int cp) { return entry.codepoint < cp; });
+    if (it != std::end(font8x8_kanji) && it->codepoint == codepoint)
+        return reinterpret_cast<const char *>(it->glyph);
+    return nullptr;
+}
+
 SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color)
 {
     if(text.size()==0)
@@ -165,6 +175,14 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
             bitmap = font8x8_ext_latin[codepoint - 0xA0];
         else if (codepoint >= 0x3040 && codepoint <= 0x309F)
             bitmap = font8x8_hiragana[codepoint - 0x3040];
+        else if (codepoint >= 0x30A0 && codepoint <= 0x30FF)
+            bitmap = font8x8_katakana[codepoint - 0x30A0];
+        else if (codepoint >= 0x4E00 && codepoint <= 0x9FFF)
+        {
+            const char * kanjiGlyph = LookupKanjiGlyph(codepoint);
+            if (kanjiGlyph)
+                bitmap = kanjiGlyph;
+        }
 
         int offset = i*8;
         for(int y = 0; y < 8; ++y)

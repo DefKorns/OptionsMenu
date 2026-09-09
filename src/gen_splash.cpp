@@ -10,6 +10,7 @@
 #include "localization.h"
 #include "framework/font8x8.h"
 
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -73,6 +74,15 @@ namespace
             return font8x8_ext_latin[codepoint - 0xA0];
         if (codepoint >= 0x3040 && codepoint <= 0x309F)
             return font8x8_hiragana[codepoint - 0x3040];
+        if (codepoint >= 0x30A0 && codepoint <= 0x30FF)
+            return font8x8_katakana[codepoint - 0x30A0];
+        if (codepoint >= 0x4E00 && codepoint <= 0x9FFF)
+        {
+            auto it = std::lower_bound(std::begin(font8x8_kanji), std::end(font8x8_kanji), codepoint,
+                [](const Font8x8KanjiEntry & entry, unsigned int cp) { return entry.codepoint < cp; });
+            if (it != std::end(font8x8_kanji) && it->codepoint == codepoint)
+                return reinterpret_cast<const char *>(it->glyph);
+        }
         return font8x8_basic[0x3F];
     }
 
