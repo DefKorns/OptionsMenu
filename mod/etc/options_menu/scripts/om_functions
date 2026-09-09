@@ -140,7 +140,16 @@ toggleDownloads() {
   fi
 }
 
+is_classic_ui() {
+  # Modern UI reads its own toggle state via STATE_STR and draws a real
+  # switch, so [X]-in-title markers (switchOn/switchOff below) are only
+  # meaningful when the classic UI is active. Mirrors the exact check
+  # main.cpp does against /etc/options_menu/ui_style.cfg.
+  [ "$(cat /etc/options_menu/ui_style.cfg 2>/dev/null)" = "classic" ]
+}
+
 switchOff() {
+  is_classic_ui || return 0
   for item in $@; do
     [ -f "$item" ] && sed -r -i 's/ \[X\]//g' "$item"
   done
@@ -148,6 +157,7 @@ switchOff() {
 }
 
 switchOn() {
+  is_classic_ui || return 0
   for item in $@; do
     [ -f "$item" ] && sed -r -i "1 s|$| [X]|" "$item"
   done

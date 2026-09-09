@@ -19,6 +19,6 @@ save_config
 echo " "
 echo "Rebooting console in 5 seconds..."
 
-sleep(5)
+sleep 5
 
 reboot

@@ -11,6 +11,7 @@ RUN_TOP=Top uitvoeren
 BENCHMARK_TOOL=Benchmarktool
 DUMP_FILE_STRUCTURE=Bestandsstructuur exporteren (naar USB)
 TOGGLE_USB_WRITE=USB-schrijftoegang schakelen
+TOGGLE_MODERN_UI=Moderne interface
 RA_DEBUGGER=RetroArch-debugger (USB-logs)
 CHANGE_BUTTON_COMBO=Knoppencombinatie wijzigen
 CLEAR_CACHE=Cache wissen
@@ -52,5 +53,8 @@ DELETE_BACKUP_CONFIRM=Deze back-up verwijderen?
 DELETE_CONFIRM_HINT=A = Ja     B = Nee
 DELETE_CONFIRM_GENERIC=Dit item verwijderen?
 WIFI_DELETE_HINT_FOOTER=X = Verwijderen     A = Herstellen
+HINT_SELECT=Kiezen
+HINT_BACK=Terug
+HINT_DELETE=Wissen
 NO_NET_ERR=Verbinding met de server mislukt, controleer je internetverbinding en probeer het opnieuw.
 NO_PKG_ERR=Het gevraagde pakket is momenteel niet beschikbaar, probeer het later opnieuw.

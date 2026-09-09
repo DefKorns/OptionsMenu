@@ -2,3 +2,6 @@ COMMAND_NAME=RA_DELETE_BIOS
 COMMAND_TYPE=INTERNAL
 USB_ONLY=TRUE
 COMMAND_STR=sh %script_dir%/delete-bios.sh
+PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
+PREVIEW_IMAGE_X=920
+PREVIEW_IMAGE_Y=300

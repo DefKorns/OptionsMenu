@@ -11,6 +11,7 @@
 #include "framework/controller.h"
 #include "localization.h"
 
+#include <cctype>
 #include <fstream>
 #include <list>
 #include <vector>
@@ -43,6 +44,11 @@ Command::Command(std::ifstream & in)
             deleteCommand = value;
         else if(param.compare("DELETE_CONFIRM_KEY")==0)
             deleteConfirmKey = value;
+        else if(param.compare("STATE_STR")==0)
+        {
+            stateCommand = value;
+            isToggle = true;
+        }
         else if(param.compare("USB_ONLY")==0)
             usbOnly = (value == "TRUE");
         else if(param.compare("CHILD")==0)
@@ -61,7 +67,7 @@ Command::Command(std::ifstream & in)
     in.close();
 }
 
-void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU) const
+void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
 {
     std::list<Texture> textList;
     FILE* pipe = popen(command.c_str(), "r");
@@ -118,6 +124,35 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
             controller->Update();
             render(&closeText);
         }
-        SDL_SetRenderDrawColor(renderer, 0x6e, 0x6e, 0x6e, 0xFF);
+        SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
     }
+}
+
+void Command::UpdateState()
+{
+    stateOn = false;
+    if(stateCommand.empty())
+        return;
+
+    FILE * pipe = popen(stateCommand.c_str(), "r");
+    if(!pipe)
+        return;
+
+    char buffer[64] = {0};
+    std::string result;
+    if(fgets(buffer, sizeof(buffer), pipe))
+        result = buffer;
+    pclose(pipe);
+
+    size_t start = 0;
+    while(start < result.size() && std::isspace(static_cast<unsigned char>(result[start])))
+        ++start;
+    size_t end = result.size();
+    while(end > start && std::isspace(static_cast<unsigned char>(result[end-1])))
+        --end;
+    result = result.substr(start, end-start);
+    for(char & ch : result)
+        ch = std::tolower(static_cast<unsigned char>(ch));
+
+    stateOn = (result == "1" || result == "on" || result == "y" || result == "yes" || result == "true");
 }

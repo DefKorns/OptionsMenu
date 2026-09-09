@@ -11,6 +11,7 @@ RUN_TOP=Top ausführen
 BENCHMARK_TOOL=Benchmark-Tool
 DUMP_FILE_STRUCTURE=Dateistruktur exportieren (auf USB)
 TOGGLE_USB_WRITE=USB-Schreibzugriff umschalten
+TOGGLE_MODERN_UI=Moderne Oberfläche
 RA_DEBUGGER=RetroArch-Debugger (USB-Logs)
 CHANGE_BUTTON_COMBO=Tastenkombination ändern
 CLEAR_CACHE=Cache leeren
@@ -52,5 +53,8 @@ DELETE_BACKUP_CONFIRM=Diese Sicherung löschen?
 DELETE_CONFIRM_HINT=A = Ja     B = Nein
 DELETE_CONFIRM_GENERIC=Dieses Element löschen?
 WIFI_DELETE_HINT_FOOTER=X = Löschen     A = Wiederherstellen
+HINT_SELECT=Wählen
+HINT_BACK=Zurück
+HINT_DELETE=Löschen
 NO_NET_ERR=Verbindung zum Server fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.
 NO_PKG_ERR=Das angeforderte Paket ist derzeit nicht verfügbar. Bitte später erneut versuchen.

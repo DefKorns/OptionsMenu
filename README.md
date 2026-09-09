@@ -142,6 +142,10 @@ This option will toggle read write access on your USB device. By default, if you
 
  > **Note:** If you already use external saves. You don't need to use this toggle.
 
+#### Modern UI
+
+Toggles between the redesigned "settings dialog" look (dialog frame, selection highlight bar, button-hint badges, real toggle switches) and the original plain menu style. Switching restarts the Options Menu so the change applies immediately.
+
 #### RetroArch Debugger (USB logs)
 
 This option will run your locally installed RetroArch in full verbose mode. It will also copy the config files for your RetroArch and save them to:
@@ -164,7 +168,7 @@ This option will force the kernel to clear the page cache and free up unused mem
 
 #### Language Options
 
-This option opens a submenu where you can choose the display language for the Options Menu. Currently available: English and Portuguese. The Options Menu automatically restarts in the selected language.
+This option opens a submenu where you can choose the display language for the Options Menu. Currently available: English, Portuguese, French, German, Spanish, Italian and Dutch. The Options Menu automatically restarts in the selected language.
 
 ## Network Options
 
@@ -256,6 +260,7 @@ Command Files should contain the following fields:
 |PREVIEW_IMAGE_HEIGHT|Sets the height for the thumbnail/icon.|
 |DELETE_STR|Optional command string to run when the user presses X on this entry and confirms. Used to make list entries deletable (e.g. the wifi backup restore list).|
 |DELETE_CONFIRM_KEY|Optional translation key for the confirmation prompt shown before running DELETE_STR. Falls back to a generic "Delete this item?" if not set.|
+|STATE_STR|Optional command string that prints the current on/off state of this entry (its first line of output, case-insensitively `1`/`on`/`y`/`yes`/`true` for on, anything else for off). Presence of this field renders the entry as a toggle switch instead of a plain row; it is only read to draw the switch, not to change behavior, so COMMAND_STR is still what actually flips the setting.|
 
 >Note: Fields and values are case sensitive. Values should be separated from fields using '=' without spaces.
 
@@ -270,7 +275,18 @@ The command string supports the use of the following variables:
 
 ### Compiling Options Menu
 
-The options menu can be compiled using the makefile provided. To compile the options menu you must have the SDL2 and libpng libraries as well as GNU Make installed. To cross-compile the options menu call `make` with the `CROSS_PREFIX` set to the prefix of your cross-compiler toolchain eg. `make CROSS_PREFIX=arm-linux-gnueabihf-`.
+#### Docker toolchain (recommended)
+
+The repo includes a Docker-based ARM cross-compile toolchain, which is the tested and supported way to build a release-ready `.hmod`. It needs only Docker installed - no local SDL2/libpng/ARM toolchain setup required.
+
+    ./build.sh      # Linux/macOS/Git Bash
+    ./build.ps1     # Windows PowerShell
+
+This builds the toolchain image (`Dockerfile.jessie-armhf`) if needed, then runs `Makefile.docker` inside it, producing `out/*.hmod`.
+
+#### Native / manual build
+
+The options menu can also be compiled using the plain `Makefile` provided. To compile the options menu you must have the SDL2 and libpng libraries as well as GNU Make installed. To cross-compile the options menu call `make` with the `CROSS_PREFIX` set to the prefix of your cross-compiler toolchain eg. `make CROSS_PREFIX=arm-linux-gnueabihf-`.
 
 ## Contributions and Thanks
 
@@ -281,6 +297,10 @@ The options menu can be compiled using the makefile provided. To compile the opt
 - Network commands courtesy by Advokaten and DefKorns
 - Wifi Backup courtesy of DefKorns
 - Preview image aspect ratio courtesy of DefKorns
+- Wifi backup delete feature (press X on a saved backup) courtesy of DefKorns
+- Multi-language localization system (i18n) and translations courtesy of DefKorns
+- Docker-based ARM cross-compile toolchain and build tooling courtesy of DefKorns
+- Redesigned "Modern UI" (dialog frame, selection highlight, toggle switches, button-hint badges) courtesy of DefKorns
 - Thanks to ThanosRD for assistance with UI Layout/Design
 
 ### Testing

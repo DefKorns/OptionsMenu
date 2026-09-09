@@ -4,7 +4,7 @@ STRIP = strip
 CXXFLAGS = -std=c++11 -Os `sdl2-config --cflags`
 LDLIBS =  `sdl2-config --libs` -lpng
 LDFLAGS = 
-SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/controller.cpp src/framework/powerwatch.cpp
+SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/nineslice.cpp src/framework/controller.cpp src/framework/powerwatch.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
 all: $(TARGET_NAME).hmod $(TARGET_NAME)_b_down.hmod

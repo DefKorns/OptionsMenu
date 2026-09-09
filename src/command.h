@@ -18,17 +18,21 @@ struct Command
 {
     Command();
     Command(std::ifstream & in);
-    void RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU) const;
+    void RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, Uint8 bgR = 0x6e, Uint8 bgG = 0x6e, Uint8 bgB = 0x6e) const;
+    void UpdateState();
 
     std::string name;
     std::string command;
     std::string deleteCommand;
     std::string deleteConfirmKey;
+    std::string stateCommand;
     bool runInternal = true;
     bool restartUI = false;
     bool ignoreInterrupt = false;
     bool usbOnly = false;
     bool child = false;
+    bool isToggle = false;
+    bool stateOn = false;
     Texture texture;
     std::string previewImage;
     int previewImageX = 0;

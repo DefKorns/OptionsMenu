@@ -14,13 +14,7 @@ PKG_CONFIG_LIBDIR = /usr/lib/arm-linux-gnueabihf/pkgconfig
 SDL_CFLAGS = -I/usr/include/arm-linux-gnueabihf $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --cflags sdl2 libpng)
 SDL_LIBS = $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --libs sdl2 libpng)
 PNG_LIBS = $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --libs libpng)
-# The cross sysroot only has libSDL2/libpng themselves, not every library they
-# link against (X11, Wayland, ALSA, PulseAudio, ...); those are resolved by
-# the console's actual rootfs at runtime, not at build time.
 LDFLAGS = -Wl,--allow-shlib-undefined
-# The console's /usr/lib/libSDL2.so has no soname/version suffix, unlike the
-# cross sysroot's libSDL2-2.0.so.0 (libpng16.so.16 already matches as-is).
-#FIX_SDL2_SONAME = patchelf --replace-needed libSDL2-2.0.so.0 libSDL2.so
 else
 SDL_CFLAGS = $(shell sdl2-config --cflags)
 SDL_LIBS = $(shell sdl2-config --libs) -lpng
@@ -28,9 +22,9 @@ PNG_LIBS = -lpng
 LDFLAGS =
 #FIX_SDL2_SONAME = true
 endif
-CXXFLAGS = -std=c++11 -Os $(SDL_CFLAGS)
+CXXFLAGS = -std=c++11 -Os $(SDL_CFLAGS) -DMOD_VERSION=\"$(MOD_VER)\"
 LDLIBS = $(SDL_LIBS)
-SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/controller.cpp src/framework/powerwatch.cpp
+SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/nineslice.cpp src/framework/controller.cpp src/framework/powerwatch.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 DEV_DIR = $(shell realpath .)
 OUT = $(DEV_DIR)/out
@@ -82,14 +76,12 @@ $(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/op
 
 mod/etc/options_menu/options: $(OBJECTS)
 	$(CROSS_PREFIX)$(CXX) $(OBJECTS) $(LDLIBS) $(LDFLAGS) -o mod/etc/options_menu/options
-# 	$(FIX_SDL2_SONAME) mod/etc/options_menu/options
 
 mod/etc/options_menu/optiond: src/daemon.o src/framework/controller.o
 	$(CROSS_PREFIX)$(CXX) $(LDFLAGS) src/daemon.o src/framework/controller.o -o mod/etc/options_menu/optiond
 
 mod/etc/options_menu/mod_uninstall/mod_uninstall: src/mod_uninstall.o
 	$(CROSS_PREFIX)$(CXX) src/mod_uninstall.o src/framework/*.o $(LDLIBS) $(LDFLAGS) -o mod/etc/options_menu/mod_uninstall/mod_uninstall
-# 	$(FIX_SDL2_SONAME) mod/etc/options_menu/mod_uninstall/mod_uninstall
 
 mod/bin/standby_watchdog: src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o
 	$(CROSS_PREFIX)$(CXX) src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o -o mod/bin/standby_watchdog

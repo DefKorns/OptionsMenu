@@ -1,3 +1,6 @@
 COMMAND_NAME=RUN_TOP
 COMMAND_TYPE=INTERNAL
 COMMAND_STR=top -b -n 1
+PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
+PREVIEW_IMAGE_X=920
+PREVIEW_IMAGE_Y=300

@@ -1,3 +1,6 @@
 COMMAND_NAME=BENCHMARK_TOOL
 COMMAND_TYPE=INTERNAL
 COMMAND_STR=sh %script_dir%/BenchMark.sh
+PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
+PREVIEW_IMAGE_X=920
+PREVIEW_IMAGE_Y=300

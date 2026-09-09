@@ -11,6 +11,7 @@ RUN_TOP=topをじっこう
 BENCHMARK_TOOL=Benchmarkのどうぐ
 DUMP_FILE_STRUCTURE=Fileこうぞうをほぞん (USBへ)
 TOGGLE_USB_WRITE=USBへのかきこみをきりかえ
+TOGGLE_MODERN_UI=Modern UI
 RA_DEBUGGER=RAのDebugger (USB Log)
 CHANGE_BUTTON_COMBO=Buttonくみあわせをへんこう
 CLEAR_CACHE=Cacheをけす
@@ -52,5 +53,8 @@ DELETE_BACKUP_CONFIRM=このBackupをさくじょしますか?
 DELETE_CONFIRM_HINT=A = はい     B = いいえ
 DELETE_CONFIRM_GENERIC=これをさくじょしますか?
 WIFI_DELETE_HINT_FOOTER=X = さくじょ     A = もどす
+HINT_SELECT=けってい
+HINT_BACK=もどる
+HINT_DELETE=けす
 NO_NET_ERR=Serverへのせつぞくにしっぱいしました. Internetせつぞくをかくにんして, もういちどおためしください.
 NO_PKG_ERR=ようきゅうされたPackageは, いま, りようできません. しばらくしてから, もういちどおためしください.

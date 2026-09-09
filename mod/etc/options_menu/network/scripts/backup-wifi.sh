@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2154,SC1091,SC1090
-#  Copyright (C) 2026 DefKorns (https://gitlab.com/DefKorns/om-wifi-backup/LICENSE)
+#  Copyright (c) 2026 DefKorns (https://defkorns.github.io/LICENSE)
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
