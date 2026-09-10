@@ -3,5 +3,3 @@ COMMAND_TYPE=EXTERNAL
 USB_ONLY=TRUE
 COMMAND_STR=sh %script_dir%/restore_settings.sh usb
 PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
-PREVIEW_IMAGE_X=920
-PREVIEW_IMAGE_Y=300

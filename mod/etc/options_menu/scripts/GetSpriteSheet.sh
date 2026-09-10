@@ -7,7 +7,7 @@ script_init
 
 region="$sfregion"
 # For backwards compatibility with previous hakchi versions
-[ "$(cat "$mountpoint/etc/clover/REGION")" == "EUR" ] && region="eur"
+[ "$(cat "$mountpoint/etc/clover/REGION")" = "EUR" ] && region="eur"
 
 case "$sftype-$region" in
     nes-usa)

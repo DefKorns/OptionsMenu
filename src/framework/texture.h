@@ -16,7 +16,7 @@
 struct Texture
 {
     std::shared_ptr<SDL_Texture> texture;
-    SDL_Rect rect;
+    SDL_Rect rect{0, 0, 0, 0}; // LoadTexturePNG leaves this untouched on failure, so it must default to zero, not garbage
     Texture();
     Texture(const std::string & text, int fontSize, SDL_Renderer* renderer, int x = 0, int y = 0, bool centerText = false, const int color = 0xFFFFFFFF);
     Texture(const std::string & pngFilePath, SDL_Renderer* renderer, int x = 0, int y = 0, bool centerImg = false);

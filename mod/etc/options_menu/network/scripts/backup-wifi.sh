@@ -20,8 +20,10 @@ source $mountpoint/etc/options_menu/network/scripts/om_vars
 script_init
 
 wpa_supplicant_conf="$wpa_supplicant/wpa_supplicant.conf"
-ssid="$(grep -o 'ssid=".*"' $wpa_supplicant_conf | sed 's/^ssid="\(.*\)".*/\1/')"
-ssid_lower="$(echo $ssid | awk '{print tolower($0)}')"
+ssid="$(grep -o 'ssid=".*"' "$wpa_supplicant_conf" | sed 's/^ssid="\(.*\)".*/\1/')"
+# sanitize: SSID is attacker-controlled and becomes a folder/command-line token
+ssid_lower="$(echo "$ssid" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')"
+[ -z "$ssid_lower" ] && ssid_lower="network"
 
 [ "$1" = "nand" ] && backup_path="$rootfs/etc/wifi_backup"
 network="$backup_path/$ssid_lower"
@@ -30,7 +32,8 @@ Backup_Wifi() {
   if [ -d "$backup_path" ]; then
     [ -d "$network" ] && rm -rf "$network"
   fi
-  mkdir -p 777 "$network"
+  mkdir -p "$network"
+  chmod 777 "$network"
   cp -r "$wpa_supplicant_conf" "$network"
 
 }

@@ -24,17 +24,19 @@ if [ "$1" = "nand" ]; then
   dst="$1"
 fi
 
-find "$omWifiRestoreCmds" -type f -name 'c0001_*' -print0 -exec rm {} \;
+find "$omWifiRestoreCmds" -type f -name 'c0001_*' -exec rm {} \;
 
 find "$backup_path/." -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -n 1 basename | while IFS= read -r wifi_network; do
   wpa_supplicant_conf="$backup_path/$wifi_network/wpa_supplicant.conf"
-  ssid="$(grep -o 'ssid=".*"' $wpa_supplicant_conf | sed 's/^ssid="\(.*\)".*/\1/')"
-  ssid_lower="$(echo $ssid | awk '{print tolower($0)}')"
+  # sanitize: SSID is attacker-controlled and ends up in a generated command file
+  ssid="$(grep -o 'ssid=".*"' "$wpa_supplicant_conf" | sed 's/^ssid="\(.*\)".*/\1/' | tr -d '\r\n')"
+  ssid_lower="$(echo "$ssid" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')"
+  [ -z "$ssid_lower" ] && ssid_lower="network"
   echo "COMMAND_NAME=$ssid
 COMMAND_TYPE=INTERNAL
 RESTART_UI=FALSE
 COMMAND_STR=sh $omNetworkScripts/backup-wifi.sh $dst restore $ssid_lower
-DELETE_STR=rm -rf $backup_path/$wifi_network && sh $omNetworkScripts/restore_settings.sh $1
+DELETE_STR=rm -rf \"$backup_path/$wifi_network\" && sh $omNetworkScripts/restore_settings.sh $1
 DELETE_CONFIRM_KEY=DELETE_BACKUP_CONFIRM" >"$omWifiRestoreCmds/c0001_$ssid_lower"
 done
 

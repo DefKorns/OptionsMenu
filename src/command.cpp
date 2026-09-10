@@ -15,6 +15,20 @@
 #include <fstream>
 #include <list>
 #include <vector>
+#include <poll.h>
+
+// std::stoi throws on non-numeric input; avoid crashing on a bad command file
+static int SafeStoi(const std::string & value, int fallback = 0)
+{
+    try
+    {
+        return std::stoi(value);
+    }
+    catch(...)
+    {
+        return fallback;
+    }
+}
 
 Command::Command() {}
 
@@ -56,33 +70,43 @@ Command::Command(std::ifstream & in)
         else if(param.compare("PREVIEW_IMAGE")==0)
             previewImage = value;
         else if(param.compare("PREVIEW_IMAGE_X")==0)
-            previewImageX = std::stoi(value);
+            previewImageX = SafeStoi(value, 0);
         else if(param.compare("PREVIEW_IMAGE_Y")==0)
-            previewImageY = std::stoi(value);
+            previewImageY = SafeStoi(value, 0);
         else if(param.compare("PREVIEW_IMAGE_WIDTH")==0)
-            previewImageWidth = std::stoi(value);
+            previewImageWidth = SafeStoi(value, -1);
         else if(param.compare("PREVIEW_IMAGE_HEIGHT")==0)
-            previewImageHeight = std::stoi(value);
+            previewImageHeight = SafeStoi(value, -1);
     }
     in.close();
 }
 
-void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
+void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, bool modernUI, const NineSlice & frame, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
 {
     std::list<Texture> textList;
     FILE* pipe = popen(command.c_str(), "r");
     if(pipe)
     {
         auto renderer = sdl_context.renderer;
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        if(modernUI)
+            SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, SDL_ALPHA_OPAQUE);
+        else
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         char buffer[128] = {0};
+        const int textX = modernUI ? UiTheme::FrameRect.x + UiTheme::FrameInset : 30;
+        const int textFirstY = modernUI ? UiTheme::HeaderDividerY + 24 : 100;
 
         auto render = [&](Texture * closeText = nullptr)
         {
             sdl_context.StartFrame();
-            menuU.Draw(renderer);
-            menuL.Draw(renderer);
-            int y = 100;
+            if(modernUI)
+                frame.Draw(renderer, UiTheme::FrameRect);
+            else
+            {
+                menuU.Draw(renderer);
+                menuL.Draw(renderer);
+            }
+            int y = textFirstY;
             for(auto & t : textList)
             {
                 t.rect.y = y;
@@ -94,15 +118,19 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
             sdl_context.EndFrame();
         };
 
+        int fd = fileno(pipe);
         while(!feof(pipe))
         {
-            if(fgets(buffer, 128, pipe) != nullptr)
+            // poll with a short timeout instead of blocking fgets, so a script
+            // that stalls without output doesn't also freeze input/rendering
+            struct pollfd pfd{fd, POLLIN, 0};
+            if(poll(&pfd, 1, 100) > 0 && fgets(buffer, 128, pipe) != nullptr)
             {
                 std::string sBuffer(buffer);
                 int pos = sBuffer.find('\n');
                 if(pos > 0)
                     sBuffer[pos] = '\0';
-                textList.push_back(Texture(sBuffer, 8, renderer, 30));
+                textList.push_back(Texture(sBuffer, 8, renderer, textX));
 
                 if(textList.size() > 40)
                 {
@@ -117,7 +145,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
             render();
         }
         pclose(pipe);
-        Texture closeText(Translate("PRESS_B_EXIT"), 12, renderer, 30, 610);
+        Texture closeText(Translate("PRESS_B_EXIT"), 12, renderer, textX, modernUI ? UiTheme::CreditY : 610);
 
         while (!controller->GetButtonStatus(B))
         {
@@ -140,7 +168,9 @@ void Command::UpdateState()
 
     char buffer[64] = {0};
     std::string result;
-    if(fgets(buffer, sizeof(buffer), pipe))
+    // state scripts are expected to be near-instant; don't let a stuck one block menu load
+    struct pollfd pfd{fileno(pipe), POLLIN, 0};
+    if(poll(&pfd, 1, 1000) > 0 && fgets(buffer, sizeof(buffer), pipe))
         result = buffer;
     pclose(pipe);
 

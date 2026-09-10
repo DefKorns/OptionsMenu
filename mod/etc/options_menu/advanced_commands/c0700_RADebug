@@ -4,5 +4,3 @@ RESTART_UI=FALSE
 USB_ONLY=TRUE
 COMMAND_STR=sh %script_dir%/RADebug.sh && sh %script_dir%/ResumeUI.sh &
 PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
-PREVIEW_IMAGE_X=920
-PREVIEW_IMAGE_Y=300

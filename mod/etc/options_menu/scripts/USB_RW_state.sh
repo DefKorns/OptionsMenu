@@ -19,7 +19,7 @@
 source /etc/preinit
 script_init
 
-if [ "$cfg_usb_rw" == "y" ]; then
+if [ "$cfg_usb_rw" = "y" ]; then
   echo "on"
 else
   echo "off"

@@ -49,6 +49,7 @@ namespace UiTheme
     const int RowFirstY = FrameRect.y + 236;
     const int RowPitch = 22;
     const int RowTextX = FrameRect.x + 40;
+    const int DisplayItemCount = 16; // rows visible at once, both UI styles
 
     // badge cluster (A/B always shown, X shown per-row when it has a delete action)
     const int BadgeOuterSize = 28;
@@ -103,7 +104,7 @@ namespace UiTheme
     // scroll chevrons
     const int ScrollX = SectionTitleCenterX - 8;
     const int ScrollUpY = FrameRect.y + 216;
-    const int ScrollDownY = RowFirstY + 16 * RowPitch + 8;
+    const int ScrollDownY = RowFirstY + DisplayItemCount * RowPitch + 8;
 
     // asset paths, relative to optionsLocation
     const char * const AssetFrame = "/images/ui/frame.png";

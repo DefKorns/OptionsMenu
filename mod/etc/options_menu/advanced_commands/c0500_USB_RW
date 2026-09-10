@@ -4,5 +4,3 @@ USB_ONLY=TRUE
 COMMAND_STR=sh %script_dir%/USB_RW.sh
 STATE_STR=sh %script_dir%/USB_RW_state.sh
 PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
-PREVIEW_IMAGE_X=920
-PREVIEW_IMAGE_Y=300

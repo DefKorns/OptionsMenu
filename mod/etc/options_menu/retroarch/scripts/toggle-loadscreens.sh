@@ -15,7 +15,7 @@ if [ -f "$rootfs/share/retroarch/assets/RAloading-min.png" ] && [ -f "$rootfs/sh
   ok=1
 fi
 
-if [ -f "$rootfs/share/retroarch/assets/RAloading-min.png_DISABLED" ] && [ -f "$rootfs/share/retroarch/assets/loading-min.png_DISABLED" ] && [ "$ok" == 0 ]; then
+if [ -f "$rootfs/share/retroarch/assets/RAloading-min.png_DISABLED" ] && [ -f "$rootfs/share/retroarch/assets/loading-min.png_DISABLED" ] && [ "$ok" = 0 ]; then
   mv  "$rootfs/share/retroarch/assets/RAloading-min.png_DISABLED" "$rootfs/share/retroarch/assets/RAloading-min.png"
   echo "RetroArch loading screen enabled..." && echo " "
   mv  "$rootfs/share/retroarch/assets/loading-min.png_DISABLED" "$rootfs/share/retroarch/assets/loading-min.png"
@@ -23,7 +23,7 @@ if [ -f "$rootfs/share/retroarch/assets/RAloading-min.png_DISABLED" ] && [ -f "$
   ok=1
 fi
 
-if [ "$ok" == 1 ]; then
+if [ "$ok" = 1 ]; then
   echo "RetroArch load screen toggle complete!"
 else
   echo "Failed to locate load screens... Please ensure you are using the latest RetroArch 'Neo' Build!"

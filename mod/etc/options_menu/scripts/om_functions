@@ -87,7 +87,7 @@ translate() {
 }
 
 remove() {
-  for f in $@; do
+  for f in "$@"; do
     [ -f "$f" ] || [ -d "$f" ] && rm -rf "$f"
   done
 }
@@ -105,7 +105,7 @@ create() {
 }
 
 enable_cmds() {
-  for arg in $@; do
+  for arg in "$@"; do
     in="disable$arg"
     out="enable$arg"
     # shellcheck disable=SC2086
@@ -114,7 +114,7 @@ enable_cmds() {
 }
 
 disable_cmds() {
-  for arg in $@; do
+  for arg in "$@"; do
     in="enable$arg"
     out="disable$arg"
     # shellcheck disable=SC2086
@@ -141,16 +141,13 @@ toggleDownloads() {
 }
 
 is_classic_ui() {
-  # Modern UI reads its own toggle state via STATE_STR and draws a real
-  # switch, so [X]-in-title markers (switchOn/switchOff below) are only
-  # meaningful when the classic UI is active. Mirrors the exact check
-  # main.cpp does against /etc/options_menu/ui_style.cfg.
+  # [X]-in-title markers only apply in classic UI; modern UI has a real switch
   [ "$(cat /etc/options_menu/ui_style.cfg 2>/dev/null)" = "classic" ]
 }
 
 switchOff() {
   is_classic_ui || return 0
-  for item in $@; do
+  for item in "$@"; do
     [ -f "$item" ] && sed -r -i 's/ \[X\]//g' "$item"
   done
 
@@ -158,7 +155,7 @@ switchOff() {
 
 switchOn() {
   is_classic_ui || return 0
-  for item in $@; do
+  for item in "$@"; do
     [ -f "$item" ] && sed -r -i "1 s|$| [X]|" "$item"
   done
 }

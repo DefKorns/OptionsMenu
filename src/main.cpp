@@ -13,6 +13,7 @@
 #include "command.h"
 #include "localization.h"
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -30,6 +31,21 @@ void sReplace(std::string & command, std::string oldString, std::string newStrin
     {
         command.replace(pos, oldString.size(), newString);
     }
+}
+
+// truncates by UTF-8 codepoint, not byte, so multi-byte glyphs (e.g. Japanese) aren't split
+std::string TruncateUtf8(const std::string & text, int maxCodepoints)
+{
+    size_t i = 0;
+    int count = 0;
+    while(i < text.size() && count < maxCodepoints)
+    {
+        unsigned char c = static_cast<unsigned char>(text[i]);
+        size_t len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
+        i += len;
+        ++count;
+    }
+    return text.substr(0, i);
 }
 
 static struct ExitManager
@@ -145,8 +161,15 @@ int main(int argc, char * argv[])
         exit(1);
     }
 
+    // commands[0] below would be UB on an empty vector
+    if(commands.empty())
+    {
+        std::cerr << "No usable commands in " << commandLocation << "\n";
+        exit(1);
+    }
+
     int currentCommandId = 0;
-    const int DisplayItemCount = 16;
+    const int DisplayItemCount = UiTheme::DisplayItemCount;
 
     //Create SDL Window/Renderer and Controller Handler
     SDL_Context sdl_context(std::chrono::milliseconds(33), false);
@@ -199,8 +222,7 @@ int main(int argc, char * argv[])
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = modernUI ? UiTheme::ScrollDownY : (252+DisplayItemCount*18);
 
-    //Badge cluster (top-right button hints): A/B always shown, right-aligned;
-    //X shown to their left, per-row, when the current command has a delete action.
+    //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
     struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
     Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_SELECT"), 16, renderer), UiTheme::BadgeADark, UiTheme::BadgeA };
     Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_BACK"), 16, renderer), UiTheme::BadgeBDark, UiTheme::BadgeB };
@@ -229,8 +251,32 @@ int main(int argc, char * argv[])
     //Create Command Texture
     const int ChildIndent = 4*16;
     const int rowTextBaseX = modernUI ? UiTheme::RowTextX : 50;
+    const int RowGlyphSize = 16;
+    const int RowTextGapPx = 16; // gap kept between truncated text and preview image/switch
     for(Command & c : commands)
-        c.texture = Texture(Translate(c.name), 16, renderer, rowTextBaseX + (c.child ? ChildIndent : 0), 0);
+    {
+        int textX = rowTextBaseX + (c.child ? ChildIndent : 0);
+        std::string label = Translate(c.name);
+
+        // rows with a preview image, or (modern UI) a toggle switch, have less width for text
+        int maxRight = -1;
+        if(c.previewImage.size())
+            maxRight = c.previewImageX - RowTextGapPx;
+        if(modernUI && c.isToggle)
+        {
+            int switchBound = UiTheme::ControlColumnRightX - RowTextGapPx;
+            maxRight = (maxRight < 0) ? switchBound : std::min(maxRight, switchBound);
+        }
+
+        if(maxRight >= 0)
+        {
+            int maxChars = std::max(0, (maxRight - textX) / RowGlyphSize);
+            if(TruncateUtf8(label, maxChars).size() != label.size())
+                label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
+        }
+
+        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0);
+    }
 
     int topListItemNumber = 1;
     std::shared_ptr<Texture> PreviewImage;
@@ -265,27 +311,29 @@ int main(int argc, char * argv[])
         pointerRect.y = currentCommand.texture.rect.y;
         if(currentCommand.previewImage.size())
         {
-            //Don't let the highlight bar run underneath a row's preview image.
-            //Fixed width, not derived from this row's own previewImageX, so the
-            //bar doesn't resize row-to-row depending on where each image sits.
+            // fixed width so the bar doesn't run under the image or resize per-row
             highlightRect.w = UiTheme::HighlightWWithPreview;
             PreviewImage = std::make_shared<Texture>(currentCommand.previewImage, renderer, currentCommand.previewImageX, currentCommand.previewImageY);
-            double wAspectRatio = (double)currentCommand.previewImageHeight / (double)PreviewImage->rect.h * (double)PreviewImage->rect.w;
-            double hAspectRatio = (double)currentCommand.previewImageWidth / (double)PreviewImage->rect.w * (double)PreviewImage->rect.h;
-            if (currentCommand.previewImageWidth > 0)
+            // guards against div-by-zero if the PNG failed to load
+            if(PreviewImage->rect.w > 0 && PreviewImage->rect.h > 0)
             {
-                PreviewImage->rect.w = currentCommand.previewImageWidth;
-                if (currentCommand.previewImageHeight <= 0)
+                double wAspectRatio = (double)currentCommand.previewImageHeight / (double)PreviewImage->rect.h * (double)PreviewImage->rect.w;
+                double hAspectRatio = (double)currentCommand.previewImageWidth / (double)PreviewImage->rect.w * (double)PreviewImage->rect.h;
+                if (currentCommand.previewImageWidth > 0)
                 {
-                    PreviewImage->rect.h = hAspectRatio;
+                    PreviewImage->rect.w = currentCommand.previewImageWidth;
+                    if (currentCommand.previewImageHeight <= 0)
+                    {
+                        PreviewImage->rect.h = hAspectRatio;
+                    }
                 }
-            }
-            if (currentCommand.previewImageHeight > 0)
-            {
-                PreviewImage->rect.h = currentCommand.previewImageHeight;
-                if (currentCommand.previewImageWidth <= 0)
+                if (currentCommand.previewImageHeight > 0)
                 {
-                    PreviewImage->rect.w = wAspectRatio;
+                    PreviewImage->rect.h = currentCommand.previewImageHeight;
+                    if (currentCommand.previewImageWidth <= 0)
+                    {
+                        PreviewImage->rect.w = wAspectRatio;
+                    }
                 }
             }
         }
@@ -316,7 +364,7 @@ int main(int argc, char * argv[])
         {
             if(commands[currentCommandId].runInternal)
             {
-                commands[currentCommandId].RunCommand(sdl_context, &controller, menuL, menuU, bgR, bgG, bgB);
+                commands[currentCommandId].RunCommand(sdl_context, &controller, menuL, menuU, modernUI, frame, bgR, bgG, bgB);
                 if(commands[currentCommandId].isToggle)
                     commands[currentCommandId].UpdateState();
             }
@@ -329,16 +377,25 @@ int main(int argc, char * argv[])
         }
         else if(controller.GetButtonStatus(UP))
         {
+            // bounded so an all-headers list can't spin forever
             int newCommandId = currentCommandId;
-            do { newCommandId = (newCommandId-1+commands.size())%commands.size(); }
-            while(commands[newCommandId].command.size() == 0);
+            for(size_t tries = 0; tries < commands.size(); ++tries)
+            {
+                newCommandId = (newCommandId-1+commands.size())%commands.size();
+                if(commands[newCommandId].command.size() != 0)
+                    break;
+            }
             SetCurrentCommand(newCommandId);
         }
         else if(controller.GetButtonStatus(DOWN))
         {
             int newCommandId = currentCommandId;
-            do { newCommandId = (newCommandId+1)%commands.size(); }
-            while(commands[newCommandId].command.size() == 0);
+            for(size_t tries = 0; tries < commands.size(); ++tries)
+            {
+                newCommandId = (newCommandId+1)%commands.size();
+                if(commands[newCommandId].command.size() != 0)
+                    break;
+            }
             SetCurrentCommand(newCommandId);
         }
         else if(controller.GetButtonStatus(B))
@@ -419,9 +476,7 @@ int main(int argc, char * argv[])
 
         if(modernUI)
         {
-            //Badge cluster: A rightmost, B to its left, both always shown; X
-            //further left, shown only when the current row has a delete action
-            //(keeps A/B from jittering as X appears/disappears while scrolling).
+            // A rightmost, B left of it, X further left so A/B don't jitter
             int rightEdge = UiTheme::BadgeClusterRightX;
             rightEdge = DrawBadge(badgeA, rightEdge);
             rightEdge = DrawBadge(badgeB, rightEdge);
