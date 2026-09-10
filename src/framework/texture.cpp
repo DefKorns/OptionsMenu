@@ -11,10 +11,13 @@
 #include "font8x8.h"
 
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <cstring>
+#include <map>
 #include <vector>
 #include <png.h>
+#include <SDL_ttf.h>
 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 #define rmask 0xff000000
@@ -30,9 +33,10 @@
 
 Texture::Texture() {}
 
-Texture::Texture(const std::string & text, int fontSize, SDL_Renderer* renderer, int x, int y, bool centerText, const int color)
+Texture::Texture(const std::string & text, int fontSize, SDL_Renderer* renderer, int x, int y, bool centerText, const int color, bool useTTF)
 {
-    texture = std::shared_ptr<SDL_Texture>(WriteText(text, fontSize, renderer, rect.w, rect.h, color), SDL_DestroyTexture);
+    auto writer = (useTTF && CanRenderWithTTF(text, fontSize)) ? WriteTextTTF : WriteText;
+    texture = std::shared_ptr<SDL_Texture>(writer(text, fontSize, renderer, rect.w, rect.h, color), SDL_DestroyTexture);
     rect.x = (centerText) ? x-rect.w/2 : x;
     rect.y = (centerText) ? y-rect.h/2 : y;
 }
@@ -173,6 +177,8 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
             bitmap = font8x8_basic[codepoint];
         else if (codepoint >= 0xA0 && codepoint <= 0xFF)
             bitmap = font8x8_ext_latin[codepoint - 0xA0];
+        else if (codepoint >= 0x0400 && codepoint <= 0x04FF)
+            bitmap = font8x8_cyrillic[codepoint - 0x0400];
         else if (codepoint >= 0x3040 && codepoint <= 0x309F)
             bitmap = font8x8_hiragana[codepoint - 0x3040];
         else if (codepoint >= 0x30A0 && codepoint <= 0x30FF)
@@ -197,4 +203,113 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     SDL_FreeSurface(surface);
     return texture;
+}
+
+static std::string ttfFontPath;
+
+// CJK font comes from the optional addon hmod if installed, else the bundled Latin-only one
+void SetTTFFontPath(const std::string & optionsLocation)
+{
+    static const char * const cjkFontPath = "/etc/options_menu/fonts/NotoSansJP-CJK.ttf";
+    ttfFontPath = std::ifstream(cjkFontPath).good() ? cjkFontPath : optionsLocation + "fonts/NotoSansJP-Latin-subset.ttf";
+}
+
+// one TTF_Font per point size actually used, opened once and kept for the process lifetime
+static TTF_Font * GetTTFFont(int pointSize)
+{
+    static std::map<int, TTF_Font *> fonts;
+    auto it = fonts.find(pointSize);
+    if(it != fonts.end())
+        return it->second;
+
+    TTF_Font * font = TTF_OpenFont(ttfFontPath.c_str(), pointSize);
+    fonts[pointSize] = font;
+    return font;
+}
+
+SDL_Texture * WriteTextTTF(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color)
+{
+    if(text.empty())
+        return nullptr;
+
+    TTF_Font * font = GetTTFFont(fontSize);
+    if(!font)
+    {
+        std::cerr << "Cannot open TTF font: " << ttfFontPath << " (" << TTF_GetError() << ")\n";
+        return nullptr;
+    }
+
+    // color is packed 0xAABBGGRR, same convention as WriteText/the rest of the codebase
+    SDL_Color sdlColor{
+        static_cast<Uint8>(color & 0xFF),
+        static_cast<Uint8>((color >> 8) & 0xFF),
+        static_cast<Uint8>((color >> 16) & 0xFF),
+        static_cast<Uint8>((color >> 24) & 0xFF)
+    };
+
+    SDL_Surface * surface = TTF_RenderUTF8_Blended(font, text.c_str(), sdlColor);
+    if(!surface)
+    {
+        std::cerr << "TTF_RenderUTF8_Blended failed: " << TTF_GetError() << "\n";
+        return nullptr;
+    }
+
+    textureWidth = surface->w;
+    textureHeight = surface->h;
+    auto texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_FreeSurface(surface);
+    return texture;
+}
+
+bool CanRenderWithTTF(const std::string & text, int fontSize)
+{
+    TTF_Font * font = GetTTFFont(fontSize);
+    if(!font)
+        return false;
+
+    for(size_t i = 0; i < text.size();)
+    {
+        unsigned char firstByte = static_cast<unsigned char>(text[i]);
+        unsigned int codepoint = 0xFFFD;
+        size_t sequenceLength = 1;
+
+        if(firstByte < 0x80)
+        {
+            codepoint = firstByte;
+        }
+        else if(firstByte >= 0xC2 && firstByte <= 0xDF && i + 1 < text.size())
+        {
+            codepoint = ((firstByte & 0x1F) << 6) | (static_cast<unsigned char>(text[i+1]) & 0x3F);
+            sequenceLength = 2;
+        }
+        else if(firstByte >= 0xE0 && firstByte <= 0xEF && i + 2 < text.size())
+        {
+            codepoint = ((firstByte & 0x0F) << 12) | ((static_cast<unsigned char>(text[i+1]) & 0x3F) << 6) | (static_cast<unsigned char>(text[i+2]) & 0x3F);
+            sequenceLength = 3;
+        }
+
+        // TTF_GlyphIsProvided only takes a 16-bit code
+        if(codepoint > 0xFFFF || !TTF_GlyphIsProvided(font, static_cast<Uint16>(codepoint)))
+            return false;
+
+        i += sequenceLength;
+    }
+    return true;
+}
+
+int MeasureTTFWidth(const std::string & text, int fontSize)
+{
+    TTF_Font * font = GetTTFFont(fontSize);
+    if(!font || text.empty())
+        return 0;
+    int w = 0, h = 0;
+    TTF_SizeUTF8(font, text.c_str(), &w, &h);
+    return w;
+}
+
+int GetTTFLineHeight(int fontSize)
+{
+    TTF_Font * font = GetTTFFont(fontSize);
+    return font ? TTF_FontLineSkip(font) : fontSize;
 }

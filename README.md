@@ -168,7 +168,7 @@ This option will force the kernel to clear the page cache and free up unused mem
 
 #### Language Options
 
-This option opens a submenu where you can choose the display language for the Options Menu. Currently available: English, Portuguese, French, German, Spanish, Italian and Dutch. The Options Menu automatically restarts in the selected language.
+This option opens a submenu where you can choose the display language for the Options Menu. Currently available: English, Français, Deutsch, Español, Italiano, Nederlands, Português (Europeu), Русский and 日本語. The Options Menu automatically restarts in the selected language.
 
 ## Network Options
 

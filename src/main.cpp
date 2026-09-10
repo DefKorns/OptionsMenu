@@ -48,6 +48,18 @@ std::string TruncateUtf8(const std::string & text, int maxCodepoints)
     return text.substr(0, i);
 }
 
+int Utf8Length(const std::string & text)
+{
+    int count = 0;
+    for(size_t i = 0; i < text.size();)
+    {
+        unsigned char c = static_cast<unsigned char>(text[i]);
+        i += (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
+        ++count;
+    }
+    return count;
+}
+
 static struct ExitManager
 {
     std::string exitCommand;
@@ -78,6 +90,7 @@ int main(int argc, char * argv[])
     if(langCode.empty())
         langCode = "en-US";
     LoadLanguage(optionsLocation, langCode);
+    SetTTFFontPath(optionsLocation);
 
     std::string uiStyle;
     in.open("/etc/options_menu/ui_style.cfg");
@@ -199,18 +212,19 @@ int main(int argc, char * argv[])
     Texture badgeInner(optionsLocation + UiTheme::AssetBadgeInner, renderer);
 
     //Create Textures for Strings
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, 0xFFFFFFFF);
+    // appTitleText/appVersionText only ever draw in the modernUI branch (see the render loop below)
+    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, 0xFFFFFFFF, true);
     appTitleText.rect.y -= appTitleText.rect.h / 2; // vertically center on the gear (Texture only supports centering both axes together)
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, 0xFFFFFFFF);
+    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, 0xFFFFFFFF, true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
     Texture titleText = modernUI
-        ? Texture(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleCenterX, UiTheme::SectionTitleY, true)
+        ? Texture(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleCenterX, UiTheme::SectionTitleY, true, 0xFFFFFFFF, true)
         : Texture(titleString, 36, renderer, 640, 185, true);
     SDL_Rect highlightRect{ UiTheme::HighlightX, UiTheme::RowFirstY - 2, UiTheme::HighlightW, UiTheme::HighlightH };
     Texture pointerText("->", 16, renderer, 20, UiTheme::RowFirstY, false, 0xFF00FF00);
     SDL_Rect & pointerRect = pointerText.rect;
     Texture CompComText = modernUI
-        ? Texture("created by CompCom", 16, renderer)
+        ? Texture("created by CompCom", 16, renderer, 0, 0, false, 0xFFFFFFFF, true)
         : Texture("created by CompCom", 16, renderer, 1100, 620, true);
     if(modernUI)
     {
@@ -218,15 +232,18 @@ int main(int argc, char * argv[])
         CompComText.rect.y = UiTheme::CreditY;
     }
     Texture deleteHint(Translate("WIFI_DELETE_HINT_FOOTER"), 16, renderer, 30, 612);
-    Texture scrollUp = modernUI ? Texture("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY) : Texture("^", 16, renderer, 30, 248);
+    Texture scrollUp = modernUI
+        ? Texture("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY, false, 0xFFFFFFFF, true)
+        : Texture("^", 16, renderer, 30, 248);
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = modernUI ? UiTheme::ScrollDownY : (252+DisplayItemCount*18);
 
     //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
+    // badges only ever exist in modernUI, so their textures are unconditionally TTF
     struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
-    Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_SELECT"), 16, renderer), UiTheme::BadgeADark, UiTheme::BadgeA };
-    Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_BACK"), 16, renderer), UiTheme::BadgeBDark, UiTheme::BadgeB };
-    Badge badgeX{ Texture("X", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_DELETE"), 16, renderer), UiTheme::BadgeXDark, UiTheme::BadgeX };
+    Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_SELECT"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeADark, UiTheme::BadgeA };
+    Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_BACK"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
+    Badge badgeX{ Texture("X", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_DELETE"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeXDark, UiTheme::BadgeX };
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
@@ -268,14 +285,30 @@ int main(int argc, char * argv[])
             maxRight = (maxRight < 0) ? switchBound : std::min(maxRight, switchBound);
         }
 
+        bool rowUsesTTF = modernUI && CanRenderWithTTF(label, RowGlyphSize);
         if(maxRight >= 0)
         {
-            int maxChars = std::max(0, (maxRight - textX) / RowGlyphSize);
-            if(TruncateUtf8(label, maxChars).size() != label.size())
-                label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
+            int available = std::max(0, maxRight - textX);
+            if(rowUsesTTF)
+            {
+                // proportional font: shrink by measured width, not a fixed px/char guess
+                if(MeasureTTFWidth(label, RowGlyphSize) > available)
+                {
+                    int n = Utf8Length(label);
+                    while(n > 0 && MeasureTTFWidth(TruncateUtf8(label, n) + "...", RowGlyphSize) > available)
+                        --n;
+                    label = TruncateUtf8(label, n) + "...";
+                }
+            }
+            else
+            {
+                int maxChars = available / RowGlyphSize;
+                if(TruncateUtf8(label, maxChars).size() != label.size())
+                    label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
+            }
         }
 
-        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0);
+        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, 0xFFFFFFFF, modernUI);
     }
 
     int topListItemNumber = 1;
@@ -299,14 +332,16 @@ int main(int argc, char * argv[])
         if(updateCommandYPos)
         {
             int y = UiTheme::RowFirstY;
+            int rowPitch = modernUI ? std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize)) : 18;
             for(int i = 0, count = std::min(DisplayItemCount,static_cast<int>(commands.size())); i < count; ++i)
             {
                 commands[i+topListItemNumber].texture.rect.y = y;
-                y += 18;
+                y += rowPitch;
             }
         }
 
         highlightRect.y = currentCommand.texture.rect.y - 2;
+        highlightRect.h = currentCommand.texture.rect.h + 4; // wrap the row's actual text height (16px font8x8 or variable-height TTF), not a fixed guess
         highlightRect.w = UiTheme::HighlightW;
         pointerRect.y = currentCommand.texture.rect.y;
         if(currentCommand.previewImage.size())
@@ -403,8 +438,8 @@ int main(int argc, char * argv[])
         else if(controller.GetButtonStatus(X) && !commands[currentCommandId].deleteCommand.empty())
         {
             const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
-            Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true);
-            Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true);
+            Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, 0xFFFFFFFF, modernUI);
+            Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, 0xFFFFFFFF, modernUI);
             bool confirmed = false;
             for(;;)
             {
@@ -466,7 +501,7 @@ int main(int argc, char * argv[])
             {
                 Texture & rowSwitch = rowCommand.stateOn ? switchOn : switchOff;
                 rowSwitch.rect.x = UiTheme::SwitchRightX - UiTheme::SwitchW;
-                rowSwitch.rect.y = rowCommand.texture.rect.y;
+                rowSwitch.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - UiTheme::SwitchH) / 2;
                 rowSwitch.Draw(renderer);
             }
         }

@@ -18,7 +18,7 @@ struct Texture
     std::shared_ptr<SDL_Texture> texture;
     SDL_Rect rect{0, 0, 0, 0}; // LoadTexturePNG leaves this untouched on failure, so it must default to zero, not garbage
     Texture();
-    Texture(const std::string & text, int fontSize, SDL_Renderer* renderer, int x = 0, int y = 0, bool centerText = false, const int color = 0xFFFFFFFF);
+    Texture(const std::string & text, int fontSize, SDL_Renderer* renderer, int x = 0, int y = 0, bool centerText = false, const int color = 0xFFFFFFFF, bool useTTF = false);
     Texture(const std::string & pngFilePath, SDL_Renderer* renderer, int x = 0, int y = 0, bool centerImg = false);
     void Draw(SDL_Renderer* renderer);
     void Draw(SDL_Renderer* renderer, SDL_RendererFlip flip_enum);
@@ -33,5 +33,18 @@ struct Sprite
 
 SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect * rect = nullptr);
 SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color = 0xFFFFFF);
+SDL_Texture * WriteTextTTF(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color = 0xFFFFFF);
+
+// call before any useTTF=true Texture, once at startup
+void SetTTFFontPath(const std::string & optionsLocation);
+
+// false if the loaded font is missing a glyph in text - fall back to font8x8
+bool CanRenderWithTTF(const std::string & text, int fontSize);
+
+// proportional width, unlike font8x8's fixed fontSize/char
+int MeasureTTFWidth(const std::string & text, int fontSize);
+
+// line-to-line spacing, unlike font8x8's fixed-height rows
+int GetTTFLineHeight(int fontSize);
 
 #endif

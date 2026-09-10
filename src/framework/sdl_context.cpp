@@ -13,6 +13,7 @@
 #include <iostream>
 #include <thread>
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit) : fpsTime(fpsTime), powerButtonExit(powerButtonExit)
 {
@@ -24,11 +25,13 @@ SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit
         SDL_DestroyWindow(window);
         exit(1);
     }
+    TTF_Init();
     nextFrameTime = std::chrono::system_clock::now()+fpsTime;
 }
 
 SDL_Context::~SDL_Context()
 {
+    TTF_Quit();
     delete powerwatch;
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
