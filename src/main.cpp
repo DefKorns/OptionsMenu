@@ -449,11 +449,11 @@ int main(int argc, char * argv[])
         DrawRoundedFillRect(renderer, selectedRowRect, UiTheme::SelectedRowBgR, UiTheme::SelectedRowBgG, UiTheme::SelectedRowBgB, UiTheme::BoxRadius);
         DrawStrokeRect(renderer, selectedRowRect, UiTheme::AccentR, UiTheme::AccentG, UiTheme::AccentB, 2, UiTheme::BoxRadius);
 
-        // just the preview image - icon/title box looked wrong with no per-command art
-        SDL_Rect previewBox{ UiTheme::DetailX, UiTheme::PreviewBoxY, UiTheme::DetailW, UiTheme::PreviewBoxH };
-        DrawStrokeRect(renderer, previewBox, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BoxRadius);
+        // no box when there's no preview - an empty frame looks broken
         if(PreviewImage.get())
         {
+            SDL_Rect previewBox{ UiTheme::DetailX, UiTheme::PreviewBoxY, UiTheme::DetailW, UiTheme::PreviewBoxH };
+            DrawStrokeRect(renderer, previewBox, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BoxRadius);
             PreviewImage->rect.x = previewBox.x + (previewBox.w - PreviewImage->rect.w) / 2;
             PreviewImage->rect.y = previewBox.y + (previewBox.h - PreviewImage->rect.h) / 2;
             PreviewImage->Draw(renderer);
@@ -475,7 +475,7 @@ int main(int argc, char * argv[])
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
         Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, 0xFFFFFFFF, true);
         Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, 0xFFFFFFFF, true);
-        controller.GetButtonStatus(B); // B is still physically held from the long-press that triggered this - don't read it as an instant cancel
+        controller.GetButtonStatus(B); // consume the still-held B from the triggering long-press
         bool confirmed = false;
         for(;;)
         {

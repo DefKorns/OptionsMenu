@@ -14,7 +14,7 @@
 
 class Controller;
 
-// header/footer chrome shared with the main screen, reused as-is for pixel-identical INTERNAL output screens
+// header/footer textures, shared by reference with the main screen
 struct ModernChrome
 {
     Texture & gearIcon;
