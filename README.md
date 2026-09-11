@@ -289,16 +289,16 @@ The options menu can also be compiled using the plain `Makefile` provided. To co
 
 ### Contributions
 
-- Hibernate Mod and Hakchi-Option-Pack scripts courtesy of Swingflip  
-- Retroarch Configuration scripts courtesy of BsLeNuL
-- Network commands courtesy by Advokaten and DefKorns
-- Wifi Backup courtesy of DefKorns
-- Preview image aspect ratio courtesy of DefKorns
-- Wifi backup delete feature (hold B on a saved backup) courtesy of DefKorns
-- Multi-language localization system (i18n) and translations courtesy of DefKorns
-- Docker-based ARM cross-compile toolchain and build tooling courtesy of DefKorns
-- Redesigned "Modern UI" (flat-drawn dialog frame, selection highlight, toggle switches, button-hint badges) courtesy of DefKorns
-- Thanks to ThanosRD for assistance with UI Layout/Design
+- **Swingflip** — Hibernate Mod and Hakchi-Option-Pack scripts
+- **BsLeNuL** — Retroarch Configuration scripts
+- **Advokaten** — Network commands (with DefKorns)
+- **DefKorns**
+  - Network commands (with Advokaten)
+  - Wifi Backup, preview image aspect ratio, delete feature (hold B on a saved backup)
+  - Multi-language localization system (i18n) and translations
+  - Docker-based ARM cross-compile toolchain and build tooling
+  - Redesigned "Modern UI" (dialog frame, selection highlight, toggle switches, button-hint badges)
+- **ThanosRD** — UI Layout/Design assistance (original Classic UI)
 
 ### Testing
 
