@@ -95,13 +95,7 @@ int main(int argc, char * argv[])
     std::string commandLocation(optionsLocation + "commands/");
     std::string scriptLocation(optionsLocation + "scripts/");
 
-    std::string langCode("en-US");
-    std::ifstream in("/etc/options_menu/language.cfg");
-    std::getline(in, langCode);
-    in.close();
-    if(langCode.empty())
-        langCode = "en-US";
-    LoadLanguage(optionsLocation, langCode);
+    LoadLanguageFromConfig(optionsLocation);
     SetTTFFontPath(optionsLocation);
 
     std::string titleString(Translate("OPTIONS_TITLE"));
@@ -155,6 +149,7 @@ int main(int argc, char * argv[])
 
     //Read commands from command folder
     std::vector<Command> commands;
+    std::ifstream in;
     if(auto dir = opendir(commandLocation.c_str()))
     {
         //Find all commands in folder

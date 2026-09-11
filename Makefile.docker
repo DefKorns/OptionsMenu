@@ -53,7 +53,7 @@ all: $(OUT)/$(TARGET_NAME).hmod
 bump-build-number:
 	echo $$(( $$(cat $(BUILD_NUM_FILE) 2>/dev/null || echo 0) + 1 )) > $(BUILD_NUM_FILE)
 
-$(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash $(VENDORED_TTF_LIBS) bump-build-number
+$(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo $(VENDORED_TTF_LIBS) bump-build-number
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/options
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/optiond
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/mod_uninstall/mod_uninstall
@@ -61,6 +61,8 @@ $(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/op
 	$(CROSS_PREFIX)$(STRIP) mod/bin/standby_watchdog
 	upx --lzma mod/bin/standby_watchdog
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/gen_splash
+	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/ChangeCombo
+	upx --lzma mod/etc/options_menu/scripts/ChangeCombo
 	$(inject-readme)
 
 	cd mod/; tar -czvf "../out/$(TARGET_NAME).hmod" *
@@ -92,6 +94,9 @@ mod/bin/standby_watchdog: src/standby_watchdog.o src/framework/controller.o src/
 
 mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o
 	$(CROSS_PREFIX)$(CXX) src/gen_splash.o src/localization.o $(PNG_LIBS) $(LDFLAGS) -o mod/etc/options_menu/scripts/gen_splash
+
+mod/etc/options_menu/scripts/ChangeCombo: src/change_combo.o src/framework/controller.o src/localization.o
+	$(CROSS_PREFIX)$(CXX) src/change_combo.o src/framework/controller.o src/localization.o $(LDFLAGS) -o mod/etc/options_menu/scripts/ChangeCombo
 
 %.o: %.cpp
 	$(CROSS_PREFIX)$(CXX) $(CXXFLAGS) -c $< -o $@
