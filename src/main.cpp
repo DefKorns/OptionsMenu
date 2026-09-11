@@ -11,6 +11,7 @@
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
+#include "framework/utf8.h"
 #include "command.h"
 #include "localization.h"
 
@@ -35,33 +36,6 @@ void sReplace(std::string & command, std::string oldString, std::string newStrin
     {
         command.replace(pos, oldString.size(), newString);
     }
-}
-
-// truncates by UTF-8 codepoint, not byte, so multi-byte glyphs (e.g. Japanese) aren't split
-std::string TruncateUtf8(const std::string & text, int maxCodepoints)
-{
-    size_t i = 0;
-    int count = 0;
-    while(i < text.size() && count < maxCodepoints)
-    {
-        unsigned char c = static_cast<unsigned char>(text[i]);
-        size_t len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
-        i += len;
-        ++count;
-    }
-    return text.substr(0, i);
-}
-
-int Utf8Length(const std::string & text)
-{
-    int count = 0;
-    for(size_t i = 0; i < text.size();)
-    {
-        unsigned char c = static_cast<unsigned char>(text[i]);
-        i += (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
-        ++count;
-    }
-    return count;
 }
 
 // "%options_path%/xxx" command templates always produce a double slash (optionsLocation

@@ -26,7 +26,7 @@ VENDORED_TTF_LIBS =
 endif
 CXXFLAGS = -std=c++11 -Os $(SDL_CFLAGS) -DMOD_VERSION=\"$(MOD_VER)\"
 LDLIBS = $(SDL_LIBS)
-SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/controller.cpp src/framework/powerwatch.cpp src/framework/draw_helpers.cpp
+SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/controller.cpp src/framework/powerwatch.cpp src/framework/draw_helpers.cpp src/framework/utf8.cpp src/framework/font8x8_lookup.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 DEV_DIR = $(shell realpath .)
 OUT = $(DEV_DIR)/out
@@ -92,8 +92,8 @@ mod/etc/options_menu/mod_uninstall/mod_uninstall: src/mod_uninstall.o
 mod/bin/standby_watchdog: src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o
 	$(CROSS_PREFIX)$(CXX) src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o -o mod/bin/standby_watchdog
 
-mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o
-	$(CROSS_PREFIX)$(CXX) src/gen_splash.o src/localization.o $(PNG_LIBS) $(LDFLAGS) -o mod/etc/options_menu/scripts/gen_splash
+mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o src/framework/utf8.o src/framework/font8x8_lookup.o
+	$(CROSS_PREFIX)$(CXX) src/gen_splash.o src/localization.o src/framework/utf8.o src/framework/font8x8_lookup.o $(PNG_LIBS) $(LDFLAGS) -o mod/etc/options_menu/scripts/gen_splash
 
 mod/etc/options_menu/scripts/ChangeCombo: src/change_combo.o src/framework/controller.o src/localization.o
 	$(CROSS_PREFIX)$(CXX) src/change_combo.o src/framework/controller.o src/localization.o $(LDFLAGS) -o mod/etc/options_menu/scripts/ChangeCombo

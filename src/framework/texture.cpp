@@ -8,9 +8,9 @@
  */
 
 #include "texture.h"
-#include "font8x8.h"
+#include "font8x8_lookup.h"
+#include "utf8.h"
 
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <cstring>
@@ -109,55 +109,12 @@ SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect 
     return texture;
 }
 
-static const char * LookupKanjiGlyph(unsigned int codepoint)
-{
-    auto it = std::lower_bound(std::begin(font8x8_kanji), std::end(font8x8_kanji), codepoint,
-        [](const Font8x8KanjiEntry & entry, unsigned int cp) { return entry.codepoint < cp; });
-    if (it != std::end(font8x8_kanji) && it->codepoint == codepoint)
-        return reinterpret_cast<const char *>(it->glyph);
-    return nullptr;
-}
-
 SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color)
 {
     if(text.size()==0)
         return nullptr;
 
-    std::vector<unsigned int> codepoints;
-    for (size_t i = 0; i < text.size();)
-    {
-        unsigned char firstByte = static_cast<unsigned char>(text[i]);
-        unsigned int codepoint = 0xFFFD;
-        size_t sequenceLength = 1;
-
-        if (firstByte < 0x80)
-        {
-            codepoint = firstByte;
-        }
-        else if (firstByte >= 0xC2 && firstByte <= 0xDF && i + 1 < text.size())
-        {
-            unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
-            if ((secondByte & 0xC0) == 0x80)
-            {
-                codepoint = ((firstByte & 0x1F) << 6) | (secondByte & 0x3F);
-                sequenceLength = 2;
-            }
-        }
-        else if (firstByte >= 0xE0 && firstByte <= 0xEF && i + 2 < text.size())
-        {
-            unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
-            unsigned char thirdByte = static_cast<unsigned char>(text[i + 2]);
-            if ((secondByte & 0xC0) == 0x80 && (thirdByte & 0xC0) == 0x80)
-            {
-                codepoint = ((firstByte & 0x0F) << 12) |
-                            ((secondByte & 0x3F) << 6) | (thirdByte & 0x3F);
-                sequenceLength = 3;
-            }
-        }
-
-        codepoints.push_back(codepoint);
-        i += sequenceLength;
-    }
+    std::vector<unsigned int> codepoints = Utf8ToCodepoints(text);
 
     textureWidth = fontSize*codepoints.size();
     textureHeight = fontSize;
@@ -166,25 +123,7 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
     int pitch = 8*codepoints.size();
     for (unsigned int i = 0; i < codepoints.size(); ++i)
     {
-        const char *bitmap = font8x8_basic[0x3F];
-        unsigned int codepoint = codepoints[i];
-        if (codepoint < 0x80)
-            bitmap = font8x8_basic[codepoint];
-        else if (codepoint >= 0xA0 && codepoint <= 0xFF)
-            bitmap = font8x8_ext_latin[codepoint - 0xA0];
-        else if (codepoint >= 0x0400 && codepoint <= 0x04FF)
-            bitmap = font8x8_cyrillic[codepoint - 0x0400];
-        else if (codepoint >= 0x3040 && codepoint <= 0x309F)
-            bitmap = font8x8_hiragana[codepoint - 0x3040];
-        else if (codepoint >= 0x30A0 && codepoint <= 0x30FF)
-            bitmap = font8x8_katakana[codepoint - 0x30A0];
-        else if (codepoint >= 0x4E00 && codepoint <= 0x9FFF)
-        {
-            const char * kanjiGlyph = LookupKanjiGlyph(codepoint);
-            if (kanjiGlyph)
-                bitmap = kanjiGlyph;
-        }
-
+        const char * bitmap = Font8x8Glyph(codepoints[i]);
         int offset = i*8;
         for(int y = 0; y < 8; ++y)
         {
@@ -263,33 +202,10 @@ bool CanRenderWithTTF(const std::string & text, int fontSize)
     if(!font)
         return false;
 
-    for(size_t i = 0; i < text.size();)
-    {
-        unsigned char firstByte = static_cast<unsigned char>(text[i]);
-        unsigned int codepoint = 0xFFFD;
-        size_t sequenceLength = 1;
-
-        if(firstByte < 0x80)
-        {
-            codepoint = firstByte;
-        }
-        else if(firstByte >= 0xC2 && firstByte <= 0xDF && i + 1 < text.size())
-        {
-            codepoint = ((firstByte & 0x1F) << 6) | (static_cast<unsigned char>(text[i+1]) & 0x3F);
-            sequenceLength = 2;
-        }
-        else if(firstByte >= 0xE0 && firstByte <= 0xEF && i + 2 < text.size())
-        {
-            codepoint = ((firstByte & 0x0F) << 12) | ((static_cast<unsigned char>(text[i+1]) & 0x3F) << 6) | (static_cast<unsigned char>(text[i+2]) & 0x3F);
-            sequenceLength = 3;
-        }
-
+    for(unsigned int codepoint : Utf8ToCodepoints(text))
         // TTF_GlyphIsProvided only takes a 16-bit code
         if(codepoint > 0xFFFF || !TTF_GlyphIsProvided(font, static_cast<Uint16>(codepoint)))
             return false;
-
-        i += sequenceLength;
-    }
     return true;
 }
 
