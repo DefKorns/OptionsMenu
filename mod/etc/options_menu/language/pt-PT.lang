@@ -11,7 +11,6 @@ RUN_TOP=Executar Top
 BENCHMARK_TOOL=Ferramenta de Benchmark
 DUMP_FILE_STRUCTURE=Exportar Estrutura de Ficheiros (para USB)
 TOGGLE_USB_WRITE=Alternar Escrita na USB
-TOGGLE_MODERN_UI=Interface Moderna
 RA_DEBUGGER=Depurador do RetroArch (logs USB)
 CHANGE_BUTTON_COMBO=Mudar Combinação de Botões
 CLEAR_CACHE=Limpar Cache
@@ -44,7 +43,6 @@ WIFI_BACKUP_SPLASH_LINE2=Aguarde Por Favor . . .
 DELETE_BACKUP_CONFIRM=Apagar esta cópia de segurança?
 DELETE_CONFIRM_HINT=A = Sim     B = Não
 DELETE_CONFIRM_GENERIC=Apagar este item?
-WIFI_DELETE_HINT_FOOTER=X = Apagar     A = Restaurar
 HINT_SELECT=Selecionar
 HINT_BACK=Voltar
 HINT_DELETE=Apagar (manter premido)

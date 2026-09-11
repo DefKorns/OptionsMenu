@@ -24,13 +24,6 @@ struct Texture
     void Draw(SDL_Renderer* renderer, SDL_RendererFlip flip_enum);
 };
 
-struct Sprite
-{
-    std::shared_ptr<SDL_Texture> texture;
-    SDL_Rect sRect, dRect;
-    void Draw(SDL_Renderer * renderer);
-};
-
 SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect * rect = nullptr);
 SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color = 0xFFFFFF);
 SDL_Texture * WriteTextTTF(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color = 0xFFFFFF);

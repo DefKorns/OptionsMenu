@@ -27,7 +27,7 @@ struct Command
 {
     Command();
     Command(std::ifstream & in);
-    void RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, bool modernUI, const ModernChrome & chrome, Uint8 bgR = 0x6e, Uint8 bgG = 0x6e, Uint8 bgB = 0x6e) const;
+    void RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Uint8 bgR = UiTheme::BgR, Uint8 bgG = UiTheme::BgG, Uint8 bgB = UiTheme::BgB) const;
     void UpdateState();
 
     std::string name;

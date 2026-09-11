@@ -22,9 +22,7 @@
 
 // Geometry and palette for the split-panel "settings dialog" look. Screen
 // is a fixed 1280x720 (sdl_context.cpp), so these are plain constants.
-// Border/dividers are flat drawn lines (see main.cpp's DrawRect/FillRect/
-// HLine/VLine helpers), not the old frame.png/highlight.png NineSlice art -
-// those two assets are unused by Modern UI now.
+// Border/dividers are flat drawn lines (see draw_helpers.h), no textured art.
 namespace UiTheme
 {
     const Uint8 BgR = 0x0C, BgG = 0x0F, BgB = 0x16;
@@ -39,7 +37,7 @@ namespace UiTheme
     const int BorderRadius = 14;
     const int BoxRadius = 8; // selected row / detail icon box / preview box
     const int ContentPadding = 16; // border to content start
-    const int FrameInset = 24; // frame.png's 9-slice corner size (delete-confirm modal only)
+    const int FrameInset = 24; // text inset for the INTERNAL command output screen
 
     const SDL_Rect FrameRect{ SafeMarginX, SafeMarginY, 1280 - 2*SafeMarginX, 720 - 2*SafeMarginY };
     const int FrameX = FrameRect.x + ContentPadding;
@@ -87,7 +85,6 @@ namespace UiTheme
     const int RowPitch = 36;
     const int RowTextYNudge = -4; // fine-tune vs. pure (slot-h - text-h)/2 centering
     const int RowTextX = ListX + 16;
-    const int DisplayItemCount = 12; // rows visible at once in the scrollable region, both UI styles
     const int PinnedBottomMargin = 10; // gap from the footer divider to the last pinned row (e.g. Exit)
 
     // detail panel (right column), Modern UI only - just the preview image,
@@ -137,10 +134,7 @@ namespace UiTheme
     const int ScrollUpY = HeaderDividerY + 90;
     const int ScrollDownY = FooterDividerY - 104;
 
-    // asset paths, relative to optionsLocation (frame/highlight unused by
-    // Modern UI now - kept for Classic UI / potential rollback)
-    const char * const AssetFrame = "/images/ui/frame.png";
-    const char * const AssetHighlight = "/images/ui/highlight.png";
+    // asset paths, relative to optionsLocation
     const char * const AssetBadgeOuter = "/images/ui/badge_outer.png";
     const char * const AssetBadgeInner = "/images/ui/badge_inner.png";
     const char * const AssetSwitchOn = "/images/ui/switch_on.png";

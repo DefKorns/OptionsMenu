@@ -82,25 +82,15 @@ int main(int argc, char * argv[])
     _exitManager.exitCommand = "/bin/sh " + optionsLocation + "/scripts/ResumeUI.sh";
     std::string commandLocation(optionsLocation + "commands/");
     std::string scriptLocation(optionsLocation + "scripts/");
-    std::string spriteSheetLocation;
-    std::ifstream in("/tmp/spritesheet");
-    std::getline(in, spriteSheetLocation);
-    in.close();
 
     std::string langCode("en-US");
-    in.open("/etc/options_menu/language.cfg");
+    std::ifstream in("/etc/options_menu/language.cfg");
     std::getline(in, langCode);
     in.close();
     if(langCode.empty())
         langCode = "en-US";
     LoadLanguage(optionsLocation, langCode);
     SetTTFFontPath(optionsLocation);
-
-    std::string uiStyle;
-    in.open("/etc/options_menu/ui_style.cfg");
-    std::getline(in, uiStyle);
-    in.close();
-    bool modernUI = (uiStyle != "classic");
 
     std::string titleString(Translate("OPTIONS_TITLE"));
     std::string titleKey = "OPTIONS_TITLE";
@@ -251,18 +241,11 @@ int main(int argc, char * argv[])
     //Create Options Flag to prevent multiple menu launches
     system("touch /tmp/options.flag");
 
-    //Create Background
-    auto spriteSheet = std::shared_ptr<SDL_Texture>(LoadTexturePNG(renderer, spriteSheetLocation), SDL_DestroyTexture);
-    Texture banner(optionsLocation + "/images/banner.png", renderer, 640, 185, true);
-    Sprite menuU = { spriteSheet, {1,43,432,40}, {-8,-24,1296,120} };
-    Sprite menuL = { spriteSheet, {1,1,432,40}, {-8,630,1296,120} };
-    const Uint8 bgR = modernUI ? UiTheme::BgR : 0x6e;
-    const Uint8 bgG = modernUI ? UiTheme::BgG : 0x6e;
-    const Uint8 bgB = modernUI ? UiTheme::BgB : 0x6e;
+    const Uint8 bgR = UiTheme::BgR;
+    const Uint8 bgG = UiTheme::BgG;
+    const Uint8 bgB = UiTheme::BgB;
     SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
 
-    // only the delete-confirm modal still uses this (NineSlice)
-    NineSlice frame(optionsLocation + UiTheme::AssetFrame, renderer, UiTheme::FrameInset, UiTheme::FrameInset, UiTheme::FrameInset, UiTheme::FrameInset);
     Texture gearIcon(optionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
     Texture switchOn(optionsLocation + UiTheme::AssetSwitchOn, renderer);
     Texture switchOff(optionsLocation + UiTheme::AssetSwitchOff, renderer);
@@ -270,31 +253,19 @@ int main(int argc, char * argv[])
     Texture badgeInner(optionsLocation + UiTheme::AssetBadgeInner, renderer);
 
     //Create Textures for Strings
-    // only drawn in the modernUI branch
     Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, 0xFFFFFFFF, true);
     appTitleText.rect.y -= appTitleText.rect.h / 2; // vertically center on the gear (Texture only supports centering both axes together)
     Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, 0xFFFFFFFF, true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText = modernUI
-        ? Texture(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, 0xFFFFFFFF, true)
-        : Texture(titleString, 36, renderer, 640, 185, true);
+    Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, 0xFFFFFFFF, true);
     SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
-    Texture pointerText("->", 16, renderer, 20, UiTheme::RowFirstY, false, 0xFF00FF00);
-    SDL_Rect & pointerRect = pointerText.rect;
-    Texture CompComText = modernUI
-        ? Texture("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, 0xFFFFFFFF, true)
-        : Texture("created by CompCom", 16, renderer, 1100, 620, true);
-    Texture deleteHint(Translate("WIFI_DELETE_HINT_FOOTER"), 16, renderer, 30, 612);
-    Texture scrollUp = modernUI
-        ? Texture("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY, false, 0xFFFFFFFF, true)
-        : Texture("^", 16, renderer, 30, 248);
-    if(modernUI)
-        scrollUp.rect.x -= scrollUp.rect.w / 2; // ScrollX is the gutter's center, not the glyph's left edge
+    Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, 0xFFFFFFFF, true);
+    Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY, false, 0xFFFFFFFF, true);
+    scrollUp.rect.x -= scrollUp.rect.w / 2; // ScrollX is the gutter's center, not the glyph's left edge
     Texture scrollDown = scrollUp;
-    scrollDown.rect.y = modernUI ? UiTheme::ScrollDownY : (252+UiTheme::DisplayItemCount*18);
+    scrollDown.rect.y = UiTheme::ScrollDownY;
 
     //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
-    // badges only ever exist in modernUI, so their textures are unconditionally TTF
     struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
     Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_SELECT"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeADark, UiTheme::BadgeA };
     Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_BACK"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
@@ -323,13 +294,12 @@ int main(int argc, char * argv[])
 
     //Create Command Texture
     const int ChildIndent = 4*16;
-    const int rowTextBaseX = modernUI ? UiTheme::RowTextX : 50;
     const int RowGlyphSize = 16;
     const int RowTextGapPx = 16; // gap kept between truncated text and preview image/switch
-    Texture chevronText(">", RowGlyphSize, renderer, 0, 0, false, UiTheme::TextDimColor, modernUI);
+    Texture chevronText(">", RowGlyphSize, renderer, 0, 0, false, UiTheme::TextDimColor, true);
     for(Command & c : commands)
     {
-        // self-relaunch into the same dir (language, ModernUI toggle) isn't a submenu
+        // self-relaunch into the same dir (e.g. language selection) isn't a submenu
         if(c.hasSubmenu)
         {
             size_t pos = c.command.find("--commandPath");
@@ -343,47 +313,36 @@ int main(int argc, char * argv[])
         if(c.name == "BACK")
             c.hasSubmenu = false;
 
-        int textX = rowTextBaseX + (c.child ? ChildIndent : 0);
+        int textX = UiTheme::RowTextX + (c.child ? ChildIndent : 0);
         std::string label = Translate(c.name);
 
-        // classic UI: only rows with a preview image get less width for text.
-        // modern UI: the list column has a fixed width regardless (previews
-        // now live in the detail panel, not floating on the row).
-        int maxRight = -1;
-        if(!modernUI && c.previewImage.size())
-            maxRight = c.previewImageX - RowTextGapPx;
-        if(modernUI)
-            maxRight = UiTheme::RowControlRightX - RowTextGapPx;
-
-        bool rowUsesTTF = modernUI && CanRenderWithTTF(label, RowGlyphSize);
-        if(maxRight >= 0)
+        // fixed list-column width regardless of preview - previews live in the detail panel, not floating on the row
+        int maxRight = UiTheme::RowControlRightX - RowTextGapPx;
+        bool rowUsesTTF = CanRenderWithTTF(label, RowGlyphSize);
+        int available = std::max(0, maxRight - textX);
+        if(rowUsesTTF)
         {
-            int available = std::max(0, maxRight - textX);
-            if(rowUsesTTF)
+            // proportional font: shrink by measured width, not a fixed px/char guess
+            if(MeasureTTFWidth(label, RowGlyphSize) > available)
             {
-                // proportional font: shrink by measured width, not a fixed px/char guess
-                if(MeasureTTFWidth(label, RowGlyphSize) > available)
-                {
-                    int n = Utf8Length(label);
-                    while(n > 0 && MeasureTTFWidth(TruncateUtf8(label, n) + "...", RowGlyphSize) > available)
-                        --n;
-                    label = TruncateUtf8(label, n) + "...";
-                }
-            }
-            else
-            {
-                int maxChars = available / RowGlyphSize;
-                if(TruncateUtf8(label, maxChars).size() != label.size())
-                    label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
+                int n = Utf8Length(label);
+                while(n > 0 && MeasureTTFWidth(TruncateUtf8(label, n) + "...", RowGlyphSize) > available)
+                    --n;
+                label = TruncateUtf8(label, n) + "...";
             }
         }
+        else
+        {
+            int maxChars = available / RowGlyphSize;
+            if(TruncateUtf8(label, maxChars).size() != label.size())
+                label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
+        }
 
-        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, 0xFFFFFFFF, modernUI);
+        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, 0xFFFFFFFF, true);
     }
 
     const int modernRowPitch = std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize));
-    int pinnedAreaTop = UiTheme::FooterDividerY - UiTheme::PinnedBottomMargin;
-    if(modernUI)
+    int pinnedAreaTop;
     {
         int slotBottom = UiTheme::FooterDividerY - UiTheme::PinnedBottomMargin;
         for(int i = static_cast<int>(commands.size())-1; i >= pinnedStartIndex; --i)
@@ -395,9 +354,7 @@ int main(int argc, char * argv[])
         pinnedAreaTop = slotBottom;
     }
     // scrollable rows that fit above the pinned block - varies per screen
-    const int DisplayItemCount = modernUI
-        ? std::max(1, (pinnedAreaTop - UiTheme::RowFirstY) / modernRowPitch)
-        : UiTheme::DisplayItemCount;
+    const int DisplayItemCount = std::max(1, (pinnedAreaTop - UiTheme::RowFirstY) / modernRowPitch);
 
     int topListItemNumber = 1;
     std::shared_ptr<Texture> PreviewImage;
@@ -407,8 +364,7 @@ int main(int argc, char * argv[])
         const Command & currentCommand = commands[currentCommandId];
 
         // pinned rows don't affect scroll position
-        int scrollBound = modernUI ? pinnedStartIndex : static_cast<int>(commands.size());
-        int scrollTarget = modernUI ? std::min(currentCommandId, std::max(0, pinnedStartIndex-1)) : currentCommandId;
+        int scrollTarget = std::min(currentCommandId, std::max(0, pinnedStartIndex-1));
 
         bool updateCommandYPos = false;
         if(scrollTarget < topListItemNumber)
@@ -424,22 +380,20 @@ int main(int argc, char * argv[])
         if(updateCommandYPos)
         {
             int y = UiTheme::RowFirstY;
-            int rowPitch = modernUI ? modernRowPitch : 18;
-            for(int i = 0, count = std::min(DisplayItemCount, scrollBound-topListItemNumber); i < count; ++i)
+            for(int i = 0, count = std::min(DisplayItemCount, pinnedStartIndex-topListItemNumber); i < count; ++i)
             {
                 Texture & rowTexture = commands[i+topListItemNumber].texture;
                 // centered in its slot - TTF glyphs have ascender padding, top-align leaves a gap
-                rowTexture.rect.y = modernUI ? (y + (rowPitch - rowTexture.rect.h) / 2 + UiTheme::RowTextYNudge) : y;
-                y += rowPitch;
+                rowTexture.rect.y = y + (modernRowPitch - rowTexture.rect.h) / 2 + UiTheme::RowTextYNudge;
+                y += modernRowPitch;
             }
         }
 
         selectedRowRect.y = currentCommand.texture.rect.y - 2;
         selectedRowRect.h = currentCommand.texture.rect.h + 4; // wrap the row's actual text height (16px font8x8 or variable-height TTF), not a fixed guess
-        pointerRect.y = currentCommand.texture.rect.y;
 
         // scaled to fit the detail panel box, ignores the command's own previewImageX/Y/W/H
-        if(modernUI && currentCommand.previewImage.size())
+        if(currentCommand.previewImage.size())
         {
             PreviewImage = std::make_shared<Texture>(currentCommand.previewImage, renderer, 0, 0);
             if(PreviewImage->rect.w > 0 && PreviewImage->rect.h > 0)
@@ -460,26 +414,26 @@ int main(int argc, char * argv[])
     {
         bool selected = &rowCommand == &commands[currentCommandId];
         rowCommand.texture.Draw(renderer);
-        if(modernUI && rowCommand.isToggle)
+        if(rowCommand.isToggle)
         {
             Texture & rowSwitch = rowCommand.stateOn ? switchOn : switchOff;
             rowSwitch.rect.x = UiTheme::SwitchRightX - UiTheme::SwitchW;
             rowSwitch.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - UiTheme::SwitchH) / 2;
             rowSwitch.Draw(renderer);
         }
-        else if(modernUI && rowCommand.hasSubmenu)
+        else if(rowCommand.hasSubmenu)
         {
             chevronText.rect.x = UiTheme::RowControlRightX - chevronText.rect.w;
             chevronText.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - chevronText.rect.h) / 2;
             chevronText.Draw(renderer);
         }
         // skip for separators and the last row - nothing to separate there
-        if(modernUI && !selected && !rowCommand.command.empty() && !isLastOverall)
+        if(!selected && !rowCommand.command.empty() && !isLastOverall)
             DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB);
     };
 
-    // modern-UI-only drawing, called early - must run before DrawRow (bg before text)
-    auto DrawModernUI = [&]()
+    // called early, before DrawRow - must run first so its background is behind the row text
+    auto DrawChrome = [&]()
     {
         // one continuous border across header+body+footer, plus the footer divider
         DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
@@ -519,8 +473,9 @@ int main(int argc, char * argv[])
     auto ConfirmDelete = [&]() -> bool
     {
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
-        Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, 0xFFFFFFFF, modernUI);
-        Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, 0xFFFFFFFF, modernUI);
+        Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, 0xFFFFFFFF, true);
+        Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, 0xFFFFFFFF, true);
+        controller.GetButtonStatus(B); // B is still physically held from the long-press that triggered this - don't read it as an instant cancel
         bool confirmed = false;
         for(;;)
         {
@@ -533,16 +488,11 @@ int main(int argc, char * argv[])
                 break;
             }
             sdl_context.StartFrame();
-            if(modernUI)
-                frame.Draw(renderer, UiTheme::FrameRect);
-            else
-            {
-                banner.Draw(renderer);
-                menuU.Draw(renderer);
-                menuL.Draw(renderer);
-            }
+            DrawFillRect(renderer, UiTheme::FrameRect, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB);
+            DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
             confirmTitle.Draw(renderer);
             confirmHint.Draw(renderer);
+            SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF); // flat helpers leave the draw color dirty
             sdl_context.EndFrame();
         }
         if(!confirmed)
@@ -578,7 +528,7 @@ int main(int argc, char * argv[])
         {
             if(commands[currentCommandId].runInternal)
             {
-                commands[currentCommandId].RunCommand(sdl_context, &controller, menuL, menuU, modernUI, { gearIcon, appTitleText, appVersionText, CompComText }, bgR, bgG, bgB);
+                commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bgR, bgG, bgB);
                 if(commands[currentCommandId].isToggle)
                     commands[currentCommandId].UpdateState();
             }
@@ -630,44 +580,27 @@ int main(int argc, char * argv[])
         }
 
         //Draw all textures
-        if(modernUI)
-            DrawModernUI();
-        else
-        {
-            banner.Draw(renderer);
-            menuU.Draw(renderer);
-            menuL.Draw(renderer);
-        }
+        DrawChrome();
         titleText.Draw(renderer);
 
         int lastCommandIndex = static_cast<int>(commands.size()) - 1;
-        int scrollDrawBound = modernUI ? pinnedStartIndex : static_cast<int>(commands.size());
-        for(int i = 0, count = std::min(DisplayItemCount, scrollDrawBound-topListItemNumber); i < count; ++i)
+        for(int i = 0, count = std::min(DisplayItemCount, pinnedStartIndex-topListItemNumber); i < count; ++i)
             DrawRow(commands[i+topListItemNumber], (i+topListItemNumber) == lastCommandIndex);
 
         // pinned trailing rows (Back/Exit) - always visible near the footer
-        if(modernUI)
-            for(int i = pinnedStartIndex; i <= lastCommandIndex; ++i)
-                DrawRow(commands[i], i == lastCommandIndex);
+        for(int i = pinnedStartIndex; i <= lastCommandIndex; ++i)
+            DrawRow(commands[i], i == lastCommandIndex);
 
         CompComText.Draw(renderer);
 
-        if(!modernUI)
-        {
-            pointerText.Draw(renderer);
-            if(commands[currentCommandId].deleteCommand.size())
-                deleteHint.Draw(renderer);
-        }
-
-        // bounded by scrollDrawBound, not commands.size() - pinned rows need no scroll
+        // bounded by pinnedStartIndex, not commands.size() - pinned rows need no scroll
         if(topListItemNumber != 0)
             scrollUp.Draw(renderer);
-        if((topListItemNumber + DisplayItemCount) < scrollDrawBound)
+        if((topListItemNumber + DisplayItemCount) < pinnedStartIndex)
             scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
 
         // flat-line helpers leave the draw color dirty - reset before EndFrame
-        if(modernUI)
-            SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
+        SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
 
         //Render Framebuffer and Wait for Next Frame
         sdl_context.EndFrame();

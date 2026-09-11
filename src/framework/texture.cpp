@@ -60,11 +60,6 @@ void Texture::Draw(SDL_Renderer* renderer, SDL_RendererFlip flip_enum)
         SDL_RenderCopyEx(renderer, texture.get(), NULL, &rect, 0, NULL, flip_enum);
 }
 
-void Sprite::Draw(SDL_Renderer * renderer)
-{
-    SDL_RenderCopyEx(renderer, texture.get(), &sRect, &dRect, 0, NULL, SDL_FLIP_NONE);
-}
-
 SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect * rect)
 {
     SDL_Texture* texture = nullptr;

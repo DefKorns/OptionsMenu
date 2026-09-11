@@ -11,7 +11,6 @@ RUN_TOP=Run Top
 BENCHMARK_TOOL=Benchmark Tool
 DUMP_FILE_STRUCTURE=Dump File Structure (to USB)
 TOGGLE_USB_WRITE=Toggle Write Access on USB
-TOGGLE_MODERN_UI=Modern UI
 RA_DEBUGGER=RetroArch Debugger (USB logs)
 CHANGE_BUTTON_COMBO=Change Options Button Combo
 CLEAR_CACHE=Clear Cache
@@ -44,7 +43,6 @@ WIFI_BACKUP_SPLASH_LINE2=Please Wait . . .
 DELETE_BACKUP_CONFIRM=Delete this backup?
 DELETE_CONFIRM_HINT=A = Yes     B = No
 DELETE_CONFIRM_GENERIC=Delete this item?
-WIFI_DELETE_HINT_FOOTER=X = Delete     A = Restore
 HINT_SELECT=Select
 HINT_BACK=Back
 HINT_DELETE=Delete (Hold)

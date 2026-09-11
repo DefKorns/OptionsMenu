@@ -83,20 +83,17 @@ Command::Command(std::ifstream & in)
     in.close();
 }
 
-void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, bool modernUI, const ModernChrome & chrome, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
+void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
 {
     std::list<Texture> textList;
     FILE* pipe = popen(command.c_str(), "r");
     if(pipe)
     {
         auto renderer = sdl_context.renderer;
-        if(modernUI)
-            SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, SDL_ALPHA_OPAQUE);
-        else
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, SDL_ALPHA_OPAQUE);
         char buffer[128] = {0};
-        const int textX = modernUI ? UiTheme::FrameRect.x + UiTheme::FrameInset : 30;
-        const int textFirstY = modernUI ? UiTheme::HeaderDividerY + 24 : 100;
+        const int textX = UiTheme::FrameRect.x + UiTheme::FrameInset;
+        const int textFirstY = UiTheme::HeaderDividerY + 24;
 
         // same app header/footer chrome as the main screen, plus a persistent B/Exit badge
         Texture exitLetter("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true);
@@ -108,27 +105,19 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
         exitLabel.rect.x = exitBadge.x + exitBadge.w + UiTheme::BadgeLabelGap;
         exitLabel.rect.y = exitBadge.y + (exitBadge.h - exitLabel.rect.h) / 2;
 
-        auto render = [&](Texture * closeText = nullptr)
+        auto render = [&]()
         {
             sdl_context.StartFrame();
-            if(modernUI)
-            {
-                DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
-                chrome.gearIcon.Draw(renderer);
-                chrome.appTitleText.Draw(renderer);
-                chrome.appVersionText.Draw(renderer);
-                DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
-                DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
-                chrome.creditText.Draw(renderer);
-                DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB.r, UiTheme::BadgeB.g, UiTheme::BadgeB.b, exitBadge.w/2);
-                exitLetter.Draw(renderer);
-                exitLabel.Draw(renderer);
-            }
-            else
-            {
-                menuU.Draw(renderer);
-                menuL.Draw(renderer);
-            }
+            DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
+            chrome.gearIcon.Draw(renderer);
+            chrome.appTitleText.Draw(renderer);
+            chrome.appVersionText.Draw(renderer);
+            DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+            DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+            chrome.creditText.Draw(renderer);
+            DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB.r, UiTheme::BadgeB.g, UiTheme::BadgeB.b, exitBadge.w/2);
+            exitLetter.Draw(renderer);
+            exitLabel.Draw(renderer);
             int y = textFirstY;
             for(auto & t : textList)
             {
@@ -136,10 +125,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
                 t.Draw(renderer);
                 y+=10;
             }
-            if(closeText)
-                closeText->Draw(renderer);
-            if(modernUI)
-                SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, 0xFF); // must be the LAST color-setting call, or it leaks into next frame's clear
+            SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, 0xFF); // must be the LAST color-setting call, or it leaks into next frame's clear
             sdl_context.EndFrame();
         };
 
@@ -170,13 +156,11 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
             render();
         }
         pclose(pipe);
-        // modern UI's badge already says "B: Back" - the old text hint is classic UI only
-        Texture closeText(Translate("PRESS_B_EXIT"), 12, renderer, textX, 610);
 
         while (!controller->GetButtonStatus(B))
         {
             controller->Update();
-            render(modernUI ? nullptr : &closeText);
+            render();
         }
         SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
     }
