@@ -64,3 +64,14 @@ std::string Translate(const std::string & key)
     auto it = strings.find(key);
     return it == strings.end() ? key : it->second;
 }
+
+void LoadLanguageFromConfig(const std::string & optionsRoot)
+{
+    std::string langCode("en-US");
+    std::ifstream in("/etc/options_menu/language.cfg");
+    std::getline(in, langCode);
+    in.close();
+    if(langCode.empty())
+        langCode = "en-US";
+    LoadLanguage(optionsRoot, langCode);
+}

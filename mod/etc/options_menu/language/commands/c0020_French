@@ -1,4 +1,4 @@
-COMMAND_NAME=LANG_FRENCH
+COMMAND_NAME=Français
 COMMAND_TYPE=EXTERNAL
 RESTART_UI=FALSE
 COMMAND_STR=echo fr-FR > /etc/options_menu/language.cfg && usleep 50000 && %options_path%/options --commandPath %options_path%/language/commands/ --title "LANGUAGE_OPTIONS" &

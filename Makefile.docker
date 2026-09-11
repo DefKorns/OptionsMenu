@@ -11,20 +11,22 @@ CXX = g++
 STRIP = strip
 ifdef CROSS_PREFIX
 PKG_CONFIG_LIBDIR = /usr/lib/arm-linux-gnueabihf/pkgconfig
-SDL_CFLAGS = -I/usr/include/arm-linux-gnueabihf $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --cflags sdl2 libpng)
-SDL_LIBS = $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --libs sdl2 libpng)
+SDL_CFLAGS = -I/usr/include/arm-linux-gnueabihf $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --cflags sdl2 SDL2_ttf libpng)
+SDL_LIBS = $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --libs sdl2 SDL2_ttf libpng)
 PNG_LIBS = $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --libs libpng)
 LDFLAGS = -Wl,--allow-shlib-undefined
+VENDORED_TTF_LIBS = mod/etc/options_menu/libSDL2_ttf-2.0.so.0 mod/etc/options_menu/libfreetype.so.2.8
 else
-SDL_CFLAGS = $(shell sdl2-config --cflags)
-SDL_LIBS = $(shell sdl2-config --libs) -lpng
+SDL_CFLAGS = $(shell sdl2-config --cflags) $(shell pkg-config --cflags SDL2_ttf)
+SDL_LIBS = $(shell sdl2-config --libs) $(shell pkg-config --libs SDL2_ttf) -lpng
 PNG_LIBS = -lpng
 LDFLAGS =
+VENDORED_TTF_LIBS =
 #FIX_SDL2_SONAME = true
 endif
 CXXFLAGS = -std=c++11 -Os $(SDL_CFLAGS) -DMOD_VERSION=\"$(MOD_VER)\"
 LDLIBS = $(SDL_LIBS)
-SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/nineslice.cpp src/framework/controller.cpp src/framework/powerwatch.cpp
+SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/controller.cpp src/framework/powerwatch.cpp src/framework/draw_helpers.cpp src/framework/utf8.cpp src/framework/font8x8_lookup.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 DEV_DIR = $(shell realpath .)
 OUT = $(DEV_DIR)/out
@@ -46,18 +48,12 @@ define inject-readme =
 	sed 1d temp/readme.md >> mod/readme.md
 endef
 
-all: $(OUT)/$(TARGET_NAME).hmod $(OUT)/$(TARGET_NAME)_b_down.hmod
+all: $(OUT)/$(TARGET_NAME).hmod
 
 bump-build-number:
 	echo $$(( $$(cat $(BUILD_NUM_FILE) 2>/dev/null || echo 0) + 1 )) > $(BUILD_NUM_FILE)
 
-$(OUT)/$(TARGET_NAME)_b_down.hmod: $(OUT)/$(TARGET_NAME).hmod bump-build-number
-	$(inject-readme)
-	cp button.cfg mod/etc/options_menu/
-	cd mod/; tar -czvf "../out/$(TARGET_NAME)_b_down.hmod" *
-	cp temp/readme.md mod/readme.md
-
-$(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash bump-build-number
+$(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo $(VENDORED_TTF_LIBS) bump-build-number
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/options
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/optiond
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/mod_uninstall/mod_uninstall
@@ -65,36 +61,49 @@ $(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/op
 	$(CROSS_PREFIX)$(STRIP) mod/bin/standby_watchdog
 	upx --lzma mod/bin/standby_watchdog
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/gen_splash
+	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/ChangeCombo
+	upx --lzma mod/etc/options_menu/scripts/ChangeCombo
 	$(inject-readme)
 
-	rm -f mod/etc/options_menu/button.cfg
 	cd mod/; tar -czvf "../out/$(TARGET_NAME).hmod" *
 
 	cp temp/readme.md mod/readme.md
 	find -name "*.o" -type f -delete
 	rm -rf $(TMP)
 
+# SDL2_ttf/freetype aren't on the console's own rootfs (unlike SDL2/libpng);
+# they're shipped as mod/etc/options_menu/lib*.so and found via rpath instead.
 mod/etc/options_menu/options: $(OBJECTS)
-	$(CROSS_PREFIX)$(CXX) $(OBJECTS) $(LDLIBS) $(LDFLAGS) -o mod/etc/options_menu/options
+	$(CROSS_PREFIX)$(CXX) $(OBJECTS) $(LDLIBS) $(LDFLAGS) -Wl,-rpath,'$$ORIGIN' -o mod/etc/options_menu/options
+
+# not ours to redistribute, pulled from the toolchain image each build
+mod/etc/options_menu/libSDL2_ttf-2.0.so.0:
+	cp /usr/lib/arm-linux-gnueabihf/libSDL2_ttf.so mod/etc/options_menu/libSDL2_ttf-2.0.so.0
+
+mod/etc/options_menu/libfreetype.so.2.8:
+	cp /usr/lib/arm-linux-gnueabihf/libfreetype.so.2.8.1 mod/etc/options_menu/libfreetype.so.2.8
 
 mod/etc/options_menu/optiond: src/daemon.o src/framework/controller.o
 	$(CROSS_PREFIX)$(CXX) $(LDFLAGS) src/daemon.o src/framework/controller.o -o mod/etc/options_menu/optiond
 
-mod/etc/options_menu/mod_uninstall/mod_uninstall: src/mod_uninstall.o
-	$(CROSS_PREFIX)$(CXX) src/mod_uninstall.o src/framework/*.o $(LDLIBS) $(LDFLAGS) -o mod/etc/options_menu/mod_uninstall/mod_uninstall
+mod/etc/options_menu/mod_uninstall/mod_uninstall: src/mod_uninstall.o src/localization.o
+	$(CROSS_PREFIX)$(CXX) src/mod_uninstall.o src/localization.o src/framework/*.o $(LDLIBS) $(LDFLAGS) -Wl,-rpath,/etc/options_menu -o mod/etc/options_menu/mod_uninstall/mod_uninstall
 
 mod/bin/standby_watchdog: src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o
 	$(CROSS_PREFIX)$(CXX) src/standby_watchdog.o src/framework/controller.o src/framework/powerwatch.o -o mod/bin/standby_watchdog
 
-mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o
-	$(CROSS_PREFIX)$(CXX) src/gen_splash.o src/localization.o $(PNG_LIBS) $(LDFLAGS) -o mod/etc/options_menu/scripts/gen_splash
+mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o src/framework/utf8.o src/framework/font8x8_lookup.o
+	$(CROSS_PREFIX)$(CXX) src/gen_splash.o src/localization.o src/framework/utf8.o src/framework/font8x8_lookup.o $(PNG_LIBS) $(LDFLAGS) -o mod/etc/options_menu/scripts/gen_splash
+
+mod/etc/options_menu/scripts/ChangeCombo: src/change_combo.o src/framework/controller.o src/localization.o
+	$(CROSS_PREFIX)$(CXX) src/change_combo.o src/framework/controller.o src/localization.o $(LDFLAGS) -o mod/etc/options_menu/scripts/ChangeCombo
 
 %.o: %.cpp
 	$(CROSS_PREFIX)$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	find -name "*.o" -type f -delete
-	rm -f mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/button.cfg $(TARGET_NAME).hmod $(TARGET_NAME)_b_down.hmod
+	rm -f mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/libSDL2_ttf-2.0.so.0 mod/etc/options_menu/libfreetype.so.2.8 $(TARGET_NAME).hmod
 	rm -rf out/ temp/
 
 .PHONY: clean bump-build-number

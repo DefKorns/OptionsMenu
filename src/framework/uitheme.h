@@ -20,64 +20,45 @@
 
 #include <SDL.h>
 
-// Geometry and palette for the "settings dialog" look. Screen is a fixed
-// 1280x720 (sdl_context.cpp), so these are plain constants.
+// Geometry and palette for the split-panel "settings dialog" look. Screen
+// is a fixed 1280x720 (sdl_context.cpp), so these are plain constants.
+// Border/dividers are flat drawn lines (see draw_helpers.h), no textured art.
 namespace UiTheme
 {
-    const Uint8 BgR = 0x0A, BgG = 0x0A, BgB = 0x0C;
+    const Uint8 BgR = 0x0C, BgG = 0x0F, BgB = 0x16;
+    const Uint8 BorderR = 0x2A, BorderG = 0x2C, BorderB = 0x33;
+    const Uint8 AccentR = 0xF0, AccentG = 0xC4, AccentB = 0x3D; // yellow
+    const Uint8 SelectedRowBgR = 0x14, SelectedRowBgG = 0x16, SelectedRowBgB = 0x1A;
 
     // TV overscan safe area
-    const int SafeMarginX = 48;
+    const int SafeMarginX = 64;
     const int SafeMarginY = 36;
+    const int BorderWidth = 3;
+    const int BorderRadius = 14;
+    const int BoxRadius = 8; // selected row / detail icon box / preview box
+    const int ContentPadding = 16; // border to content start
+    const int FrameInset = 24; // text inset for the INTERNAL command output screen
 
     const SDL_Rect FrameRect{ SafeMarginX, SafeMarginY, 1280 - 2*SafeMarginX, 720 - 2*SafeMarginY };
-    const int FrameInset = 24; // frame.png's 9-slice corner size
+    const int FrameX = FrameRect.x + ContentPadding;
+    const int FrameY = FrameRect.y + ContentPadding;
+    const int FrameW = FrameRect.w - 2*ContentPadding;
 
-    // selection highlight bar
-    const int HighlightInsetLR = 8;
-    const int HighlightX = FrameRect.x + 16;
-    const int HighlightW = (FrameRect.x + FrameRect.w - FrameInset) - HighlightX;
-    const int HighlightH = 20;
-    const Uint8 HighlightR = 0x3F, HighlightG = 0x59, HighlightB = 0x7F;
-
-    // right edge for switches/highlight on rows with a PREVIEW_IMAGE - fixed,
-    // not derived from PREVIEW_IMAGE_X, so it doesn't move as that's tuned
-    const int ControlColumnRightX = 760;
-    const int HighlightWWithPreview = ControlColumnRightX - HighlightX;
-
-    // row layout
-    const int RowFirstY = FrameRect.y + 236;
-    const int RowPitch = 22;
-    const int RowTextX = FrameRect.x + 40;
-    const int DisplayItemCount = 16; // rows visible at once, both UI styles
-
-    // badge cluster (A/B always shown, X shown per-row when it has a delete action)
-    const int BadgeOuterSize = 28;
-    const int BadgeInnerSize = 22;
-    const int BadgeBandY = FrameRect.y + 22;
-    const int BadgeClusterRightX = FrameRect.x + FrameRect.w - 24;
-    const int BadgeGroupGap = 24;
-    const int BadgeLabelGap = 6;
-    const Uint32 BadgeLetterColor = 0xFF16161C; // AABBGGRR
-
-    struct BadgeColor { Uint8 r, g, b; };
-    const BadgeColor BadgeA{ 0xE0, 0xA4, 0x58 }; // amber
-    const BadgeColor BadgeADark{ 0xA0, 0x6D, 0x2E };
-    const BadgeColor BadgeB{ 0x4F, 0xB0, 0xA5 }; // teal
-    const BadgeColor BadgeBDark{ 0x2C, 0x72, 0x68 };
-    const BadgeColor BadgeX{ 0x6C, 0x8E, 0xBF }; // slate-blue
-    const BadgeColor BadgeXDark{ 0x3F, 0x59, 0x7F };
-    const BadgeColor BadgeY{ 0xC9, 0x7B, 0x84 }; // dusty rose, unused
-    const BadgeColor BadgeYDark{ 0x8F, 0x47, 0x50 };
+    const int HeaderH = 64;
+    const int FooterGap = 16;
+    const int FooterH = 50;
+    const int BodyH = FrameRect.h - 2*ContentPadding - FooterGap - FooterH;
+    const int FooterY = FrameY + BodyH + FooterGap;
+    const int FooterDividerY = FooterY - FooterGap/2;
+    const SDL_Rect OuterRect{ FrameRect.x, FrameRect.y, FrameRect.w, (FooterY+FooterH+ContentPadding) - FrameRect.y };
 
     // header/body divider
-    const int HeaderDividerY = FrameRect.y + 76;
-    const int HeaderDividerH = 2;
-    const int HeaderDividerX = FrameRect.x + FrameInset;
-    const int HeaderDividerW = FrameRect.w - 2 * FrameInset;
+    const int HeaderDividerY = FrameY + HeaderH;
+    const int HeaderDividerX = FrameX;
+    const int HeaderDividerW = FrameW;
 
     // gear icon
-    const int GearX = FrameRect.x + 32, GearY = FrameRect.y + 22;
+    const int GearX = FrameX, GearY = FrameY + 4;
     const int GearSize = 32;
 
     // "OptionsMenu" + smaller "vX.Y.Z", right of the gear
@@ -88,27 +69,74 @@ namespace UiTheme
     const int TitleX = GearX + GearSize + TitleGap;
     const int TitleY = GearY + GearSize / 2;
 
-    // current screen's title, centered below the divider
+    // current screen's title, left-aligned next to a small accent bar
     const int SectionTitleFontSize = 28;
-    const int SectionTitleY = FrameRect.y + 116;
-    const int SectionTitleCenterX = FrameRect.x + FrameRect.w / 2;
+    const int SectionAccentBarW = 3;
+    const int SectionAccentBarH = 26;
+    const int SectionTitleY = HeaderDividerY + 22;
+    const int SectionTitleX = FrameX + 32 + 14 + SectionAccentBarW; // ListX + accent bar + gap
 
-    // toggle switch, right-aligned to the control column
-    const int SwitchRightX = ControlColumnRightX;
+    // row list (left column)
+    const int ListX = FrameX + 32;
+    const int ListW = 800;
+    const int ListContentRightX = ListX + ListW - 40; // row box / divider right edge
+    const int RowControlRightX = ListContentRightX - 16; // switch/chevron align here - matches RowTextX's 16px left inset
+    const int RowFirstY = SectionTitleY + 46; // clears the section title's own text height at SectionTitleFontSize
+    const int RowPitch = 36;
+    const int RowTextYNudge = -4; // fine-tune vs. pure (slot-h - text-h)/2 centering
+    const int RowTextX = ListX + 16;
+    const int PinnedBottomMargin = 10; // gap from the footer divider to the last pinned row (e.g. Exit)
+
+    // detail panel (right column), Modern UI only - just the preview image,
+    // fixed Y independent of scroll/selection (it must not move as the list
+    // scrolls). No icon box/title - nothing to show without per-command art.
+    const int DetailX = ListX + ListW + 16;
+    const int DetailW = (FrameX + FrameW - 16) - DetailX;
+    const int PreviewBoxH = 200;
+    // centered between the header and footer dividers, not anchored to the top
+    const int PreviewBoxY = HeaderDividerY + ((FooterDividerY - HeaderDividerY) - PreviewBoxH) / 2;
+
+    // toggle switch
+    const int SwitchRightX = RowControlRightX;
     const int SwitchW = 40, SwitchH = 16;
 
-    // "created by CompCom" footer credit, right-aligned inside the frame
-    const int CreditRightX = (FrameRect.x + FrameRect.w - FrameInset) - 24;
-    const int CreditY = FrameRect.y + FrameRect.h - 28;
+    // badge cluster (A/B always shown, X shown per-row when it has a delete
+    // action), now in the footer instead of the header
+    const int BadgeOuterSize = 28;
+    const int BadgeInnerSize = 22;
+    const int BadgeBandY = FooterY + (FooterH - BadgeOuterSize) / 2;
+    const int BadgeClusterRightX = FrameX + FrameW - 8;
+    const int BadgeGroupGap = 24;
+    const int BadgeLabelGap = 6;
+    // DrawBadge's returned "next left edge" already subtracts BadgeGroupGap
+    // (24px) from the last-drawn badge's own left edge; this closes the gap
+    // to land the divider exactly 40px left of that badge, per hardware test
+    const int BadgeDividerGapFromCluster = 16;
+    const Uint32 BadgeLetterColor = 0xFF16161C; // AABBGGRR
+    const Uint32 TextDimColor = 0xFF938D8D; // AABBGGRR - muted grey for chevrons/secondary text
 
-    // scroll chevrons
-    const int ScrollX = SectionTitleCenterX - 8;
-    const int ScrollUpY = FrameRect.y + 216;
-    const int ScrollDownY = RowFirstY + DisplayItemCount * RowPitch + 8;
+    struct BadgeColor { Uint8 r, g, b; };
+    const BadgeColor BadgeA{ 0x4C, 0xAF, 0x6E }; // green
+    const BadgeColor BadgeADark{ 0x2E, 0x6B, 0x42 };
+    const BadgeColor BadgeB{ 0xE1, 0x55, 0x54 }; // red
+    const BadgeColor BadgeBDark{ 0x8C, 0x34, 0x33 };
+    const BadgeColor BadgeX{ 0x6C, 0x8E, 0xBF }; // slate-blue
+    const BadgeColor BadgeXDark{ 0x3F, 0x59, 0x7F };
+    const BadgeColor BadgeY{ 0xC9, 0x7B, 0x84 }; // dusty rose, unused
+    const BadgeColor BadgeYDark{ 0x8F, 0x47, 0x50 };
+    const BadgeColor BadgeStart{ 0xC2, 0xA8, 0x5E }; // muted gold, for a wide "Start" pill instead of a letter circle
+    const BadgeColor BadgeStartDark{ 0x74, 0x65, 0x38 };
+
+    // "created by CompCom" footer credit, left-aligned in the footer
+    const int CreditX = FrameX;
+    const int CreditY = FooterY + FooterH/2 - 8;
+
+    // scroll chevrons - in the empty gutter left of the list, not over it
+    const int ScrollX = FrameX + (ListX - FrameX) / 2 - 7;
+    const int ScrollUpY = HeaderDividerY + 90;
+    const int ScrollDownY = FooterDividerY - 104;
 
     // asset paths, relative to optionsLocation
-    const char * const AssetFrame = "/images/ui/frame.png";
-    const char * const AssetHighlight = "/images/ui/highlight.png";
     const char * const AssetBadgeOuter = "/images/ui/badge_outer.png";
     const char * const AssetBadgeInner = "/images/ui/badge_inner.png";
     const char * const AssetSwitchOn = "/images/ui/switch_on.png";

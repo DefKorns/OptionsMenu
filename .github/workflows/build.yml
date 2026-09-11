@@ -10,20 +10,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
 
       # vendor/ holds the console's own SDL2 headers + libSDL2.so, extracted
       # from the console's firmware - proprietary, so it isn't committed to
       # this (public) repo. It's too large for a GitHub Secret (2.6MB, the
       # limit is ~48-64KB), so it's kept in a separate PRIVATE repo instead
       # and cloned here with a fine-grained PAT (repo secret VENDOR_REPO_PAT,
-      # read-only access to that one private repo).
+      # read-only access to that one private repo). Lands in toolchain/vendor -
+      # the Dockerfile's build context is the toolchain/ submodule, not repo root.
       - name: Restore vendor/ from private repo
         run: |
-          git clone --depth 1 "https://x-access-token:${{ secrets.VENDOR_REPO_PAT }}@github.com/${{ secrets.VENDOR_REPO }}.git" vendor
+          git clone --depth 1 "https://x-access-token:${{ secrets.VENDOR_REPO_PAT }}@github.com/${{ secrets.VENDOR_REPO }}.git" toolchain/vendor
 
       - name: Build cross-compile toolchain image
-        run: docker build -f Dockerfile.jessie-armhf -t optionsmenu-toolchain:jessie .
+        run: docker build -f toolchain/Dockerfile.jessie-armhf -t hakchi-toolchain:jessie-armhf toolchain
 
       # On a tag push (release build), force MOD_VER to the tag name itself
       # rather than trusting `git describe` inside the container -- checkout
@@ -37,10 +40,10 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then
             MOD_VER_ARG="MOD_VER=${{ github.ref_name }}"
           fi
-          docker run --rm -v "${{ github.workspace }}:/src" optionsmenu-toolchain:jessie make -f Makefile.docker CROSS_PREFIX=arm-linux-gnueabihf- $MOD_VER_ARG
+          docker run --rm -v "${{ github.workspace }}:/src" hakchi-toolchain:jessie-armhf make -f Makefile.docker CROSS_PREFIX=arm-linux-gnueabihf- $MOD_VER_ARG
 
       - name: Upload .hmod build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: options-menu-hmod
           path: out/*.hmod
@@ -51,13 +54,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: options-menu-hmod
           path: out
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: out/*.hmod
           generate_release_notes: true

@@ -1,4 +1,4 @@
-COMMAND_NAME=LANG_GERMAN
+COMMAND_NAME=Deutsch
 COMMAND_TYPE=EXTERNAL
 RESTART_UI=FALSE
 COMMAND_STR=echo de-DE > /etc/options_menu/language.cfg && usleep 50000 && %options_path%/options --commandPath %options_path%/language/commands/ --title "LANGUAGE_OPTIONS" &

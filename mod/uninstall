@@ -1,1 +1,9 @@
+#!/bin/sh
+# shellcheck disable=SC2154
 rm -f "$rootfs/etc/options_menu/button.cfg"
+rm -f "$rootfs/etc/options_menu/language.cfg"
+rm -f "$rootfs/etc/options_menu/ui_style.cfg"
+rm -f "$rootfs/etc/options_menu/network/restore/commands"/c0001_*
+rm -f "$rootfs/etc/options_menu/network/commands"/_*
+find "$rootfs/etc/options_menu" -depth -type d -empty -delete 2>/dev/null
+find "$rootfs/etc/hibernate_mod" -depth -type d -empty -delete 2>/dev/null
