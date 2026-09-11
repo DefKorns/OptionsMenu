@@ -48,16 +48,10 @@ define inject-readme =
 	sed 1d temp/readme.md >> mod/readme.md
 endef
 
-all: $(OUT)/$(TARGET_NAME).hmod $(OUT)/$(TARGET_NAME)_b_down.hmod
+all: $(OUT)/$(TARGET_NAME).hmod
 
 bump-build-number:
 	echo $$(( $$(cat $(BUILD_NUM_FILE) 2>/dev/null || echo 0) + 1 )) > $(BUILD_NUM_FILE)
-
-$(OUT)/$(TARGET_NAME)_b_down.hmod: $(OUT)/$(TARGET_NAME).hmod bump-build-number
-	$(inject-readme)
-	cp button.cfg mod/etc/options_menu/
-	cd mod/; tar -czvf "../out/$(TARGET_NAME)_b_down.hmod" *
-	cp temp/readme.md mod/readme.md
 
 $(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash $(VENDORED_TTF_LIBS) bump-build-number
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/options
@@ -69,7 +63,6 @@ $(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/op
 	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/gen_splash
 	$(inject-readme)
 
-	rm -f mod/etc/options_menu/button.cfg
 	cd mod/; tar -czvf "../out/$(TARGET_NAME).hmod" *
 
 	cp temp/readme.md mod/readme.md
@@ -105,7 +98,7 @@ mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o
 
 clean:
 	find -name "*.o" -type f -delete
-	rm -f mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/button.cfg mod/etc/options_menu/libSDL2_ttf-2.0.so.0 mod/etc/options_menu/libfreetype.so.2.8 $(TARGET_NAME).hmod $(TARGET_NAME)_b_down.hmod
+	rm -f mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/libSDL2_ttf-2.0.so.0 mod/etc/options_menu/libfreetype.so.2.8 $(TARGET_NAME).hmod
 	rm -rf out/ temp/
 
 .PHONY: clean bump-build-number
