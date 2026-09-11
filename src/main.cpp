@@ -23,7 +23,6 @@
 #include <map>
 #include <cmath>
 #include <dirent.h>
-#include <unistd.h>
 
 #ifndef MOD_VERSION
 #define MOD_VERSION "dev"
@@ -77,7 +76,16 @@ std::string CollapseSlashes(const std::string & path)
     return result;
 }
 
-ExitManager _exitManager;
+static struct ExitManager
+{
+    std::string exitCommand;
+    bool runExitCommand = true;
+    ~ExitManager()
+    {
+        if(runExitCommand)
+            system(exitCommand.c_str());
+    }
+} _exitManager;
 
 int main(int argc, char * argv[])
 {
@@ -539,10 +547,7 @@ int main(int argc, char * argv[])
 
         if(sdl_context.powerwatch->buttonPress())
         {
-            // skip SDL teardown - vsync can block on a vblank the display
-            // never delivers once the console starts powering off
-            system(_exitManager.exitCommand.c_str());
-            _exit(0);
+            break;
         }
         if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
         {
@@ -554,8 +559,6 @@ int main(int argc, char * argv[])
             }
             else
             {
-                // release the display first - the child's startup delay assumed our teardown was instant
-                sdl_context.Shutdown();
                 system(commands[currentCommandId].command.c_str());
                 _exitManager.runExitCommand = commands[currentCommandId].restartUI;
                 break;

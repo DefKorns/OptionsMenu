@@ -12,8 +12,6 @@
 
 #include "framework/sdl_helper.h"
 
-#include <cstdlib>
-
 class Controller;
 
 // header/footer textures, shared by reference with the main screen
@@ -24,19 +22,6 @@ struct ModernChrome
     Texture & appVersionText;
     Texture & creditText;
 };
-
-// runs the paused-UI resume script on exit, unless something (delete, relaunch) disables it
-struct ExitManager
-{
-    std::string exitCommand;
-    bool runExitCommand = true;
-    ~ExitManager()
-    {
-        if(runExitCommand)
-            system(exitCommand.c_str());
-    }
-};
-extern ExitManager _exitManager;
 
 struct Command
 {

@@ -10,7 +10,6 @@
 #include "command.h"
 #include "framework/controller.h"
 #include "framework/draw_helpers.h"
-#include "framework/powerwatch.h"
 #include "localization.h"
 
 #include <cctype>
@@ -19,7 +18,6 @@
 #include <vector>
 #include <poll.h>
 #include <fcntl.h>
-#include <unistd.h>
 
 // std::stoi throws on non-numeric input; avoid crashing on a bad command file
 static int SafeStoi(const std::string & value, int fallback = 0)
@@ -158,13 +156,6 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
             if(!feof(pipe))
                 clearerr(pipe); // last fgets() failed because nothing's ready yet, not EOF - stay readable
 
-            // power press must exit even mid-command - skip SDL teardown, same as main.cpp's loop
-            if(sdl_context.powerwatch->buttonPress())
-            {
-                system(_exitManager.exitCommand.c_str());
-                _exit(0);
-            }
-
             // ignoreInterrupt commands (e.g. ChangeCombo) read the controller themselves -
             // stop polling it here too, or we race them for the same button events
             if(!ignoreInterrupt)
@@ -180,11 +171,6 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
 
         while (!controller->GetButtonStatus(B))
         {
-            if(sdl_context.powerwatch->buttonPress())
-            {
-                system(_exitManager.exitCommand.c_str());
-                _exit(0);
-            }
             controller->Update();
             render();
         }

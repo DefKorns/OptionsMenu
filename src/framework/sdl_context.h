@@ -25,10 +25,6 @@ public:
     ~SDL_Context();
     void StartFrame();
     void EndFrame();
-    // releases the renderer/window now instead of waiting for the destructor -
-    // call before system()-launching a replacement options process, so that
-    // process isn't racing this one for the display (see main.cpp)
-    void Shutdown();
 
     SDL_Window* window;
     SDL_Renderer* renderer;
@@ -38,7 +34,6 @@ public:
 private:
     std::chrono::time_point<std::chrono::system_clock> nextFrameTime;
     bool powerButtonExit;
-    bool shutDown = false;
 };
 
 #endif
