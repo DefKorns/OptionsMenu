@@ -43,6 +43,10 @@ This option will safely restart the console.\*
 
 This option will open a menu for managing retroarch configurations (see below).
 
+#### Network Options
+
+This option will open a menu for managing your network and wifi configuration (see below).
+
 #### Advanced Options
 
 This option will open a menu containing more advanced features (see below).
@@ -99,78 +103,6 @@ Removes all bios files from NAND only.
 
 Toggle the RetroArch and Canoe loading screens on or off.
 
-## Advanced Options
-
-#### Module Uninstaller
-
-This option launches the module uninstaller program. This program allows you to remove modules from your device. Press the up and down buttons to select a module. Press A to add a module to the uninstall list. Press B to remove a module from the uninstall list. Pressing start will exit if no modules are added to the uninstall list. If there are modules on the uninstall this you will be prompted to ensure you want to remove them press START+SELECT to remove selected modules or B to cancel.
-
->**Caution:** The uninstaller will list all modules on the device including the default hakchi modules. Only delete modules you have added yourself. Deleting the default hakchi modules can have unintended effects on your console.
-
-#### Display Temp
-
-This option will display the current temperature of the CPU.
-
-#### Run Top
-
-This option runs and displays the output of the top binary. This shows the current CPU, memory usage and list of running processes.
-
-#### Benchmark Tool
-
-This option will go through and echo out useful information regarding your console.
-It will also include information on your:
-
-- Current disk mounting information
-- CPU analysis information
-- RAM analysis information
-
-> **Note:** The information is displayed in 4 parts and has a 2 second wait between each part
-
-#### Dump File Structure (to USB)
-
-This option will map and echo out your complete file and directory structure for your console and any mounted disks. The log file will be saved to your mounted USB/SD card at:
-
-    /media/data/log/Hakchi_file_structure.log
-
- > **Note:** If these folders do not exist, they will be created when the option is ran.
-
-The log file will also include information on:
-
-- Symbolic Links (Overmounts)
-- File and directory permissions
-
-#### Toggle Write Access on USB
-
-This option will toggle read write access on your USB device. By default, if you don't have a saves folder located on your USB/SD, write access is disabled. If you wish to write logs or use your external mounted storage and **not** use external saves... This is the toggle for you.
-
- > **Note:** If you already use external saves. You don't need to use this toggle.
-
-#### RetroArch Debugger (USB logs)
-
-This option will run your locally installed RetroArch in full verbose mode. It will also copy the config files for your RetroArch and save them to:
-
-    /media/data/log/RetroArchConfig
-
-The full verbose log will be located here:
-
-    /media/data/log/Hakchi_retroarch_debug.log
-
-> **Note:** Depending on what you are trying to do, you might have limited functionality within RetroArch when running it via the debugger. This app is primarily designed to debug cores, custom configs and themes.
-
-#### Change Options Button Combo
-
-This option will allow you to change the button combo used to launch the options menu. You will need to restart the console after setting a new combo.
-
-> **Note:** The default combo is **L + R**, or **B + Down** on consoles with no shoulder buttons (NES Classic, Famicom Classic and its variants, e.g. the Famicom Shonen Jump 50th Anniversary edition), detected automatically. Setting a custom combo here overrides that detection.
-
-#### Clear Cache
-
-This option will force the kernel to clear the page cache and free up unused memory. You should not need to call this as the system should manage memory fine on it's own.
-
-#### Language Options
-
-This option opens a submenu where you can choose the display language for the Options Menu. Currently available: English, Français, Deutsch, Español, Italiano, Nederlands, Português (Europeu), Русский and 日本語. The Options Menu automatically restarts in the selected language.
-
 ## Network Options
 
 #### Display IP Address
@@ -220,6 +152,78 @@ and reconnects to the network.
 While browsing the list of saved backups, hold **B** (~1 second) to delete
 the selected backup (you will be asked to confirm with **A**, or cancel by
 pressing **B** again). The list refreshes automatically after deleting.
+
+## Advanced Options
+
+#### Language Options
+
+This option opens a submenu where you can choose the display language for the Options Menu. Currently available: English, Français, Deutsch, Español, Italiano, Nederlands, Português (Europeu), Русский and 日本語. The Options Menu automatically restarts in the selected language.
+
+#### Change Options Button Combo
+
+This option will allow you to change the button combo used to launch the options menu. You will need to restart the console after setting a new combo.
+
+> **Note:** The default combo is **L + R**, or **B + Down** on consoles with no shoulder buttons (NES Classic, Famicom Classic and its variants, e.g. the Famicom Shonen Jump 50th Anniversary edition), detected automatically. Setting a custom combo here overrides that detection.
+
+#### Toggle Write Access on USB
+
+This option will toggle read write access on your USB device. By default, if you don't have a saves folder located on your USB/SD, write access is disabled. If you wish to write logs or use your external mounted storage and **not** use external saves... This is the toggle for you.
+
+ > **Note:** If you already use external saves. You don't need to use this toggle.
+
+#### Clear Cache
+
+This option will force the kernel to clear the page cache and free up unused memory. You should not need to call this as the system should manage memory fine on it's own.
+
+#### Module Uninstaller
+
+This option launches the module uninstaller program. This program allows you to remove modules from your device. Press the up and down buttons to select a module. Press A to add a module to the uninstall list. Press B to remove a module from the uninstall list. Pressing start will exit if no modules are added to the uninstall list. If there are modules on the uninstall this you will be prompted to ensure you want to remove them press START+SELECT to remove selected modules or B to cancel.
+
+>**Caution:** The uninstaller will list all modules on the device including the default hakchi modules. Only delete modules you have added yourself. Deleting the default hakchi modules can have unintended effects on your console.
+
+#### Display Temp
+
+This option will display the current temperature of the CPU.
+
+#### Run Top
+
+This option runs and displays the output of the top binary. This shows the current CPU, memory usage and list of running processes.
+
+#### Benchmark Tool
+
+This option will go through and echo out useful information regarding your console.
+It will also include information on your:
+
+- Current disk mounting information
+- CPU analysis information
+- RAM analysis information
+
+> **Note:** The information is displayed in 4 parts and has a 2 second wait between each part
+
+#### RetroArch Debugger (USB logs)
+
+This option will run your locally installed RetroArch in full verbose mode. It will also copy the config files for your RetroArch and save them to:
+
+    /media/data/log/RetroArchConfig
+
+The full verbose log will be located here:
+
+    /media/data/log/Hakchi_retroarch_debug.log
+
+> **Note:** Depending on what you are trying to do, you might have limited functionality within RetroArch when running it via the debugger. This app is primarily designed to debug cores, custom configs and themes.
+
+#### Dump File Structure (to USB)
+
+This option will map and echo out your complete file and directory structure for your console and any mounted disks. The log file will be saved to your mounted USB/SD card at:
+
+    /media/data/log/Hakchi_file_structure.log
+
+ > **Note:** If these folders do not exist, they will be created when the option is ran.
+
+The log file will also include information on:
+
+- Symbolic Links (Overmounts)
+- File and directory permissions
 
 ## Developer Information
 
