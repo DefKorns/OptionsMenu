@@ -59,3 +59,10 @@ CHANGE_COMBO_CHOSEN=La combinación elegida es:
 CHANGE_COMBO_CONFIRM=Si es correcta pulsa A. Si no, pulsa cualquier otro botón para intentarlo de nuevo.
 CHANGE_COMBO_DONE=Listo. Reinicia la consola para aplicar los cambios.
 CHANGE_COMBO_WRITE_ERROR=No se pudo guardar la combinación en el archivo.
+MOD_UNINSTALLER_INSTALLED=Módulos instalados
+MOD_UNINSTALLER_TO_REMOVE=Para desinstalar
+HINT_ADD=Añadir
+HINT_UNDO=Deshacer
+HINT_UNINSTALL=Desinstalar
+MOD_UNINSTALL_CONFIRM=¿Eliminar estos módulos?
+MOD_UNINSTALL_CONFIRM_HINT=Start+Select = Sí     B = No

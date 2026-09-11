@@ -59,3 +59,10 @@ CHANGE_COMBO_CHOSEN=Your chosen options menu combo is:
 CHANGE_COMBO_CONFIRM=If this is correct press A. If not press any other button to try again.
 CHANGE_COMBO_DONE=Done. Please reboot to take effect.
 CHANGE_COMBO_WRITE_ERROR=Could not write button combo to file.
+MOD_UNINSTALLER_INSTALLED=Installed Modules
+MOD_UNINSTALLER_TO_REMOVE=To Uninstall
+HINT_ADD=Add
+HINT_UNDO=Undo
+HINT_UNINSTALL=Uninstall
+MOD_UNINSTALL_CONFIRM=Remove these modules?
+MOD_UNINSTALL_CONFIRM_HINT=Start+Select = Yes     B = No

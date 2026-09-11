@@ -59,3 +59,10 @@ CHANGE_COMBO_CHOSEN=A combinação escolhida é:
 CHANGE_COMBO_CONFIRM=Se estiver correta prime A. Caso contrário, prime qualquer outro botão para tentar de novo.
 CHANGE_COMBO_DONE=Concluído. Reinicia a consola para aplicar.
 CHANGE_COMBO_WRITE_ERROR=Não foi possível guardar a combinação no ficheiro.
+MOD_UNINSTALLER_INSTALLED=Módulos instalados
+MOD_UNINSTALLER_TO_REMOVE=Para desinstalar
+HINT_ADD=Adicionar
+HINT_UNDO=Anular
+HINT_UNINSTALL=Desinstalar
+MOD_UNINSTALL_CONFIRM=Remover estes módulos?
+MOD_UNINSTALL_CONFIRM_HINT=Start+Select = Sim     B = Não

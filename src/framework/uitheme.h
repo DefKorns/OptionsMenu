@@ -124,6 +124,8 @@ namespace UiTheme
     const BadgeColor BadgeXDark{ 0x3F, 0x59, 0x7F };
     const BadgeColor BadgeY{ 0xC9, 0x7B, 0x84 }; // dusty rose, unused
     const BadgeColor BadgeYDark{ 0x8F, 0x47, 0x50 };
+    const BadgeColor BadgeStart{ 0xC2, 0xA8, 0x5E }; // muted gold, for a wide "Start" pill instead of a letter circle
+    const BadgeColor BadgeStartDark{ 0x74, 0x65, 0x38 };
 
     // "created by CompCom" footer credit, left-aligned in the footer
     const int CreditX = FrameX;

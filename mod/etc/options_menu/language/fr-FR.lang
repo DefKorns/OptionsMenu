@@ -59,3 +59,10 @@ CHANGE_COMBO_CHOSEN=La combinaison choisie est :
 CHANGE_COMBO_CONFIRM=Si c'est correct, appuie sur A. Sinon, appuie sur un autre bouton pour réessayer.
 CHANGE_COMBO_DONE=Terminé. Redémarre la console pour appliquer les changements.
 CHANGE_COMBO_WRITE_ERROR=Impossible d'enregistrer la combinaison dans le fichier.
+MOD_UNINSTALLER_INSTALLED=Modules installés
+MOD_UNINSTALLER_TO_REMOVE=À désinstaller
+HINT_ADD=Ajouter
+HINT_UNDO=Annuler
+HINT_UNINSTALL=Désinstaller
+MOD_UNINSTALL_CONFIRM=Supprimer ces modules ?
+MOD_UNINSTALL_CONFIRM_HINT=Start+Select = Oui     B = Non
