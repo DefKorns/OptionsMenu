@@ -1,5 +1,8 @@
 # Options Menu Documentation
 
+[![Build](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml/badge.svg)](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 ## What is the options menu?
 
 The Options Menu is a custom menu that can be launched via a controller button combo at any point during the console’s operation. It features a variety of commands to enhance the user experience of the console.
