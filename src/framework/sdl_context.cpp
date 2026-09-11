@@ -10,6 +10,7 @@
 #include "sdl_context.h"
 #include "powerwatch.h"
 
+#include <algorithm>
 #include <iostream>
 #include <thread>
 #include <SDL.h>
@@ -18,8 +19,15 @@
 SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit) : fpsTime(fpsTime), powerButtonExit(powerButtonExit)
 {
     powerwatch = new PowerWatch();
+    // SDL defaults to nearest-neighbor texture scaling, which makes any
+    // upscaled art (e.g. a preview image scaled to fit its box) look
+    // blocky/jagged instead of the smooth PNG it actually is
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     window = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_FULLSCREEN);
-    renderer = SDL_CreateRenderer(window, -1, 0);
+    // vsync makes SDL_RenderPresent block for the next vertical blank instead
+    // of returning immediately, so a post-pause frame burst (see EndFrame)
+    // can't outrun the display and tear/flicker the way it could unthrottled
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
     if(renderer == NULL) {
         std::cerr << "Cannot create renderer.\n";
         SDL_DestroyWindow(window);
@@ -31,8 +39,16 @@ SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit
 
 SDL_Context::~SDL_Context()
 {
-    TTF_Quit();
+    Shutdown();
     delete powerwatch;
+}
+
+void SDL_Context::Shutdown()
+{
+    if(shutDown)
+        return;
+    shutDown = true;
+    TTF_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -49,5 +65,10 @@ void SDL_Context::EndFrame()
 {
     SDL_RenderPresent(renderer);
     std::this_thread::sleep_until(nextFrameTime);
-    nextFrameTime += fpsTime;
+    // after a long stall (e.g. hakchi's "uipause" SIGSTOPs this process
+    // while it reads /dev/fb0 for a screenshot), nextFrameTime is left far
+    // in the past - clamp to now so resuming doesn't burn through a burst
+    // of back-to-back unthrottled frames trying to catch up, which is what
+    // caused the flicker after taking a screenshot
+    nextFrameTime = std::max(nextFrameTime, std::chrono::system_clock::now()) + fpsTime;
 }

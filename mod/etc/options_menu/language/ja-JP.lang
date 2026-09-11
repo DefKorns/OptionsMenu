@@ -47,6 +47,6 @@ DELETE_CONFIRM_GENERIC=これをさくじょしますか?
 WIFI_DELETE_HINT_FOOTER=X = さくじょ     A = もどす
 HINT_SELECT=けってい
 HINT_BACK=もどる
-HINT_DELETE=けす
+HINT_DELETE=けす (ながおし)
 NO_NET_ERR=Serverへのせつぞくにしっぱいしました. Internetせつぞくをかくにんして, もういちどおためしください.
 NO_PKG_ERR=ようきゅうされたPackageは, いま, りようできません. しばらくしてから, もういちどおためしください.

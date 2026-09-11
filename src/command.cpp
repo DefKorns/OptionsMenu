@@ -9,6 +9,7 @@
 
 #include "command.h"
 #include "framework/controller.h"
+#include "framework/draw_helpers.h"
 #include "localization.h"
 
 #include <cctype>
@@ -78,10 +79,11 @@ Command::Command(std::ifstream & in)
         else if(param.compare("PREVIEW_IMAGE_HEIGHT")==0)
             previewImageHeight = SafeStoi(value, -1);
     }
+    hasSubmenu = !isToggle && command.find("--commandPath") != std::string::npos;
     in.close();
 }
 
-void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, bool modernUI, const NineSlice & frame, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
+void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, bool modernUI, const ModernChrome & chrome, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
 {
     std::list<Texture> textList;
     FILE* pipe = popen(command.c_str(), "r");
@@ -96,11 +98,32 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
         const int textX = modernUI ? UiTheme::FrameRect.x + UiTheme::FrameInset : 30;
         const int textFirstY = modernUI ? UiTheme::HeaderDividerY + 24 : 100;
 
+        // same app header/footer chrome as the main screen, plus a persistent B/Exit badge
+        Texture exitLetter("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true);
+        Texture exitLabel(Translate("EXIT"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true);
+        int badgeGroupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + exitLabel.rect.w;
+        SDL_Rect exitBadge{ UiTheme::BadgeClusterRightX - badgeGroupW, UiTheme::BadgeBandY, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
+        exitLetter.rect.x = exitBadge.x + (exitBadge.w - exitLetter.rect.w) / 2;
+        exitLetter.rect.y = exitBadge.y + (exitBadge.h - exitLetter.rect.h) / 2;
+        exitLabel.rect.x = exitBadge.x + exitBadge.w + UiTheme::BadgeLabelGap;
+        exitLabel.rect.y = exitBadge.y + (exitBadge.h - exitLabel.rect.h) / 2;
+
         auto render = [&](Texture * closeText = nullptr)
         {
             sdl_context.StartFrame();
             if(modernUI)
-                frame.Draw(renderer, UiTheme::FrameRect);
+            {
+                DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
+                chrome.gearIcon.Draw(renderer);
+                chrome.appTitleText.Draw(renderer);
+                chrome.appVersionText.Draw(renderer);
+                DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+                DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+                chrome.creditText.Draw(renderer);
+                DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB.r, UiTheme::BadgeB.g, UiTheme::BadgeB.b, exitBadge.w/2);
+                exitLetter.Draw(renderer);
+                exitLabel.Draw(renderer);
+            }
             else
             {
                 menuU.Draw(renderer);
@@ -115,6 +138,8 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
             }
             if(closeText)
                 closeText->Draw(renderer);
+            if(modernUI)
+                SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, 0xFF); // must be the LAST color-setting call, or it leaks into next frame's clear
             sdl_context.EndFrame();
         };
 
@@ -145,12 +170,13 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
             render();
         }
         pclose(pipe);
-        Texture closeText(Translate("PRESS_B_EXIT"), 12, renderer, textX, modernUI ? UiTheme::CreditY : 610);
+        // modern UI's badge already says "B: Back" - the old text hint is classic UI only
+        Texture closeText(Translate("PRESS_B_EXIT"), 12, renderer, textX, 610);
 
         while (!controller->GetButtonStatus(B))
         {
             controller->Update();
-            render(&closeText);
+            render(modernUI ? nullptr : &closeText);
         }
         SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
     }

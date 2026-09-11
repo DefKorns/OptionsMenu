@@ -47,6 +47,6 @@ DELETE_CONFIRM_GENERIC=Dieses Element löschen?
 WIFI_DELETE_HINT_FOOTER=X = Löschen     A = Wiederherstellen
 HINT_SELECT=Wählen
 HINT_BACK=Zurück
-HINT_DELETE=Löschen
+HINT_DELETE=Löschen (Halten)
 NO_NET_ERR=Verbindung zum Server fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.
 NO_PKG_ERR=Das angeforderte Paket ist derzeit nicht verfügbar. Bitte später erneut versuchen.

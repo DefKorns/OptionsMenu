@@ -47,6 +47,6 @@ DELETE_CONFIRM_GENERIC=Delete this item?
 WIFI_DELETE_HINT_FOOTER=X = Delete     A = Restore
 HINT_SELECT=Select
 HINT_BACK=Back
-HINT_DELETE=Delete
+HINT_DELETE=Delete (Hold)
 NO_NET_ERR=Error while connecting to server, please check your internet connection and try again.
 NO_PKG_ERR=The package you requested isn't available at the moment, please try again later.

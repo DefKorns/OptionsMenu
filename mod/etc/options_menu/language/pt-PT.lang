@@ -47,6 +47,6 @@ DELETE_CONFIRM_GENERIC=Apagar este item?
 WIFI_DELETE_HINT_FOOTER=X = Apagar     A = Restaurar
 HINT_SELECT=Selecionar
 HINT_BACK=Voltar
-HINT_DELETE=Apagar
+HINT_DELETE=Apagar (manter premido)
 NO_NET_ERR=Erro ao ligar ao servidor, verifica a tua ligação à internet e tenta novamente.
 NO_PKG_ERR=O pacote pedido não está disponível de momento, tenta novamente mais tarde.

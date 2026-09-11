@@ -47,6 +47,6 @@ DELETE_CONFIRM_GENERIC=Eliminare questo elemento?
 WIFI_DELETE_HINT_FOOTER=X = Elimina     A = Ripristina
 HINT_SELECT=Seleziona
 HINT_BACK=Indietro
-HINT_DELETE=Elimina
+HINT_DELETE=Elimina (tieni premuto)
 NO_NET_ERR=Errore di connessione al server, controlla la tua connessione internet e riprova.
 NO_PKG_ERR=Il pacchetto richiesto non è disponibile al momento, riprova più tardi.

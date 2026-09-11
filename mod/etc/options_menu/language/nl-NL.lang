@@ -47,6 +47,6 @@ DELETE_CONFIRM_GENERIC=Dit item verwijderen?
 WIFI_DELETE_HINT_FOOTER=X = Verwijderen     A = Herstellen
 HINT_SELECT=Kiezen
 HINT_BACK=Terug
-HINT_DELETE=Wissen
+HINT_DELETE=Wissen (vasthouden)
 NO_NET_ERR=Verbinding met de server mislukt, controleer je internetverbinding en probeer het opnieuw.
 NO_PKG_ERR=Het gevraagde pakket is momenteel niet beschikbaar, probeer het later opnieuw.
