@@ -14,7 +14,7 @@ The Options Menu is a custom, easily extendable menu for your console, letting o
 
 ### How to open
 
-Hold **L + R** for about 1 second, at any point during the console's operation.
+Hold **L + R** for about 1 second, at any point during the console's operation. On consoles with no shoulder buttons (NES Classic, Famicom Classic and its variants, e.g. the Famicom Shonen Jump 50th Anniversary edition), hold **B + Down** instead.
 
 ## Documentation
 

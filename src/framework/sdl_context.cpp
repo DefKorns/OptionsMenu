@@ -19,10 +19,6 @@
 SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit) : fpsTime(fpsTime), powerButtonExit(powerButtonExit)
 {
     powerwatch = new PowerWatch();
-    // SDL defaults to nearest-neighbor texture scaling, which makes any
-    // upscaled art (e.g. a preview image scaled to fit its box) look
-    // blocky/jagged instead of the smooth PNG it actually is
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     window = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_FULLSCREEN);
     // vsync makes SDL_RenderPresent block for the next vertical blank instead
     // of returning immediately, so a post-pause frame burst (see EndFrame)

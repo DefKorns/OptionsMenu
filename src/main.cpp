@@ -23,6 +23,7 @@
 #include <map>
 #include <cmath>
 #include <dirent.h>
+#include <unistd.h>
 
 #ifndef MOD_VERSION
 #define MOD_VERSION "dev"
@@ -64,21 +65,24 @@ int Utf8Length(const std::string & text)
     return count;
 }
 
-static struct ExitManager
+// "%options_path%/xxx" command templates always produce a double slash (optionsLocation
+// already ends in one) - collapsing here stops it from growing an extra slash with every
+// relaunch, which otherwise breaks string-equality checks like the self-relaunch one below
+std::string CollapseSlashes(const std::string & path)
 {
-    std::string exitCommand;
-    bool runExitCommand = true;
-    ~ExitManager()
-    {
-        if(runExitCommand)
-            system(exitCommand.c_str());
-    }
-} _exitManager;
+    std::string result;
+    for(char ch : path)
+        if(ch != '/' || result.empty() || result.back() != '/')
+            result += ch;
+    return result;
+}
+
+ExitManager _exitManager;
 
 int main(int argc, char * argv[])
 {
     std::string optionsLocation(argv[0]);
-    optionsLocation = optionsLocation.substr(0, optionsLocation.find_last_of('/')+1);
+    optionsLocation = CollapseSlashes(optionsLocation.substr(0, optionsLocation.find_last_of('/')+1));
     _exitManager.exitCommand = "/bin/sh " + optionsLocation + "/scripts/ResumeUI.sh";
     std::string commandLocation(optionsLocation + "commands/");
     std::string scriptLocation(optionsLocation + "scripts/");
@@ -126,9 +130,19 @@ int main(int argc, char * argv[])
             ++i;
         }
     }
+    commandLocation = CollapseSlashes(commandLocation);
+    scriptLocation = CollapseSlashes(scriptLocation);
 
     // what a child screen inherits as its own OM_BACK_STACK
     std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey;
+    // a self-relaunch (e.g. after changing language) re-enters the same screen - the
+    // stack we received already ends in an entry for "this screen" from the ORIGINAL
+    // navigation into it. Strip that stale self-reference so both the Back row below
+    // and what we export to our own children point at our real parent, not ourselves
+    size_t lastSep = backStack.find_last_of(';');
+    std::string lastEntry = backStack.empty() ? "" : (lastSep == std::string::npos ? backStack : backStack.substr(lastSep + 1));
+    if(lastEntry == myEntry)
+        backStack = (lastSep == std::string::npos) ? "" : backStack.substr(0, lastSep);
     setenv("OM_BACK_STACK", (backStack.empty() ? myEntry : backStack + ";" + myEntry).c_str(), 1);
 
     //Read commands from command folder
@@ -305,7 +319,7 @@ int main(int argc, char * argv[])
             size_t pos = c.command.find("--commandPath");
             size_t pathStart = c.command.find_first_not_of(' ', pos + std::string("--commandPath").size());
             size_t pathEnd = c.command.find(' ', pathStart);
-            std::string targetPath = c.command.substr(pathStart, pathEnd - pathStart);
+            std::string targetPath = CollapseSlashes(c.command.substr(pathStart, pathEnd - pathStart));
             if(targetPath == commandLocation)
                 c.hasSubmenu = false;
         }
@@ -395,7 +409,10 @@ int main(int argc, char * argv[])
         // scaled to fit the detail panel box, ignores the command's own previewImageX/Y/W/H
         if(currentCommand.previewImage.size())
         {
+            // linear only for this one texture - baked in at creation, so toggle around it
+            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
             PreviewImage = std::make_shared<Texture>(currentCommand.previewImage, renderer, 0, 0);
+            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
             if(PreviewImage->rect.w > 0 && PreviewImage->rect.h > 0)
             {
                 const int maxW = UiTheme::DetailW - 2*UiTheme::ContentPadding;
@@ -522,7 +539,10 @@ int main(int argc, char * argv[])
 
         if(sdl_context.powerwatch->buttonPress())
         {
-            break;
+            // skip SDL teardown - vsync can block on a vblank the display
+            // never delivers once the console starts powering off
+            system(_exitManager.exitCommand.c_str());
+            _exit(0);
         }
         if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
         {

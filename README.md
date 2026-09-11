@@ -161,6 +161,8 @@ The full verbose log will be located here:
 
 This option will allow you to change the button combo used to launch the options menu. You will need to restart the console after setting a new combo.
 
+> **Note:** The default combo is **L + R**, or **B + Down** on consoles with no shoulder buttons (NES Classic, Famicom Classic and its variants, e.g. the Famicom Shonen Jump 50th Anniversary edition), detected automatically. Setting a custom combo here overrides that detection.
+
 #### Clear Cache
 
 This option will force the kernel to clear the page cache and free up unused memory. You should not need to call this as the system should manage memory fine on it's own.

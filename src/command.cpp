@@ -10,6 +10,7 @@
 #include "command.h"
 #include "framework/controller.h"
 #include "framework/draw_helpers.h"
+#include "framework/powerwatch.h"
 #include "localization.h"
 
 #include <cctype>
@@ -17,6 +18,8 @@
 #include <list>
 #include <vector>
 #include <poll.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 // std::stoi throws on non-numeric input; avoid crashing on a bad command file
 static int SafeStoi(const std::string & value, int fallback = 0)
@@ -130,12 +133,16 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
         };
 
         int fd = fileno(pipe);
+        fcntl(fd, F_SETFL, O_NONBLOCK); // so a drained-but-still-buffered fgets() below never blocks
         while(!feof(pipe))
         {
-            // poll with a short timeout instead of blocking fgets, so a script
-            // that stalls without output doesn't also freeze input/rendering
+            // poll just paces the loop now (avoids busy-spinning) - it only reflects
+            // kernel-level readiness, so a burst of lines that all arrive in one
+            // read() would otherwise pile up in stdio's own buffer, invisible to
+            // poll() until some later line's arrival makes it true again
             struct pollfd pfd{fd, POLLIN, 0};
-            if(poll(&pfd, 1, 100) > 0 && fgets(buffer, 128, pipe) != nullptr)
+            poll(&pfd, 1, 100);
+            while(fgets(buffer, 128, pipe) != nullptr)
             {
                 std::string sBuffer(buffer);
                 int pos = sBuffer.find('\n');
@@ -148,10 +155,24 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                     textList.erase(textList.begin());
                 }
             }
+            if(!feof(pipe))
+                clearerr(pipe); // last fgets() failed because nothing's ready yet, not EOF - stay readable
 
-            controller->Update();
-            if(!ignoreInterrupt && controller->GetButtonStatus(B))
-                break;
+            // power press must exit even mid-command - skip SDL teardown, same as main.cpp's loop
+            if(sdl_context.powerwatch->buttonPress())
+            {
+                system(_exitManager.exitCommand.c_str());
+                _exit(0);
+            }
+
+            // ignoreInterrupt commands (e.g. ChangeCombo) read the controller themselves -
+            // stop polling it here too, or we race them for the same button events
+            if(!ignoreInterrupt)
+            {
+                controller->Update();
+                if(controller->GetButtonStatus(B))
+                    break;
+            }
 
             render();
         }
@@ -159,6 +180,11 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
 
         while (!controller->GetButtonStatus(B))
         {
+            if(sdl_context.powerwatch->buttonPress())
+            {
+                system(_exitManager.exitCommand.c_str());
+                _exit(0);
+            }
             controller->Update();
             render();
         }
