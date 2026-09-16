@@ -49,6 +49,7 @@ struct Command
     int previewImageY = 300;
     int previewImageWidth = -1;
     int previewImageHeight = -1;
+    bool previewNearest = false; // nearest-neighbor scaling instead of linear - for small pixel-art sprites blown up a lot, where linear just blurs them
 };
 
 #endif
