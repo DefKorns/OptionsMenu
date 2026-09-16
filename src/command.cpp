@@ -81,6 +81,8 @@ Command::Command(std::ifstream & in)
             previewImageHeight = SafeStoi(value, -1);
         else if(param.compare("PREVIEW_NEAREST")==0)
             previewNearest = (value == "TRUE");
+        else if(param.compare("PREVIEW_SQUARE")==0)
+            previewSquare = (value == "TRUE");
     }
     hasSubmenu = !isToggle && command.find("--commandPath") != std::string::npos;
     in.close();

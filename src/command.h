@@ -50,6 +50,7 @@ struct Command
     int previewImageWidth = -1;
     int previewImageHeight = -1;
     bool previewNearest = false; // nearest-neighbor scaling instead of linear - for small pixel-art sprites blown up a lot, where linear just blurs them
+    bool previewSquare = false; // this screen's preview art is square/near-square - grid tiles should be too, not the default wide tile
 };
 
 #endif
