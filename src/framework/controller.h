@@ -27,6 +27,9 @@ private:
     int fd = -1;
     ButtonEvent buttonBuffer[10];
     std::map<GameButton,bool> buttons;
+#ifndef __arm__
+    unsigned char prevKeys[512] = {0}; // keyboard fallback for desktop testing builds
+#endif
 public:
     Controller(int id);
     ~Controller();
