@@ -229,6 +229,34 @@ int main(int argc, char * argv[])
     auto renderer = sdl_context.renderer;
     Controller controller(1);
 
+    // hold-to-repeat for direction buttons
+    std::map<GameButton, Uint32> repeatPressedAt, repeatLastFired;
+    std::map<GameButton, bool> repeatActive;
+    const Uint32 repeatDelay = 350;
+    const Uint32 repeatInterval = 90;
+    auto HeldRepeat = [&](GameButton button) -> bool
+    {
+        if(!controller.PeekButtonStatus(button))
+        {
+            repeatActive[button] = false;
+            return false;
+        }
+        Uint32 now = SDL_GetTicks();
+        if(!repeatActive[button])
+        {
+            repeatActive[button] = true;
+            repeatPressedAt[button] = now;
+            repeatLastFired[button] = now;
+            return true;
+        }
+        if(now - repeatPressedAt[button] >= repeatDelay && now - repeatLastFired[button] >= repeatInterval)
+        {
+            repeatLastFired[button] = now;
+            return true;
+        }
+        return false;
+    };
+
     //Create Options Flag to prevent multiple menu launches
     system("touch /tmp/options.flag");
 
@@ -533,7 +561,7 @@ int main(int argc, char * argv[])
                 break;
             }
         }
-        else if(controller.GetButtonStatus(UP))
+        else if(HeldRepeat(UP))
         {
             // bounded so an all-headers list can't spin forever
             int newCommandId = currentCommandId;
@@ -545,7 +573,7 @@ int main(int argc, char * argv[])
             }
             SetCurrentCommand(newCommandId);
         }
-        else if(controller.GetButtonStatus(DOWN))
+        else if(HeldRepeat(DOWN))
         {
             int newCommandId = currentCommandId;
             for(size_t tries = 0; tries < commands.size(); ++tries)
