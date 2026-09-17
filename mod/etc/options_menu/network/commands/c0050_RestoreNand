@@ -1,4 +1,5 @@
 COMMAND_NAME=WIFI_RESTORE_NAND
 COMMAND_TYPE=EXTERNAL
+SUBMENU=TRUE
 COMMAND_STR=sh %script_dir%/restore_settings.sh nand cmd
 PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png

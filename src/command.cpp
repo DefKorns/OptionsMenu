@@ -83,8 +83,11 @@ Command::Command(std::ifstream & in)
             previewNearest = (value == "TRUE");
         else if(param.compare("PREVIEW_SQUARE")==0)
             previewSquare = (value == "TRUE");
+        else if(param.compare("SUBMENU")==0)
+            hasSubmenu = (value == "TRUE");
     }
-    hasSubmenu = !isToggle && command.find("--commandPath") != std::string::npos;
+    if(isToggle)
+        hasSubmenu = false;
     in.close();
 }
 

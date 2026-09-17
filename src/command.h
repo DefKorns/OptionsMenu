@@ -42,7 +42,7 @@ struct Command
     bool child = false;
     bool isToggle = false;
     bool stateOn = false;
-    bool hasSubmenu = false; // COMMAND_STR relaunches options with a different --commandPath
+    bool hasSubmenu = false;
     Texture texture;
     std::string previewImage;
     int previewImageX = 920; // default position when a command sets PREVIEW_IMAGE without _X/_Y
