@@ -80,11 +80,9 @@ void Controller::Update()
         }
     }
 #else
-    // keyboard fallback for desktop testing builds - no real controller device.
-    // only write buttons[] on an actual press/release edge (like the real
-    // evdev stream does), not every frame - so a still-held key doesn't keep
-    // re-arming a just-consumed GetButtonStatus() tap, while PeekButtonStatus
-    // still correctly reports "still held" via the unchanged value in between
+    // keyboard fallback for desktop builds - only write buttons[] on an edge,
+    // matching evdev's own press/release-only stream
+    SDL_PumpEvents(); // nested loops (confirm dialog) don't otherwise pump
     const Uint8 * keys = SDL_GetKeyboardState(nullptr);
     auto press = [&](SDL_Scancode sc, GameButton button)
     {
