@@ -113,6 +113,42 @@ void DrawRoundedFillRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Ui
     SDL_RenderDrawPoints(r, points.data(), static_cast<int>(points.size()));
 }
 
+// complement of RoundedCornerDisk - the corner-square pixels a rounded rect
+// of this radius would NOT cover, i.e. what needs painting over to fake
+// rounding a rectangularly-clipped image
+static const std::vector<SDL_Point> & RoundedCornerOutside(int radius)
+{
+    static std::map<int, std::vector<SDL_Point>> cache;
+    auto it = cache.find(radius);
+    if(it != cache.end())
+        return it->second;
+    std::vector<SDL_Point> pts;
+    for(int dy = 0; dy <= radius; ++dy)
+        for(int dx = 0; dx <= radius; ++dx)
+            if(std::sqrt(static_cast<double>(dx*dx + dy*dy)) > radius + 0.5)
+                pts.push_back({dx, dy});
+    return cache.emplace(radius, std::move(pts)).first->second;
+}
+
+void DrawRoundedCornerMask(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius)
+{
+    if(radius <= 0)
+        return;
+    SDL_SetRenderDrawColor(r, cr, cg, cb, 0xFF);
+    int x0 = rect.x, y0 = rect.y, x1 = rect.x+rect.w-1, y1 = rect.y+rect.h-1;
+    const std::vector<SDL_Point> & outside = RoundedCornerOutside(radius);
+    std::vector<SDL_Point> points;
+    points.reserve(outside.size() * 4);
+    for(const SDL_Point & p : outside)
+    {
+        points.push_back({ x0+radius-p.x, y0+radius-p.y });
+        points.push_back({ x1-radius+p.x, y0+radius-p.y });
+        points.push_back({ x0+radius-p.x, y1-radius+p.y });
+        points.push_back({ x1-radius+p.x, y1-radius+p.y });
+    }
+    SDL_RenderDrawPoints(r, points.data(), static_cast<int>(points.size()));
+}
+
 void DrawHLine(SDL_Renderer * r, int x0, int x1, int y, Uint8 cr, Uint8 cg, Uint8 cb, int width)
 {
     DrawFillRect(r, { x0, y, x1-x0, width }, cr, cg, cb);

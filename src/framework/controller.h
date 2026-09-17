@@ -27,6 +27,10 @@ private:
     int fd = -1;
     ButtonEvent buttonBuffer[10];
     std::map<GameButton,bool> buttons;
+    std::map<GameButton,unsigned int> repeatPressedAt, repeatLastFired;
+    std::map<GameButton,bool> repeatActive;
+    std::map<GameButton,unsigned int> heldPressedAt;
+    std::map<GameButton,bool> heldActive;
 #ifndef __arm__
     unsigned char prevKeys[512] = {0}; // keyboard fallback for desktop testing builds
 #endif
@@ -35,6 +39,10 @@ public:
     ~Controller();
     bool PeekButtonStatus(GameButton button);
     bool GetButtonStatus(GameButton button);
+    // fires once on press, then repeats after an initial delay while held
+    bool HeldRepeat(GameButton button);
+    // ms this button has been continuously held, 0 if not currently held
+    unsigned int HeldMillis(GameButton button);
     void Update();
     void Reset();
 };
