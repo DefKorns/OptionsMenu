@@ -107,7 +107,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
 
         // same app header/footer chrome as the main screen, plus a persistent B/Exit badge
         Texture exitLetter("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true);
-        Texture exitLabel(Translate("EXIT"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true);
+        Texture exitLabel(Translate("EXIT"), 16, renderer, 0, 0, false, UiTheme::TextColor, true);
         int badgeGroupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + exitLabel.rect.w;
         SDL_Rect exitBadge{ UiTheme::BadgeClusterRightX - badgeGroupW, UiTheme::BadgeBandY, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
         exitLetter.rect.x = exitBadge.x + (exitBadge.w - exitLetter.rect.w) / 2;

@@ -19,16 +19,24 @@
 #define UITHEME_H_
 
 #include <SDL.h>
+#include <string>
 
 // Geometry and palette for the split-panel "settings dialog" look. Screen
-// is a fixed 1280x720 (sdl_context.cpp), so these are plain constants.
+// is a fixed 1280x720 (sdl_context.cpp), so geometry stays plain constants.
 // Border/dividers are flat drawn lines (see draw_helpers.h), no textured art.
+// Colors are extern, not const: LoadThemeConfig (uitheme.cpp) can override
+// them from an optional theme.cfg at startup - defaults live there too.
 namespace UiTheme
 {
-    const Uint8 BgR = 0x0C, BgG = 0x0F, BgB = 0x16;
-    const Uint8 BorderR = 0x2A, BorderG = 0x2C, BorderB = 0x33;
-    const Uint8 AccentR = 0xF0, AccentG = 0xC4, AccentB = 0x3D; // yellow
-    const Uint8 SelectedRowBgR = 0x14, SelectedRowBgG = 0x16, SelectedRowBgB = 0x1A;
+    // reads <optionsLocation>/theme.cfg if present ("Key=R,G,B" per line,
+    // # comments); missing file or bad lines are silently skipped, existing
+    // defaults stand
+    void LoadThemeConfig(const std::string & optionsLocation);
+
+    extern Uint8 BgR, BgG, BgB;
+    extern Uint8 BorderR, BorderG, BorderB;
+    extern Uint8 AccentR, AccentG, AccentB;
+    extern Uint8 SelectedRowBgR, SelectedRowBgG, SelectedRowBgB;
 
     // TV overscan safe area
     const int SafeMarginX = 64;
@@ -112,20 +120,23 @@ namespace UiTheme
     // (24px) from the last-drawn badge's own left edge; this closes the gap
     // to land the divider exactly 40px left of that badge, per hardware test
     const int BadgeDividerGapFromCluster = 16;
-    const Uint32 BadgeLetterColor = 0xFF16161C; // AABBGGRR
-    const Uint32 TextDimColor = 0xFF938D8D; // AABBGGRR - muted grey for chevrons/secondary text
+    // packed AABBGGRR, kept in sync with the R/G/B triples below by
+    // LoadThemeConfig - not user-facing keys themselves
+    extern Uint32 BadgeLetterColor;
+    extern Uint32 TextColor; // primary text - titles, row labels, badge hints
+    extern Uint32 TextDimColor; // muted grey for chevrons/secondary text
 
     struct BadgeColor { Uint8 r, g, b; };
-    const BadgeColor BadgeA{ 0x4C, 0xAF, 0x6E }; // green
-    const BadgeColor BadgeADark{ 0x2E, 0x6B, 0x42 };
-    const BadgeColor BadgeB{ 0xE1, 0x55, 0x54 }; // red
-    const BadgeColor BadgeBDark{ 0x8C, 0x34, 0x33 };
-    const BadgeColor BadgeX{ 0x6C, 0x8E, 0xBF }; // slate-blue
-    const BadgeColor BadgeXDark{ 0x3F, 0x59, 0x7F };
-    const BadgeColor BadgeY{ 0xC9, 0x7B, 0x84 }; // dusty rose, unused
-    const BadgeColor BadgeYDark{ 0x8F, 0x47, 0x50 };
-    const BadgeColor BadgeStart{ 0xC2, 0xA8, 0x5E }; // muted gold, for a wide "Start" pill instead of a letter circle
-    const BadgeColor BadgeStartDark{ 0x74, 0x65, 0x38 };
+    extern BadgeColor BadgeA; // green
+    extern BadgeColor BadgeADark;
+    extern BadgeColor BadgeB; // red
+    extern BadgeColor BadgeBDark;
+    extern BadgeColor BadgeX; // slate-blue
+    extern BadgeColor BadgeXDark;
+    extern BadgeColor BadgeY; // dusty rose, unused
+    extern BadgeColor BadgeYDark;
+    extern BadgeColor BadgeStart; // muted gold, for a wide "Start" pill instead of a letter circle
+    extern BadgeColor BadgeStartDark;
 
     // "created by CompCom" footer credit, left-aligned in the footer
     const int CreditX = FrameX;

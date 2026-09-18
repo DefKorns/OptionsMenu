@@ -76,6 +76,7 @@ int main(int argc, char * argv[])
 
     LoadLanguageFromConfig(OptionsLocation);
     SetTTFFontPath(OptionsLocation);
+    UiTheme::LoadThemeConfig(OptionsLocation);
 
     SDL_Context sdl_context(std::chrono::milliseconds(33), false);
     auto renderer = sdl_context.renderer;
@@ -85,12 +86,12 @@ int main(int argc, char * argv[])
     SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, SDL_ALPHA_OPAQUE);
 
     Texture gearIcon(OptionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, 0xFFFFFFFF, true);
+    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, UiTheme::TextColor, true);
     appTitleText.rect.y -= appTitleText.rect.h / 2;
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, 0xFFFFFFFF, true);
+    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, UiTheme::TextColor, true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText(Translate("MODULE_UNINSTALLER"), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, 0xFFFFFFFF, true);
-    Texture creditText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, 0xFFFFFFFF, true);
+    Texture titleText(Translate("MODULE_UNINSTALLER"), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, UiTheme::TextColor, true);
+    Texture creditText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, UiTheme::TextColor, true);
 
     // two columns sharing the row list's usual width, split by a center divider
     const int ColumnGap = 40;
@@ -108,11 +109,11 @@ int main(int argc, char * argv[])
     Texture toRemoveHeader(Translate("MOD_UNINSTALLER_TO_REMOVE"), 18, renderer, RightColumnX, ColumnHeaderY, false, UiTheme::TextDimColor, true);
 
     for(Mod & mod : installedMods)
-        mod.text = Texture(TruncateToWidth(mod.name, ColumnW), ListFontSize, renderer, LeftColumnX, 0, false, 0xFFFFFFFF, true);
+        mod.text = Texture(TruncateToWidth(mod.name, ColumnW), ListFontSize, renderer, LeftColumnX, 0, false, UiTheme::TextColor, true);
 
     // this screen's list spans a different vertical range than the main menu's, so the
     // chevrons are anchored to it directly rather than reusing UiTheme::ScrollUpY/DownY
-    Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, ListTopY + 10, false, 0xFFFFFFFF, true);
+    Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, ListTopY + 10, false, UiTheme::TextColor, true);
     scrollUp.rect.x -= scrollUp.rect.w / 2;
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = ListBottomY - 50;
@@ -120,8 +121,8 @@ int main(int argc, char * argv[])
     Texture badgeOuter(OptionsLocation + UiTheme::AssetBadgeOuter, renderer);
     Texture badgeInner(OptionsLocation + UiTheme::AssetBadgeInner, renderer);
     struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
-    Badge badgeAdd{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_ADD"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeADark, UiTheme::BadgeA };
-    Badge badgeUndo{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_UNDO"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
+    Badge badgeAdd{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_ADD"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeADark, UiTheme::BadgeA };
+    Badge badgeUndo{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_UNDO"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
@@ -145,7 +146,7 @@ int main(int argc, char * argv[])
 
     // wide "Start" chip instead of a single-letter circle - "St" alone reads ambiguous next to Select
     Texture pillText("Start", 14, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true);
-    Texture uninstallLabel(Translate("HINT_UNINSTALL"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true);
+    Texture uninstallLabel(Translate("HINT_UNINSTALL"), 16, renderer, 0, 0, false, UiTheme::TextColor, true);
     auto DrawPillBadge = [&](Texture & pill, Texture & label, const UiTheme::BadgeColor & rim, const UiTheme::BadgeColor & fill, int rightEdgeX) -> int
     {
         const int pillPadX = 10;
@@ -234,8 +235,8 @@ int main(int argc, char * argv[])
     // true if the uninstall was confirmed and kicked off - caller should break out of the main loop
     auto ConfirmUninstall = [&]() -> bool
     {
-        Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, 320, true, 0xFFFFFFFF, true);
-        Texture confirmHint(Translate("MOD_UNINSTALL_CONFIRM_HINT"), 16, renderer, 640, 360, true, 0xFFFFFFFF, true);
+        Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, 320, true, UiTheme::TextColor, true);
+        Texture confirmHint(Translate("MOD_UNINSTALL_CONFIRM_HINT"), 16, renderer, 640, 360, true, UiTheme::TextColor, true);
         controller.GetButtonStatus(B); // consume the still-held B from whatever press opened this dialog
         bool confirmed = false;
         for(;;)

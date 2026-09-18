@@ -71,6 +71,7 @@ int main(int argc, char * argv[])
 
     LoadLanguageFromConfig(optionsLocation);
     SetTTFFontPath(optionsLocation);
+    UiTheme::LoadThemeConfig(optionsLocation);
 
     std::string titleString(Translate("OPTIONS_TITLE"));
     std::string titleKey = "OPTIONS_TITLE";
@@ -244,24 +245,24 @@ int main(int argc, char * argv[])
     Texture badgeInner(optionsLocation + UiTheme::AssetBadgeInner, renderer);
 
     //Create Textures for Strings
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, 0xFFFFFFFF, true);
+    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, UiTheme::TextColor, true);
     appTitleText.rect.y -= appTitleText.rect.h / 2; // vertically center on the gear (Texture only supports centering both axes together)
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, 0xFFFFFFFF, true);
+    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, UiTheme::TextColor, true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, 0xFFFFFFFF, true);
+    Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, UiTheme::TextColor, true);
     SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
-    Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, 0xFFFFFFFF, true);
-    Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY, false, 0xFFFFFFFF, true);
+    Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, UiTheme::TextColor, true);
+    Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY, false, UiTheme::TextColor, true);
     scrollUp.rect.x -= scrollUp.rect.w / 2; // ScrollX is the gutter's center, not the glyph's left edge
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = UiTheme::ScrollDownY;
 
     //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
     struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
-    Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_SELECT"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeADark, UiTheme::BadgeA };
-    Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_BACK"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
+    Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_SELECT"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeADark, UiTheme::BadgeA };
+    Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_BACK"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
     // hold-to-delete hint, different color than the real B badge
-    Badge badgeHold{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_DELETE"), 16, renderer, 0, 0, false, 0xFFFFFFFF, true), UiTheme::BadgeXDark, UiTheme::BadgeX };
+    Badge badgeHold{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_DELETE"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeXDark, UiTheme::BadgeX };
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
@@ -274,8 +275,9 @@ int main(int argc, char * argv[])
         badgeInner.rect = { x+innerOffset, y+innerOffset, UiTheme::BadgeInnerSize, UiTheme::BadgeInnerSize };
         SDL_SetTextureColorMod(badgeInner.texture.get(), badge.fill.r, badge.fill.g, badge.fill.b);
         badgeInner.Draw(renderer);
-        badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2;
-        badge.letter.rect.y = y + (UiTheme::BadgeOuterSize - badge.letter.rect.h)/2;
+        // glyph bearing makes the pure-math center look 1px down/left - nudged
+        badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2 + 1;
+        badge.letter.rect.y = y + (UiTheme::BadgeOuterSize - badge.letter.rect.h)/2 - 1;
         badge.letter.Draw(renderer);
         badge.label.rect.x = x + UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap;
         badge.label.rect.y = y + (UiTheme::BadgeOuterSize - badge.label.rect.h)/2;
@@ -329,7 +331,7 @@ int main(int argc, char * argv[])
                 label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
         }
 
-        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, 0xFFFFFFFF, true);
+        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, UiTheme::TextColor, true);
     }
 
     const int modernRowPitch = std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize));
@@ -467,8 +469,8 @@ int main(int argc, char * argv[])
     auto ConfirmDelete = [&]() -> bool
     {
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
-        Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, 0xFFFFFFFF, true);
-        Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, 0xFFFFFFFF, true);
+        Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, UiTheme::TextColor, true);
+        Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, UiTheme::TextColor, true);
         controller.GetButtonStatus(B); // consume the still-held B from the triggering long-press
         bool confirmed = false;
         for(;;)
