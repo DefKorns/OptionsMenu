@@ -14,11 +14,20 @@
 
 class Controller;
 
+// header/footer textures, shared by reference with the main screen
+struct ModernChrome
+{
+    Texture & gearIcon;
+    Texture & appTitleText;
+    Texture & appVersionText;
+    Texture & creditText;
+};
+
 struct Command
 {
     Command();
     Command(std::ifstream & in);
-    void RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, bool modernUI, const NineSlice & frame, Uint8 bgR = 0x6e, Uint8 bgG = 0x6e, Uint8 bgB = 0x6e) const;
+    void RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Uint8 bgR = UiTheme::BgR, Uint8 bgG = UiTheme::BgG, Uint8 bgB = UiTheme::BgB) const;
     void UpdateState();
 
     std::string name;
@@ -33,12 +42,16 @@ struct Command
     bool child = false;
     bool isToggle = false;
     bool stateOn = false;
+    bool hasSubmenu = false;
     Texture texture;
     std::string previewImage;
     int previewImageX = 920; // default position when a command sets PREVIEW_IMAGE without _X/_Y
     int previewImageY = 300;
     int previewImageWidth = -1;
     int previewImageHeight = -1;
+    bool previewNearest = false; // nearest-neighbor scaling instead of linear - for small pixel-art sprites blown up a lot, where linear just blurs them
+    bool previewSquare = false; // this screen's preview art is square/near-square - grid tiles should be too, not the default wide tile
+    int previewGridCols = -1; // explicit grid column count override, unset (-1) defers to the square/wide default
 };
 
 #endif

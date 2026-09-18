@@ -8,9 +8,9 @@
   */
 
 #include "localization.h"
-#include "framework/font8x8.h"
+#include "framework/font8x8_lookup.h"
+#include "framework/utf8.h"
 
-#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -26,66 +26,6 @@ namespace
     const int Cell = 8 * Scale;
     const int LineSpacing = Cell + Cell/2;
 
-    std::vector<unsigned int> Utf8ToCodepoints(const std::string & text)
-    {
-        std::vector<unsigned int> codepoints;
-        for (size_t i = 0; i < text.size();)
-        {
-            unsigned char firstByte = static_cast<unsigned char>(text[i]);
-            unsigned int codepoint = 0xFFFD;
-            size_t sequenceLength = 1;
-
-            if (firstByte < 0x80)
-            {
-                codepoint = firstByte;
-            }
-            else if (firstByte >= 0xC2 && firstByte <= 0xDF && i + 1 < text.size())
-            {
-                unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
-                if ((secondByte & 0xC0) == 0x80)
-                {
-                    codepoint = ((firstByte & 0x1F) << 6) | (secondByte & 0x3F);
-                    sequenceLength = 2;
-                }
-            }
-            else if (firstByte >= 0xE0 && firstByte <= 0xEF && i + 2 < text.size())
-            {
-                unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
-                unsigned char thirdByte = static_cast<unsigned char>(text[i + 2]);
-                if ((secondByte & 0xC0) == 0x80 && (thirdByte & 0xC0) == 0x80)
-                {
-                    codepoint = ((firstByte & 0x0F) << 12) |
-                                ((secondByte & 0x3F) << 6) | (thirdByte & 0x3F);
-                    sequenceLength = 3;
-                }
-            }
-
-            codepoints.push_back(codepoint);
-            i += sequenceLength;
-        }
-        return codepoints;
-    }
-
-    const char * GlyphFor(unsigned int codepoint)
-    {
-        if (codepoint < 0x80)
-            return font8x8_basic[codepoint];
-        if (codepoint >= 0xA0 && codepoint <= 0xFF)
-            return font8x8_ext_latin[codepoint - 0xA0];
-        if (codepoint >= 0x3040 && codepoint <= 0x309F)
-            return font8x8_hiragana[codepoint - 0x3040];
-        if (codepoint >= 0x30A0 && codepoint <= 0x30FF)
-            return font8x8_katakana[codepoint - 0x30A0];
-        if (codepoint >= 0x4E00 && codepoint <= 0x9FFF)
-        {
-            auto it = std::lower_bound(std::begin(font8x8_kanji), std::end(font8x8_kanji), codepoint,
-                [](const Font8x8KanjiEntry & entry, unsigned int cp) { return entry.codepoint < cp; });
-            if (it != std::end(font8x8_kanji) && it->codepoint == codepoint)
-                return reinterpret_cast<const char *>(it->glyph);
-        }
-        return font8x8_basic[0x3F];
-    }
-
     void DrawLine(std::vector<unsigned char> & pixels, const std::string & text, int topY)
     {
         auto codepoints = Utf8ToCodepoints(text);
@@ -94,7 +34,7 @@ namespace
 
         for (size_t i = 0; i < codepoints.size(); ++i)
         {
-            const char * bitmap = GlyphFor(codepoints[i]);
+            const char * bitmap = Font8x8Glyph(codepoints[i]);
             int ox = x0 + static_cast<int>(i) * Cell;
             for (int y = 0; y < 8; ++y)
             {

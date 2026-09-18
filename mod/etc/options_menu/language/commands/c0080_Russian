@@ -1,0 +1,5 @@
+COMMAND_NAME=Русский
+COMMAND_TYPE=EXTERNAL
+RESTART_UI=FALSE
+COMMAND_STR=echo ru-RU > /etc/options_menu/language.cfg && usleep 50000 && %options_path%/options --commandPath %options_path%/language/commands/ --title "LANGUAGE_OPTIONS" &
+PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png

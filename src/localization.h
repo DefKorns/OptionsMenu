@@ -18,4 +18,7 @@
 void LoadLanguage(const std::string & optionsRoot, const std::string & langCode);
 std::string Translate(const std::string & key);
 
+// reads /etc/options_menu/language.cfg (defaulting to en-US) and loads it
+void LoadLanguageFromConfig(const std::string & optionsRoot);
+
 #endif

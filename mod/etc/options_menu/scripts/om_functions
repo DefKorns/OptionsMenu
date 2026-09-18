@@ -140,26 +140,6 @@ toggleDownloads() {
   fi
 }
 
-is_classic_ui() {
-  # [X]-in-title markers only apply in classic UI; modern UI has a real switch
-  [ "$(cat /etc/options_menu/ui_style.cfg 2>/dev/null)" = "classic" ]
-}
-
-switchOff() {
-  is_classic_ui || return 0
-  for item in "$@"; do
-    [ -f "$item" ] && sed -r -i 's/ \[X\]//g' "$item"
-  done
-
-}
-
-switchOn() {
-  is_classic_ui || return 0
-  for item in "$@"; do
-    [ -f "$item" ] && sed -r -i "1 s|$| [X]|" "$item"
-  done
-}
-
 overlayFS() {
   [ -d "$1" ] && mount -t overlayfs -o lowerdir="$2",upperdir="$1" overlayfs "$2"
 }
