@@ -19,14 +19,4 @@
 source $mountpoint/etc/options_menu/retroarch/scripts/ra_vars
 script_init
 
-omRetroarchCmds="$optionsMenu/retroarch/commands"
-omRetroarchScripts="$optionsMenu/retroarch/scripts"
-disableToggleLoadScreens="$omRetroarchCmds/_ToggleLoadScreens"
-enableToggleLoadScreens="$omRetroarchCmds/c0090_ToggleLoadScreens"
-
-# retroarch-clover-child (Ozone builds) dropped the loading-screen swap entirely -
-# nothing left for this option to toggle, so hide it instead of failing when picked
-enable_cmds "ToggleLoadScreens"
-[ ! -f "$rootfs/share/retroarch/assets/RAloading-min.png" ] && disable_cmds "ToggleLoadScreens"
-
-usleep 50000 && $optionsMenu/options --commandPath $omRetroarchCmds/ --scriptPath $omRetroarchScripts --title "RETROARCH_OPTIONS" &
+usleep 50000 && $optionsMenu/options --commandPath $optionsMenu/retroarch/commands/ --scriptPath $optionsMenu/retroarch/scripts --title "RETROARCH_OPTIONS" &

@@ -1,6 +1,7 @@
 COMMAND_NAME=WIFI_RESTORE_USB
 COMMAND_TYPE=EXTERNAL
 USB_ONLY=TRUE
+ENABLE_IF=[ -d /media/data/wifi_backup ]
 SUBMENU=TRUE
 COMMAND_STR=sh %script_dir%/restore_settings.sh usb
 PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
