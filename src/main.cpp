@@ -187,9 +187,11 @@ int main(int argc, char * argv[])
         exit(1);
     }
 
-    // synthesized, not read from c9999_Back/c9999_Exit files - Back only if backStack has an entry to pop
+    // B goes straight back (see the B-handling block below) rather than through a
+    // visible row, so only the root screen (no ancestors to go back to) gets Exit
     static const char * const NavPreviewImage = "/etc/options_menu/images/preview_placeholder.png";
     const int pinnedStartIndex = static_cast<int>(commands.size());
+    std::string backCommand;
     if(!backStack.empty())
     {
         // pop the last entry (our parent), re-join the rest for the parent's own Back chain
@@ -215,24 +217,21 @@ int main(int argc, char * argv[])
         std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
         std::string backTitleKey = lastEntry.substr(c2+1);
 
-        Command back;
-        back.name = "BACK";
-        back.runInternal = false;
-        back.restartUI = false;
-        back.previewImage = NavPreviewImage;
         // env prefix overrides OM_BACK_STACK for just this launch, to the parent's own remaining ancestors
-        back.command = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
+        backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
             + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
             + " --title \"" + backTitleKey + "\" &";
-        commands.push_back(back);
     }
-    Command exitCmd;
-    exitCmd.name = "EXIT";
-    exitCmd.runInternal = false;
-    exitCmd.restartUI = true;
-    exitCmd.previewImage = NavPreviewImage;
-    exitCmd.command = "echo \"Closing Options Menu\"";
-    commands.push_back(exitCmd);
+    else
+    {
+        Command exitCmd;
+        exitCmd.name = "EXIT";
+        exitCmd.runInternal = false;
+        exitCmd.restartUI = true;
+        exitCmd.previewImage = NavPreviewImage;
+        exitCmd.command = "echo \"Closing Options Menu\"";
+        commands.push_back(exitCmd);
+    }
 
     int currentCommandId = 0;
 
@@ -276,6 +275,8 @@ int main(int argc, char * argv[])
     };
     Badge badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
+    // root screen: B closes the menu instead of going back
+    Badge badgeBExit = MakeBadge("B", "EXIT", UiTheme::BadgeBDark, UiTheme::BadgeB);
     // hold-to-delete hint, different color than the real B badge
     Badge badgeHold = MakeBadge("B", "HINT_DELETE", UiTheme::BadgeXDark, UiTheme::BadgeX);
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
@@ -486,8 +487,7 @@ int main(int argc, char * argv[])
         // footer: A rightmost, B left of it, hold-to-delete hint further left
         int rightEdge = UiTheme::BadgeClusterRightX;
         rightEdge = DrawBadge(badgeA, rightEdge);
-        if(!backStack.empty())
-            rightEdge = DrawBadge(badgeB, rightEdge);
+        rightEdge = DrawBadge(backStack.empty() ? badgeBExit : badgeB, rightEdge);
         if(!commands[currentCommandId].deleteCommand.empty())
             rightEdge = DrawBadge(badgeHold, rightEdge);
         int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
@@ -568,7 +568,7 @@ int main(int argc, char * argv[])
         else if(controller.HeldRepeat(DOWN))
             MoveSelection(1);
 
-        // tap = jump to last item, hold ~1s = delete
+        // tap = go back, or close the menu on the root screen; hold ~1s = delete
         bool bHeldNow = controller.PeekButtonStatus(B);
         if(bHeldNow)
         {
@@ -582,7 +582,13 @@ int main(int argc, char * argv[])
         else
         {
             if(bWasHeld && !bHoldFired)
-                SetCurrentCommand(commands.size()-1);
+            {
+                // root screen: no backCommand, so this closes the menu instead
+                if(!backCommand.empty())
+                    system(backCommand.c_str());
+                _exitManager.runExitCommand = backCommand.empty();
+                break;
+            }
             bHoldFired = false;
         }
         bWasHeld = bHeldNow;
