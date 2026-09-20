@@ -264,6 +264,8 @@ Command Files should contain the following fields:
 |PREVIEW_IMAGE_Y|Unused - the detail panel always auto-centers the image.|
 |PREVIEW_IMAGE_WIDTH|Unused - the detail panel always auto-scales the image to fit.|
 |PREVIEW_IMAGE_HEIGHT|Unused - the detail panel always auto-scales the image to fit.|
+|PREVIEW_FIT_CONTAIN|If set to `TRUE`, this row's grid tile scales the art to fit inside the tile instead of cropping it to fill it. Use for portrait art in a wide/square tile.|
+|PREVIEW_HIDE_LABEL|If set to `TRUE`, this row's grid tile shows no caption below it.|
 |DELETE_STR|Optional command string to run when the user holds B (~1 second) on this entry and confirms. Used to make list entries deletable (e.g. the wifi backup restore list).|
 |DELETE_CONFIRM_KEY|Optional translation key for the confirmation prompt shown before running DELETE_STR. Falls back to a generic "Delete this item?" if not set.|
 |STATE_STR|Optional command string that prints the current on/off state of this entry (its first line of output, case-insensitively `1`/`on`/`y`/`yes`/`true` for on, anything else for off). Presence of this field renders the entry as a toggle switch instead of a plain row; it is only read to draw the switch, not to change behavior, so COMMAND_STR is still what actually flips the setting.|
@@ -289,6 +291,10 @@ The repo includes a Docker-based ARM cross-compile toolchain, which is the teste
     ./build.ps1     # Windows PowerShell
 
 This builds the toolchain image (`Dockerfile.jessie-armhf`) if needed, then runs `Makefile.docker` inside it, producing `out/*.hmod`.
+
+Pass `FIX_LIBSTDCXX=1` to also build a `_compat` variant that ships its own `libstdc++.so.6`, for consoles with another hmod that replaces the system one (e.g. RetroArch 1.8.4 Xtreme SC):
+
+    ./build.sh FIX_LIBSTDCXX=1
 
 #### Native / manual build
 
