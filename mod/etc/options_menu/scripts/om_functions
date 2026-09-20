@@ -78,7 +78,7 @@ translate() {
   [ -z "$langCode" ] && langCode="en-US"
 
   value=""
-  for langDir in "$optionsMenu/lang" "$optionsMenu"/*/lang; do
+  for langDir in "$optionsMenu/language" "$optionsMenu"/*/lang; do
     [ -z "$value" ] && [ -f "$langDir/$langCode.lang" ] && value="$(grep "^${key}=" "$langDir/$langCode.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
     [ -z "$value" ] && [ -f "$langDir/en-US.lang" ] && value="$(grep "^${key}=" "$langDir/en-US.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
   done
