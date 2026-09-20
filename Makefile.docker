@@ -26,6 +26,10 @@ ifdef FIX_LIBSTDCXX
 VENDORED_LIBS += mod/etc/options_menu/lib/libstdc++.so.6
 STDCXX_RPATH = -Wl,-rpath,/etc/options_menu/lib
 STDCXX_RPATH_ORIGIN = -Wl,-rpath,'$$ORIGIN/lib'
+else
+# a prior FIX_LIBSTDCXX=1 build leaves this behind - without FIX_LIBSTDCXX the
+# tar step would silently bundle it into what's meant to be the plain build
+STDCXX_CLEANUP = rm -f mod/etc/options_menu/lib/libstdc++.so.6
 endif
 else
 SDL_CFLAGS = $(shell sdl2-config --cflags) $(shell pkg-config --cflags SDL2_ttf)
@@ -59,22 +63,29 @@ define inject-readme =
 	sed 1d temp/readme.md >> mod/readme.md
 endef
 
+define strip-bin =
+	$(CROSS_PREFIX)$(STRIP) $(1)
+endef
+
+define strip-and-upx =
+	$(CROSS_PREFIX)$(STRIP) $(1)
+	upx --lzma $(1)
+endef
+
 all: $(OUT)/$(TARGET_NAME).hmod
 
 bump-build-number:
 	echo $$(( $$(cat $(BUILD_NUM_FILE) 2>/dev/null || echo 0) + 1 )) > $(BUILD_NUM_FILE)
 
 $(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo $(VENDORED_LIBS) bump-build-number
-	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/options
-	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/optiond
-	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/mod_uninstall/mod_uninstall
-	upx --lzma mod/etc/options_menu/mod_uninstall/mod_uninstall
-	$(CROSS_PREFIX)$(STRIP) mod/bin/standby_watchdog
-	upx --lzma mod/bin/standby_watchdog
-	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/gen_splash
-	$(CROSS_PREFIX)$(STRIP) mod/etc/options_menu/scripts/ChangeCombo
-	upx --lzma mod/etc/options_menu/scripts/ChangeCombo
+	$(call strip-bin,mod/etc/options_menu/options)
+	$(call strip-bin,mod/etc/options_menu/optiond)
+	$(call strip-and-upx,mod/etc/options_menu/mod_uninstall/mod_uninstall)
+	$(call strip-and-upx,mod/bin/standby_watchdog)
+	$(call strip-bin,mod/etc/options_menu/scripts/gen_splash)
+	$(call strip-and-upx,mod/etc/options_menu/scripts/ChangeCombo)
 	$(inject-readme)
+	$(STDCXX_CLEANUP)
 
 	cd mod/; tar -czvf "../out/$(TARGET_NAME).hmod" *
 
@@ -87,19 +98,19 @@ $(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/op
 mod/etc/options_menu/options: $(OBJECTS)
 	$(CROSS_PREFIX)$(CXX) $(OBJECTS) $(LDLIBS) $(LDFLAGS) -Wl,-rpath,'$$ORIGIN/lib' -o mod/etc/options_menu/options
 
+mod/etc/options_menu/lib:
+	mkdir -p $@
+
 # not ours to redistribute, pulled from the toolchain image each build
-mod/etc/options_menu/lib/libSDL2_ttf-2.0.so.0:
-	mkdir -p mod/etc/options_menu/lib
-	cp /usr/lib/arm-linux-gnueabihf/libSDL2_ttf.so mod/etc/options_menu/lib/libSDL2_ttf-2.0.so.0
+mod/etc/options_menu/lib/libSDL2_ttf-2.0.so.0: | mod/etc/options_menu/lib
+	cp /usr/lib/arm-linux-gnueabihf/libSDL2_ttf.so $@
 
-mod/etc/options_menu/lib/libfreetype.so.2.8:
-	mkdir -p mod/etc/options_menu/lib
-	cp /usr/lib/arm-linux-gnueabihf/libfreetype.so.2.8.1 mod/etc/options_menu/lib/libfreetype.so.2.8
+mod/etc/options_menu/lib/libfreetype.so.2.8: | mod/etc/options_menu/lib
+	cp /usr/lib/arm-linux-gnueabihf/libfreetype.so.2.8.1 $@
 
-mod/etc/options_menu/lib/libstdc++.so.6:
-	mkdir -p mod/etc/options_menu/lib
-	cp $$($(CROSS_PREFIX)$(CXX) -print-file-name=libstdc++.so.6) mod/etc/options_menu/lib/libstdc++.so.6
-	$(CROSS_PREFIX)$(STRIP) --strip-unneeded mod/etc/options_menu/lib/libstdc++.so.6
+mod/etc/options_menu/lib/libstdc++.so.6: | mod/etc/options_menu/lib
+	cp $$($(CROSS_PREFIX)$(CXX) -print-file-name=libstdc++.so.6) $@
+	$(CROSS_PREFIX)$(STRIP) --strip-unneeded $@
 
 mod/etc/options_menu/optiond: src/daemon.o src/framework/controller.o
 	$(CROSS_PREFIX)$(CXX) $(LDFLAGS) src/daemon.o src/framework/controller.o $(STDCXX_RPATH_ORIGIN) -o mod/etc/options_menu/optiond

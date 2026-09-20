@@ -122,6 +122,12 @@ int main(int argc, char * argv[])
         backStack = (lastSep == std::string::npos) ? "" : backStack.substr(0, lastSep);
     setenv("OM_BACK_STACK", (backStack.empty() ? myEntry : backStack + ";" + myEntry).c_str(), 1);
 
+    auto ExpandTemplates = [&](std::string & cmd)
+    {
+        sReplace(cmd, "%options_path%", optionsLocation);
+        sReplace(cmd, "%script_dir%", scriptLocation);
+    };
+
     //Read commands from command folder
     std::vector<Command> commands;
     std::ifstream in;
@@ -147,14 +153,19 @@ int main(int argc, char * argv[])
                 {
                     if(!c.usbOnly || (c.usbOnly && usbReady))
                     {
-                        sReplace(c.command, "%options_path%", optionsLocation);
-                        sReplace(c.command, "%script_dir%", scriptLocation);
-                        sReplace(c.deleteCommand, "%options_path%", optionsLocation);
-                        sReplace(c.deleteCommand, "%script_dir%", scriptLocation);
+                        if(!c.enableIfCommand.empty())
+                        {
+                            ExpandTemplates(c.enableIfCommand);
+                            // ENABLE_IF conditions reference $rootfs/$mountpoint like any
+                            // other options_menu script, so source preinit the same way
+                            if(system(("source /etc/preinit; script_init; " + c.enableIfCommand).c_str()) != 0)
+                                continue;
+                        }
+                        ExpandTemplates(c.command);
+                        ExpandTemplates(c.deleteCommand);
                         if(c.isToggle)
                         {
-                            sReplace(c.stateCommand, "%options_path%", optionsLocation);
-                            sReplace(c.stateCommand, "%script_dir%", scriptLocation);
+                            ExpandTemplates(c.stateCommand);
                             c.UpdateState();
                         }
                         commands.push_back(c);
@@ -259,10 +270,14 @@ int main(int argc, char * argv[])
 
     //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
     struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
-    Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_SELECT"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeADark, UiTheme::BadgeA };
-    Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_BACK"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
+    auto MakeBadge = [&](const char * letter, const char * hintKey, UiTheme::BadgeColor rim, UiTheme::BadgeColor fill) -> Badge
+    {
+        return { Texture(letter, 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate(hintKey), 16, renderer, 0, 0, false, UiTheme::TextColor, true), rim, fill };
+    };
+    Badge badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
+    Badge badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
     // hold-to-delete hint, different color than the real B badge
-    Badge badgeHold{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_DELETE"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeXDark, UiTheme::BadgeX };
+    Badge badgeHold = MakeBadge("B", "HINT_DELETE", UiTheme::BadgeXDark, UiTheme::BadgeX);
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
@@ -406,6 +421,19 @@ int main(int argc, char * argv[])
     };
     SetCurrentCommand(0);
 
+    // bounded so an all-headers list can't spin forever
+    auto MoveSelection = [&](int step)
+    {
+        int newCommandId = currentCommandId;
+        for(size_t tries = 0; tries < commands.size(); ++tries)
+        {
+            newCommandId = (newCommandId + step + commands.size()) % commands.size();
+            if(commands[newCommandId].command.size() != 0)
+                break;
+        }
+        SetCurrentCommand(newCommandId);
+    };
+
     auto DrawRow = [&](Command & rowCommand, bool isLastOverall)
     {
         bool selected = &rowCommand == &commands[currentCommandId];
@@ -535,28 +563,9 @@ int main(int argc, char * argv[])
             }
         }
         else if(controller.HeldRepeat(UP))
-        {
-            // bounded so an all-headers list can't spin forever
-            int newCommandId = currentCommandId;
-            for(size_t tries = 0; tries < commands.size(); ++tries)
-            {
-                newCommandId = (newCommandId-1+commands.size())%commands.size();
-                if(commands[newCommandId].command.size() != 0)
-                    break;
-            }
-            SetCurrentCommand(newCommandId);
-        }
+            MoveSelection(-1);
         else if(controller.HeldRepeat(DOWN))
-        {
-            int newCommandId = currentCommandId;
-            for(size_t tries = 0; tries < commands.size(); ++tries)
-            {
-                newCommandId = (newCommandId+1)%commands.size();
-                if(commands[newCommandId].command.size() != 0)
-                    break;
-            }
-            SetCurrentCommand(newCommandId);
-        }
+            MoveSelection(1);
 
         // tap = jump to last item, hold ~1s = delete
         bool bHeldNow = controller.PeekButtonStatus(B);
