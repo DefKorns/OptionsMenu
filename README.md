@@ -257,6 +257,7 @@ Command Files should contain the following fields:
 |RESTART_UI|Specifies if the paused UI should be resumed after running command (external commands only). If you set this value to `FALSE` you must manually resume the UI using `/bin/sh /etc/options_menu/script/ResumeUI.sh` after executing your code.|
 |COMMAND_STR|Command string to be executed. Commands must be single line only. To execute multi-line scripts use a script file.|
 |USB_ONLY|If set to `TRUE`, the command is only loaded when a USB/SD card is mounted.|
+|ENABLE_IF|Optional shell condition; the row is only loaded if it exits 0. Runs with `/etc/preinit` sourced and `script_init` called first, so it can reference `$rootfs`/`$mountpoint` like any other options_menu script, e.g. `ENABLE_IF=[ -d "$rootfs/etc/wifi_backup" ]`.|
 |IGNORE_INTERRUPT|If set to `TRUE`, pressing B will not interrupt an internal command while its output is being displayed.|
 |CHILD|If set to `TRUE`, indents the row under the one above it, for visually grouping a related entry without a separate submenu.|
 |PREVIEW_IMAGE|Specifies the path to a thumbnail/icon shown in the detail panel when this row is selected. Auto-scaled and centered to fit the panel.|

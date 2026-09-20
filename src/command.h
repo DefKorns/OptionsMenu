@@ -35,6 +35,7 @@ struct Command
     std::string deleteCommand;
     std::string deleteConfirmKey;
     std::string stateCommand;
+    std::string enableIfCommand; // shell condition; row is skipped unless it exits 0
     bool runInternal = true;
     bool restartUI = false;
     bool ignoreInterrupt = false;
