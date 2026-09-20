@@ -85,6 +85,10 @@ Command::Command(std::ifstream & in)
             previewSquare = (value == "TRUE");
         else if(param.compare("PREVIEW_GRID_COLS")==0)
             previewGridCols = SafeStoi(value, -1);
+        else if(param.compare("PREVIEW_FIT_CONTAIN")==0)
+            previewFitContain = (value == "TRUE");
+        else if(param.compare("PREVIEW_HIDE_LABEL")==0)
+            previewHideLabel = (value == "TRUE");
         else if(param.compare("SUBMENU")==0)
             hasSubmenu = (value == "TRUE");
     }
