@@ -486,7 +486,8 @@ int main(int argc, char * argv[])
         // footer: A rightmost, B left of it, hold-to-delete hint further left
         int rightEdge = UiTheme::BadgeClusterRightX;
         rightEdge = DrawBadge(badgeA, rightEdge);
-        rightEdge = DrawBadge(badgeB, rightEdge);
+        if(!backStack.empty())
+            rightEdge = DrawBadge(badgeB, rightEdge);
         if(!commands[currentCommandId].deleteCommand.empty())
             rightEdge = DrawBadge(badgeHold, rightEdge);
         int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
