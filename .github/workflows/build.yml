@@ -26,7 +26,7 @@ jobs:
           git clone --depth 1 "https://x-access-token:${{ secrets.VENDOR_REPO_PAT }}@github.com/${{ secrets.VENDOR_REPO }}.git" toolchain/vendor
 
       - name: Build cross-compile toolchain image
-        run: docker build -f toolchain/Dockerfile.jessie-armhf -t hakchi-toolchain:jessie-armhf toolchain
+        run: docker build -f toolchain/Dockerfile.jessie-armhf -t classicmini-cross-toolchain:jessie-armhf toolchain
 
       # On a tag push (release build), force MOD_VER to the tag name itself
       # rather than trusting `git describe` inside the container -- checkout
@@ -40,7 +40,7 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then
             MOD_VER_ARG="MOD_VER=${{ github.ref_name }}"
           fi
-          docker run --rm -v "${{ github.workspace }}:/src" hakchi-toolchain:jessie-armhf make -f Makefile.docker CROSS_PREFIX=arm-linux-gnueabihf- $MOD_VER_ARG
+          docker run --rm -v "${{ github.workspace }}:/src" classicmini-cross-toolchain:jessie-armhf make -f Makefile.docker CROSS_PREFIX=arm-linux-gnueabihf- $MOD_VER_ARG
 
       - name: Upload .hmod build artifact
         uses: actions/upload-artifact@v7
