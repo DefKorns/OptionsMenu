@@ -171,8 +171,8 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
             if(!feof(pipe))
                 clearerr(pipe); // last fgets() failed because nothing's ready yet, not EOF - stay readable
 
-            // ignoreInterrupt commands (e.g. ChangeCombo) read the controller themselves -
-            // stop polling it here too, or we race them for the same button events
+            // ignoreInterrupt commands read the controller directly
+            // stop polling here to avoid racing for the same button events
             if(!ignoreInterrupt)
             {
                 controller->Update();

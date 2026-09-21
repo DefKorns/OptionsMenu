@@ -110,12 +110,10 @@ int main(int argc, char * argv[])
     commandLocation = CollapseSlashes(commandLocation);
     scriptLocation = CollapseSlashes(scriptLocation);
 
-    // what a child screen inherits as its own OM_BACK_STACK
+    // value inherited by child screens as OM_BACK_STACK
     std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey;
-    // a self-relaunch (e.g. after changing language) re-enters the same screen - the
-    // stack we received already ends in an entry for "this screen" from the ORIGINAL
-    // navigation into it. Strip that stale self-reference so both the Back row below
-    // and what we export to our own children point at our real parent, not ourselves
+    // a self-relaunch re-enters the same screen with an existing stack entry
+    // remove it so Back and child screens point to the parent
     size_t lastSep = backStack.find_last_of(';');
     std::string lastEntry = backStack.empty() ? "" : (lastSep == std::string::npos ? backStack : backStack.substr(lastSep + 1));
     if(lastEntry == myEntry)
@@ -194,7 +192,7 @@ int main(int argc, char * argv[])
     std::string backCommand;
     if(!backStack.empty())
     {
-        // pop the last entry (our parent), re-join the rest for the parent's own Back chain
+        // pop the last entry (parent), re-join the rest for the parent's Back chain
         std::vector<std::string> entries;
         for(size_t start = 0; start < backStack.size();)
         {
