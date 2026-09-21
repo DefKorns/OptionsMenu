@@ -111,8 +111,7 @@ int main(int argc, char * argv[])
     for(Mod & mod : installedMods)
         mod.text = Texture(TruncateToWidth(mod.name, ColumnW), ListFontSize, renderer, LeftColumnX, 0, false, UiTheme::TextColor, true);
 
-    // this screen's list spans a different vertical range than the main menu's, so the
-    // chevrons are anchored to it directly rather than reusing UiTheme::ScrollUpY/DownY
+    // Anchor chevrons to the local list range.
     Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, ListTopY + 10, false, UiTheme::TextColor, true);
     scrollUp.rect.x -= scrollUp.rect.w / 2;
     Texture scrollDown = scrollUp;
@@ -144,7 +143,7 @@ int main(int argc, char * argv[])
         return x - UiTheme::BadgeGroupGap;
     };
 
-    // wide "Start" chip instead of a single-letter circle - "St" alone reads ambiguous next to Select
+    // Use a wide chip to distinguish Start from Select.
     Texture pillText("Start", 14, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true);
     Texture uninstallLabel(Translate("HINT_UNINSTALL"), 16, renderer, 0, 0, false, UiTheme::TextColor, true);
     auto DrawPillBadge = [&](Texture & pill, Texture & label, const UiTheme::BadgeColor & rim, const UiTheme::BadgeColor & fill, int rightEdgeX) -> int

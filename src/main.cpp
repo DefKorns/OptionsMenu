@@ -38,9 +38,7 @@ void sReplace(std::string & command, std::string oldString, std::string newStrin
     }
 }
 
-// "%options_path%/xxx" command templates always produce a double slash (optionsLocation
-// already ends in one) - collapsing here stops it from growing an extra slash with every
-// relaunch, which otherwise breaks string-equality checks like the self-relaunch one below
+// Collapse duplicate slashes for stable path comparisons.
 std::string CollapseSlashes(const std::string & path)
 {
     std::string result;
@@ -323,7 +321,7 @@ int main(int argc, char * argv[])
         int textX = UiTheme::RowTextX + (c.child ? ChildIndent : 0);
         std::string label = Translate(c.name);
 
-        // fixed list-column width regardless of preview - previews live in the detail panel, not floating on the row
+        // Keep previews inside the detail panel.
         int maxRight = UiTheme::RowControlRightX - RowTextGapPx;
         bool rowUsesTTF = CanRenderWithTTF(label, RowGlyphSize);
         int available = std::max(0, maxRight - textX);
@@ -455,7 +453,7 @@ int main(int argc, char * argv[])
             DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB);
     };
 
-    // called early, before DrawRow - must run first so its background is behind the row text
+    // Draw the background before row text.
     auto DrawChrome = [&]()
     {
         // one continuous border across header+body+footer, plus the footer divider

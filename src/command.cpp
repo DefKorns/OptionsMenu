@@ -205,7 +205,7 @@ void Command::UpdateState()
 
     char buffer[64] = {0};
     std::string result;
-    // state scripts are expected to be near-instant; don't let a stuck one block menu load
+    // Prevent stalled state scripts from blocking menu load.
     struct pollfd pfd{fileno(pipe), POLLIN, 0};
     if(poll(&pfd, 1, 1000) > 0 && fgets(buffer, sizeof(buffer), pipe))
         result = buffer;
