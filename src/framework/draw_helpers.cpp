@@ -54,7 +54,9 @@ void DrawStrokeRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 c
     if(radius <= 0)
         return;
     const std::vector<SDL_Point> & arc = RoundedCornerArc(radius, width);
-    std::vector<SDL_Point> points;
+    // reused across calls (single render thread) to avoid per-frame heap allocation
+    static std::vector<SDL_Point> points;
+    points.clear();
     points.reserve(arc.size() * 4);
     for(const SDL_Point & p : arc)
     {
@@ -101,7 +103,8 @@ void DrawRoundedFillRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Ui
     SDL_RenderFillRect(r, &mid);
     SDL_RenderFillRect(r, &midV);
     const std::vector<SDL_Point> & disk = RoundedCornerDisk(radius);
-    std::vector<SDL_Point> points;
+    static std::vector<SDL_Point> points; // reused - see DrawStrokeRect
+    points.clear();
     points.reserve(disk.size() * 4);
     for(const SDL_Point & p : disk)
     {
@@ -113,9 +116,8 @@ void DrawRoundedFillRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Ui
     SDL_RenderDrawPoints(r, points.data(), static_cast<int>(points.size()));
 }
 
-// complement of RoundedCornerDisk - the corner-square pixels a rounded rect
-// of this radius would NOT cover, i.e. what needs painting over to fake
-// rounding a rectangularly-clipped image
+// complement of RoundedCornerDisk: corner-square pixels outside the rounded rect,
+// for painting over a rectangularly-clipped image to fake rounding
 static const std::vector<SDL_Point> & RoundedCornerOutside(int radius)
 {
     static std::map<int, std::vector<SDL_Point>> cache;
@@ -137,7 +139,8 @@ void DrawRoundedCornerMask(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, 
     SDL_SetRenderDrawColor(r, cr, cg, cb, 0xFF);
     int x0 = rect.x, y0 = rect.y, x1 = rect.x+rect.w-1, y1 = rect.y+rect.h-1;
     const std::vector<SDL_Point> & outside = RoundedCornerOutside(radius);
-    std::vector<SDL_Point> points;
+    static std::vector<SDL_Point> points; // reused - see DrawStrokeRect
+    points.clear();
     points.reserve(outside.size() * 4);
     for(const SDL_Point & p : outside)
     {
