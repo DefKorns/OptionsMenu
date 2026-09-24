@@ -2,4 +2,4 @@ COMMAND_NAME=RA_TOGGLE_LOAD_SCREENS
 COMMAND_TYPE=INTERNAL
 ENABLE_IF=[ -f "$rootfs/share/retroarch/assets/RAloading-min.png" ]
 COMMAND_STR=sh %script_dir%/toggle-loadscreens.sh
-PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png
+PREVIEW_IMAGE=/etc/options_menu/images/preview_ra_load_screens.png
