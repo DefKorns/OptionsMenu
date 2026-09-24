@@ -27,10 +27,11 @@ namespace UiTheme
     Uint8 BorderR = 0x2A, BorderG = 0x2C, BorderB = 0x33;
     Uint8 AccentR = 0xF0, AccentG = 0xC4, AccentB = 0x3D; // yellow
     Uint8 SelectedRowBgR = 0x14, SelectedRowBgG = 0x16, SelectedRowBgB = 0x1A;
+    Uint8 ScrollArrowR = 0xFF, ScrollArrowG = 0xFF, ScrollArrowB = 0xFF;
 
     Uint32 BadgeLetterColor = 0xFF16161C; // AABBGGRR
     Uint32 TextColor = 0xFFFFFFFF; // AABBGGRR - primary text
-    Uint32 TextDimColor = 0xFF938D8D; // AABBGGRR - muted grey for chevrons/secondary text
+    Uint32 TextDimColor = 0xFF938D8D; // AABBGGRR - muted grey for secondary text
 
     BadgeColor BadgeA{ 0x4C, 0xAF, 0x6E }; // green
     BadgeColor BadgeADark{ 0x2E, 0x6B, 0x42 };
@@ -66,7 +67,7 @@ namespace UiTheme
         if(!in.is_open())
             return;
 
-        bool bgSet = false, selectedRowBgSet = false;
+        bool bgSet = false, selectedRowBgSet = false, scrollArrowSet = false;
         std::string line;
         while(std::getline(in, line))
         {
@@ -85,6 +86,7 @@ namespace UiTheme
             else if(key == "Border") { BorderR = r; BorderG = g; BorderB = b; }
             else if(key == "Accent") { AccentR = r; AccentG = g; AccentB = b; }
             else if(key == "SelectedRowBg") { SelectedRowBgR = r; SelectedRowBgG = g; SelectedRowBgB = b; selectedRowBgSet = true; }
+            else if(key == "ScrollArrow") { ScrollArrowR = r; ScrollArrowG = g; ScrollArrowB = b; scrollArrowSet = true; }
             else if(key == "Text") TextColor = 0xFF000000 | (b << 16) | (g << 8) | r;
             else if(key == "TextDim") TextDimColor = 0xFF000000 | (b << 16) | (g << 8) | r;
             else if(key == "BadgeLetter") BadgeLetterColor = 0xFF000000 | (b << 16) | (g << 8) | r;
@@ -109,6 +111,13 @@ namespace UiTheme
             SelectedRowBgR = ClampedAdd(BgR, 8);
             SelectedRowBgG = ClampedAdd(BgG, 7);
             SelectedRowBgB = ClampedAdd(BgB, 4);
+        }
+
+        if(!scrollArrowSet)
+        {
+            ScrollArrowR = TextColor & 0xFF;
+            ScrollArrowG = (TextColor >> 8) & 0xFF;
+            ScrollArrowB = (TextColor >> 16) & 0xFF;
         }
     }
 }

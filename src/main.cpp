@@ -258,7 +258,8 @@ int main(int argc, char * argv[])
     Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, UiTheme::TextColor, true);
     SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
     Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, UiTheme::TextColor, true);
-    Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY, false, UiTheme::TextColor, true);
+    Texture scrollUp(optionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
+    SDL_SetTextureColorMod(scrollUp.texture.get(), UiTheme::ScrollArrowR, UiTheme::ScrollArrowG, UiTheme::ScrollArrowB);
     scrollUp.rect.x -= scrollUp.rect.w / 2; // ScrollX is the gutter's center, not the glyph's left edge
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = UiTheme::ScrollDownY;
@@ -301,7 +302,8 @@ int main(int argc, char * argv[])
     const int ChildIndent = 4*16;
     const int RowGlyphSize = 16;
     const int RowTextGapPx = 16; // gap kept between truncated text and preview image/switch
-    Texture chevronText(">", RowGlyphSize, renderer, 0, 0, false, UiTheme::TextDimColor, true);
+    Texture chevronIcon(optionsLocation + UiTheme::AssetChevronRight, renderer);
+    SDL_SetTextureColorMod(chevronIcon.texture.get(), UiTheme::AccentR, UiTheme::AccentG, UiTheme::AccentB);
     for(Command & c : commands)
     {
         // self-relaunch into the same dir (e.g. language selection) isn't a submenu
@@ -444,9 +446,9 @@ int main(int argc, char * argv[])
         }
         else if(rowCommand.hasSubmenu)
         {
-            chevronText.rect.x = UiTheme::RowControlRightX - chevronText.rect.w;
-            chevronText.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - chevronText.rect.h) / 2;
-            chevronText.Draw(renderer);
+            chevronIcon.rect.x = UiTheme::RowControlRightX - chevronIcon.rect.w;
+            chevronIcon.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - chevronIcon.rect.h) / 2;
+            chevronIcon.Draw(renderer);
         }
         // skip for separators and the last row - nothing to separate there
         if(!selected && !rowCommand.command.empty() && !isLastOverall)

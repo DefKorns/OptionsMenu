@@ -112,7 +112,8 @@ int main(int argc, char * argv[])
         mod.text = Texture(TruncateToWidth(mod.name, ColumnW), ListFontSize, renderer, LeftColumnX, 0, false, UiTheme::TextColor, true);
 
     // Anchor chevrons to the local list range.
-    Texture scrollUp("^", 16, renderer, UiTheme::ScrollX, ListTopY + 10, false, UiTheme::TextColor, true);
+    Texture scrollUp(OptionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, ListTopY + 10);
+    SDL_SetTextureColorMod(scrollUp.texture.get(), UiTheme::ScrollArrowR, UiTheme::ScrollArrowG, UiTheme::ScrollArrowB);
     scrollUp.rect.x -= scrollUp.rect.w / 2;
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = ListBottomY - 50;

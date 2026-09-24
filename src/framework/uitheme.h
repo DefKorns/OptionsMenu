@@ -37,6 +37,7 @@ namespace UiTheme
     extern Uint8 BorderR, BorderG, BorderB;
     extern Uint8 AccentR, AccentG, AccentB;
     extern Uint8 SelectedRowBgR, SelectedRowBgG, SelectedRowBgB;
+    extern Uint8 ScrollArrowR, ScrollArrowG, ScrollArrowB; // follows Text unless set
 
     // TV overscan safe area
     const int SafeMarginX = 64;
@@ -124,7 +125,7 @@ namespace UiTheme
     // LoadThemeConfig - not user-facing keys themselves
     extern Uint32 BadgeLetterColor;
     extern Uint32 TextColor; // primary text - titles, row labels, badge hints
-    extern Uint32 TextDimColor; // muted grey for chevrons/secondary text
+    extern Uint32 TextDimColor; // muted grey for secondary text
 
     struct BadgeColor { Uint8 r, g, b; };
     extern BadgeColor BadgeA; // green
@@ -153,6 +154,8 @@ namespace UiTheme
     const char * const AssetSwitchOn = "/images/ui/switch_on.png";
     const char * const AssetSwitchOff = "/images/ui/switch_off.png";
     const char * const AssetGear = "/images/ui/gear.png";
+    const char * const AssetChevronRight = "/images/ui/chevron_right.png";
+    const char * const AssetChevronUp = "/images/ui/chevron_up.png";
 }
 
 #endif
