@@ -82,16 +82,16 @@ int main(int argc, char * argv[])
     auto renderer = sdl_context.renderer;
     Controller controller(1);
 
-    const Uint8 bgR = UiTheme::BgR, bgG = UiTheme::BgG, bgB = UiTheme::BgB;
-    SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, SDL_ALPHA_OPAQUE);
+    const Color bg = UiTheme::Bg;
+    SetDrawColor(renderer, bg);
 
     Texture gearIcon(OptionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, UiTheme::TextColor, true);
+    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
     appTitleText.rect.y -= appTitleText.rect.h / 2;
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, UiTheme::TextColor, true);
+    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText(Translate("MODULE_UNINSTALLER"), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, UiTheme::TextColor, true);
-    Texture creditText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, UiTheme::TextColor, true);
+    Texture titleText(Translate("MODULE_UNINSTALLER"), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
+    Texture creditText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
 
     // two columns sharing the row list's usual width, split by a center divider
     const int ColumnGap = 40;
@@ -105,35 +105,35 @@ int main(int argc, char * argv[])
     const int rowPitch = GetTTFLineHeight(ListFontSize);
     const int displayCount = std::max(1, (ListBottomY - ListTopY) / rowPitch);
 
-    Texture installedHeader(Translate("MOD_UNINSTALLER_INSTALLED"), 18, renderer, LeftColumnX, ColumnHeaderY, false, UiTheme::TextDimColor, true);
-    Texture toRemoveHeader(Translate("MOD_UNINSTALLER_TO_REMOVE"), 18, renderer, RightColumnX, ColumnHeaderY, false, UiTheme::TextDimColor, true);
+    Texture installedHeader(Translate("MOD_UNINSTALLER_INSTALLED"), 18, renderer, LeftColumnX, ColumnHeaderY, false, ToAbgr(UiTheme::TextDim), true);
+    Texture toRemoveHeader(Translate("MOD_UNINSTALLER_TO_REMOVE"), 18, renderer, RightColumnX, ColumnHeaderY, false, ToAbgr(UiTheme::TextDim), true);
 
     for(Mod & mod : installedMods)
-        mod.text = Texture(TruncateToWidth(mod.name, ColumnW), ListFontSize, renderer, LeftColumnX, 0, false, UiTheme::TextColor, true);
+        mod.text = Texture(TruncateToWidth(mod.name, ColumnW), ListFontSize, renderer, LeftColumnX, 0, false, ToAbgr(UiTheme::Text), true);
 
     // Anchor chevrons to the local list range.
     Texture scrollUp(OptionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, ListTopY + 10);
-    SDL_SetTextureColorMod(scrollUp.texture.get(), UiTheme::ScrollArrowR, UiTheme::ScrollArrowG, UiTheme::ScrollArrowB);
+    SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
     scrollUp.rect.x -= scrollUp.rect.w / 2;
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = ListBottomY - 50;
 
     Texture badgeOuter(OptionsLocation + UiTheme::AssetBadgeOuter, renderer);
     Texture badgeInner(OptionsLocation + UiTheme::AssetBadgeInner, renderer);
-    struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
-    Badge badgeAdd{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_ADD"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeADark, UiTheme::BadgeA };
-    Badge badgeUndo{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate("HINT_UNDO"), 16, renderer, 0, 0, false, UiTheme::TextColor, true), UiTheme::BadgeBDark, UiTheme::BadgeB };
+    struct Badge { Texture letter; Texture label; Color rim; Color fill; };
+    Badge badgeAdd{ Texture("A", 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate("HINT_ADD"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), UiTheme::BadgeADark, UiTheme::BadgeA };
+    Badge badgeUndo{ Texture("B", 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate("HINT_UNDO"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), UiTheme::BadgeBDark, UiTheme::BadgeB };
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
         int x = rightEdgeX - groupW;
         int y = UiTheme::BadgeBandY;
         badgeOuter.rect = { x, y, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
-        SDL_SetTextureColorMod(badgeOuter.texture.get(), badge.rim.r, badge.rim.g, badge.rim.b);
+        SetColorMod(badgeOuter.texture.get(), badge.rim);
         badgeOuter.Draw(renderer);
         int innerOffset = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
         badgeInner.rect = { x+innerOffset, y+innerOffset, UiTheme::BadgeInnerSize, UiTheme::BadgeInnerSize };
-        SDL_SetTextureColorMod(badgeInner.texture.get(), badge.fill.r, badge.fill.g, badge.fill.b);
+        SetColorMod(badgeInner.texture.get(), badge.fill);
         badgeInner.Draw(renderer);
         badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2;
         badge.letter.rect.y = y + (UiTheme::BadgeOuterSize - badge.letter.rect.h)/2;
@@ -145,9 +145,9 @@ int main(int argc, char * argv[])
     };
 
     // Use a wide chip to distinguish Start from Select.
-    Texture pillText("Start", 14, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true);
-    Texture uninstallLabel(Translate("HINT_UNINSTALL"), 16, renderer, 0, 0, false, UiTheme::TextColor, true);
-    auto DrawPillBadge = [&](Texture & pill, Texture & label, const UiTheme::BadgeColor & rim, const UiTheme::BadgeColor & fill, int rightEdgeX) -> int
+    Texture pillText("Start", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
+    Texture uninstallLabel(Translate("HINT_UNINSTALL"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
+    auto DrawPillBadge = [&](Texture & pill, Texture & label, const Color & rim, const Color & fill, int rightEdgeX) -> int
     {
         const int pillPadX = 10;
         int pillW = pill.rect.w + pillPadX*2;
@@ -155,11 +155,11 @@ int main(int argc, char * argv[])
         int x = rightEdgeX - groupW;
         int y = UiTheme::BadgeBandY;
         SDL_Rect pillRect{ x, y, pillW, UiTheme::BadgeOuterSize };
-        DrawRoundedFillRect(renderer, pillRect, rim.r, rim.g, rim.b, pillRect.h/2);
+        DrawRoundedFillRect(renderer, pillRect, rim, pillRect.h/2);
         // same ring thickness as the letter badges' outer/inner circle pair
         int border = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
         SDL_Rect fillRect{ x+border, y+border, pillW-border*2, UiTheme::BadgeInnerSize };
-        DrawRoundedFillRect(renderer, fillRect, fill.r, fill.g, fill.b, fillRect.h/2);
+        DrawRoundedFillRect(renderer, fillRect, fill, fillRect.h/2);
         pill.rect.x = x + (pillW - pill.rect.w)/2;
         pill.rect.y = y + (UiTheme::BadgeOuterSize - pill.rect.h)/2;
         pill.Draw(renderer);
@@ -175,14 +175,14 @@ int main(int argc, char * argv[])
 
     auto DrawChrome = [&]()
     {
-        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
+        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
         gearIcon.Draw(renderer);
         appTitleText.Draw(renderer);
         appVersionText.Draw(renderer);
-        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
-        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
+        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
         int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
-        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::AccentR, UiTheme::AccentG, UiTheme::AccentB);
+        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
         titleText.Draw(renderer);
         creditText.Draw(renderer);
     };
@@ -193,7 +193,7 @@ int main(int argc, char * argv[])
         DrawChrome();
         installedHeader.Draw(renderer);
         toRemoveHeader.Draw(renderer);
-        DrawVLine(renderer, DividerX, ColumnHeaderY, ListBottomY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+        DrawVLine(renderer, DividerX, ColumnHeaderY, ListBottomY, UiTheme::Border, UiTheme::BorderWidth);
 
         int count = std::min(displayCount, (int)installedMods.size()-installListOffset);
         for(int i = 0; i < count; ++i)
@@ -204,8 +204,8 @@ int main(int argc, char * argv[])
             if(i == currentId)
             {
                 SDL_Rect rowRect{ LeftColumnX - 8, rowText.rect.y - 2, ColumnW + 8, rowText.rect.h + 4 };
-                DrawRoundedFillRect(renderer, rowRect, UiTheme::SelectedRowBgR, UiTheme::SelectedRowBgG, UiTheme::SelectedRowBgB, UiTheme::BoxRadius);
-                DrawStrokeRect(renderer, rowRect, UiTheme::AccentR, UiTheme::AccentG, UiTheme::AccentB, 2, UiTheme::BoxRadius);
+                DrawRoundedFillRect(renderer, rowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
+                DrawStrokeRect(renderer, rowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
             }
             rowText.Draw(renderer);
         }
@@ -228,15 +228,15 @@ int main(int argc, char * argv[])
         rightEdge = DrawBadge(badgeUndo, rightEdge);
         DrawPillBadge(pillText, uninstallLabel, UiTheme::BadgeStartDark, UiTheme::BadgeStart, rightEdge);
 
-        SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF); // flat helpers leave the draw color dirty
+        SetDrawColor(renderer, bg); // flat helpers leave the draw color dirty
         sdl_context.EndFrame();
     };
 
     // true if the uninstall was confirmed and kicked off - caller should break out of the main loop
     auto ConfirmUninstall = [&]() -> bool
     {
-        Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, 320, true, UiTheme::TextColor, true);
-        Texture confirmHint(Translate("MOD_UNINSTALL_CONFIRM_HINT"), 16, renderer, 640, 360, true, UiTheme::TextColor, true);
+        Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, 320, true, ToAbgr(UiTheme::Text), true);
+        Texture confirmHint(Translate("MOD_UNINSTALL_CONFIRM_HINT"), 16, renderer, 640, 360, true, ToAbgr(UiTheme::Text), true);
         controller.GetButtonStatus(B); // consume the still-held B from whatever press opened this dialog
         bool confirmed = false;
         for(;;)
@@ -250,11 +250,11 @@ int main(int argc, char * argv[])
                 break;
             }
             sdl_context.StartFrame();
-            DrawFillRect(renderer, UiTheme::FrameRect, bgR, bgG, bgB);
-            DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
+            DrawFillRect(renderer, UiTheme::FrameRect, bg);
+            DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
             confirmTitle.Draw(renderer);
             confirmHint.Draw(renderer);
-            SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
+            SetDrawColor(renderer, bg);
             sdl_context.EndFrame();
         }
         if(!confirmed)

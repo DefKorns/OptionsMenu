@@ -74,9 +74,19 @@ namespace
     }
 }
 
-void DrawStrokeRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int width, int radius)
+void SetDrawColor(SDL_Renderer * renderer, Color color)
 {
-    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, SDL_ALPHA_OPAQUE);
+}
+
+void SetColorMod(SDL_Texture * texture, Color color)
+{
+    SDL_SetTextureColorMod(texture, color.r, color.g, color.b);
+}
+
+void DrawStrokeRect(SDL_Renderer * renderer, SDL_Rect rect, Color color, int width, int radius)
+{
+    SetDrawColor(renderer, color);
     const int x0 = rect.x, y0 = rect.y, x1 = rect.x + rect.w - 1, y1 = rect.y + rect.h - 1;
     for(int i = 0; i < width; ++i)
     {
@@ -89,15 +99,15 @@ void DrawStrokeRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, 
         DrawMirroredCorners(renderer, rect, radius, CornerOffsets(CornerRegion::Arc, radius, width));
 }
 
-void DrawFillRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb)
+void DrawFillRect(SDL_Renderer * renderer, SDL_Rect rect, Color color)
 {
-    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
+    SetDrawColor(renderer, color);
     SDL_RenderFillRect(renderer, &rect);
 }
 
-void DrawRoundedFillRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius)
+void DrawRoundedFillRect(SDL_Renderer * renderer, SDL_Rect rect, Color color, int radius)
 {
-    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
+    SetDrawColor(renderer, color);
     if(radius <= 0)
     {
         SDL_RenderFillRect(renderer, &rect);
@@ -111,20 +121,20 @@ void DrawRoundedFillRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8
     DrawMirroredCorners(renderer, rect, radius, CornerOffsets(CornerRegion::Disk, radius));
 }
 
-void DrawRoundedCornerMask(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius)
+void DrawRoundedCornerMask(SDL_Renderer * renderer, SDL_Rect rect, Color color, int radius)
 {
     if(radius <= 0)
         return;
-    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
+    SetDrawColor(renderer, color);
     DrawMirroredCorners(renderer, rect, radius, CornerOffsets(CornerRegion::Outside, radius));
 }
 
-void DrawHLine(SDL_Renderer * renderer, int x0, int x1, int y, Uint8 cr, Uint8 cg, Uint8 cb, int width)
+void DrawHLine(SDL_Renderer * renderer, int x0, int x1, int y, Color color, int width)
 {
-    DrawFillRect(renderer, { x0, y, x1 - x0, width }, cr, cg, cb);
+    DrawFillRect(renderer, { x0, y, x1 - x0, width }, color);
 }
 
-void DrawVLine(SDL_Renderer * renderer, int x, int y0, int y1, Uint8 cr, Uint8 cg, Uint8 cb, int width)
+void DrawVLine(SDL_Renderer * renderer, int x, int y0, int y1, Color color, int width)
 {
-    DrawFillRect(renderer, { x, y0, width, y1 - y0 }, cr, cg, cb);
+    DrawFillRect(renderer, { x, y0, width, y1 - y0 }, color);
 }

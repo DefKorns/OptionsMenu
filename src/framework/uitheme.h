@@ -18,6 +18,8 @@
 #ifndef UITHEME_H_
 #define UITHEME_H_
 
+#include "color.h"
+
 #include <SDL.h>
 #include <string>
 
@@ -33,11 +35,25 @@ namespace UiTheme
     // defaults stand
     void LoadThemeConfig(const std::string & optionsLocation);
 
-    extern Uint8 BgR, BgG, BgB;
-    extern Uint8 BorderR, BorderG, BorderB;
-    extern Uint8 AccentR, AccentG, AccentB;
-    extern Uint8 SelectedRowBgR, SelectedRowBgG, SelectedRowBgB;
-    extern Uint8 ScrollArrowR, ScrollArrowG, ScrollArrowB; // follows Text unless set
+    // palette - each one is a theme.cfg key of the same name
+    extern Color Bg;
+    extern Color Border; // dividers, box outlines
+    extern Color Accent; // selected row border, section title bar, submenu chevrons
+    extern Color SelectedRowBg; // follows Bg unless set
+    extern Color Text; // titles, row labels, badge hints
+    extern Color TextDim; // secondary text
+    extern Color ScrollArrow; // follows Text unless set
+    extern Color BadgeLetter; // letter inside a badge circle
+    extern Color BadgeA; // green
+    extern Color BadgeADark;
+    extern Color BadgeB; // red
+    extern Color BadgeBDark;
+    extern Color BadgeX; // slate-blue
+    extern Color BadgeXDark;
+    extern Color BadgeY; // dusty rose, unused
+    extern Color BadgeYDark;
+    extern Color BadgeStart; // muted gold, for a wide "Start" pill instead of a letter circle
+    extern Color BadgeStartDark;
 
     // TV overscan safe area
     const int SafeMarginX = 64;
@@ -121,22 +137,6 @@ namespace UiTheme
     // (24px) from the last-drawn badge's own left edge; this closes the gap
     // to land the divider exactly 40px left of that badge, per hardware test
     const int BadgeDividerGapFromCluster = 16;
-    // packed AABBGGRR (Texture's text color layout), set by LoadThemeConfig
-    extern Uint32 BadgeLetterColor;
-    extern Uint32 TextColor; // primary text - titles, row labels, badge hints
-    extern Uint32 TextDimColor; // muted grey for secondary text
-
-    struct BadgeColor { Uint8 r, g, b; };
-    extern BadgeColor BadgeA; // green
-    extern BadgeColor BadgeADark;
-    extern BadgeColor BadgeB; // red
-    extern BadgeColor BadgeBDark;
-    extern BadgeColor BadgeX; // slate-blue
-    extern BadgeColor BadgeXDark;
-    extern BadgeColor BadgeY; // dusty rose, unused
-    extern BadgeColor BadgeYDark;
-    extern BadgeColor BadgeStart; // muted gold, for a wide "Start" pill instead of a letter circle
-    extern BadgeColor BadgeStartDark;
 
     // "created by CompCom" footer credit, left-aligned in the footer
     const int CreditX = FrameX;

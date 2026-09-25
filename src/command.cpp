@@ -99,21 +99,21 @@ Command::Command(std::ifstream & in)
     in.close();
 }
 
-void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
+void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Color bg) const
 {
     std::list<Texture> textList;
     FILE* pipe = popen(command.c_str(), "r");
     if(pipe)
     {
         auto renderer = sdl_context.renderer;
-        SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, SDL_ALPHA_OPAQUE);
+        SetDrawColor(renderer, UiTheme::Bg);
         char buffer[128] = {0};
         const int textX = UiTheme::FrameRect.x + UiTheme::FrameInset;
         const int textFirstY = UiTheme::HeaderDividerY + 24;
 
         // same app header/footer chrome as the main screen, plus a persistent B/Exit badge
-        Texture exitLetter("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true);
-        Texture exitLabel(Translate("EXIT"), 16, renderer, 0, 0, false, UiTheme::TextColor, true);
+        Texture exitLetter("B", 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
+        Texture exitLabel(Translate("EXIT"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
         int badgeGroupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + exitLabel.rect.w;
         SDL_Rect exitBadge{ UiTheme::BadgeClusterRightX - badgeGroupW, UiTheme::BadgeBandY, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
         exitLetter.rect.x = exitBadge.x + (exitBadge.w - exitLetter.rect.w) / 2;
@@ -124,14 +124,14 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
         auto render = [&]()
         {
             sdl_context.StartFrame();
-            DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
+            DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
             chrome.gearIcon.Draw(renderer);
             chrome.appTitleText.Draw(renderer);
             chrome.appVersionText.Draw(renderer);
-            DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
-            DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+            DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
+            DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
             chrome.creditText.Draw(renderer);
-            DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB.r, UiTheme::BadgeB.g, UiTheme::BadgeB.b, exitBadge.w/2);
+            DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB, exitBadge.w/2);
             exitLetter.Draw(renderer);
             exitLabel.Draw(renderer);
             int y = textFirstY;
@@ -141,7 +141,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                 t.Draw(renderer);
                 y+=10;
             }
-            SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, 0xFF); // must be the LAST color-setting call, or it leaks into next frame's clear
+            SetDrawColor(renderer, UiTheme::Bg); // must be the LAST color-setting call, or it leaks into next frame's clear
             sdl_context.EndFrame();
         };
 
@@ -189,7 +189,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
             controller->Update();
             render();
         }
-        SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
+        SetDrawColor(renderer, bg);
     }
 }
 

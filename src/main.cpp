@@ -226,10 +226,8 @@ int main(int argc, char * argv[])
     //Create Options Flag to prevent multiple menu launches
     system("touch /tmp/options.flag");
 
-    const Uint8 bgR = UiTheme::BgR;
-    const Uint8 bgG = UiTheme::BgG;
-    const Uint8 bgB = UiTheme::BgB;
-    SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
+    const Color bg = UiTheme::Bg;
+    SetDrawColor(renderer, bg);
 
     Texture gearIcon(optionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
     Texture switchOn(optionsLocation + UiTheme::AssetSwitchOn, renderer);
@@ -238,24 +236,24 @@ int main(int argc, char * argv[])
     Texture badgeInner(optionsLocation + UiTheme::AssetBadgeInner, renderer);
 
     //Create Textures for Strings
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, UiTheme::TextColor, true);
+    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
     appTitleText.rect.y -= appTitleText.rect.h / 2; // vertically center on the gear (Texture only supports centering both axes together)
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, UiTheme::TextColor, true);
+    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, UiTheme::TextColor, true);
+    Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
     SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
-    Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, UiTheme::TextColor, true);
+    Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
     Texture scrollUp(optionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
-    SDL_SetTextureColorMod(scrollUp.texture.get(), UiTheme::ScrollArrowR, UiTheme::ScrollArrowG, UiTheme::ScrollArrowB);
+    SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
     scrollUp.rect.x -= scrollUp.rect.w / 2; // ScrollX is the gutter's center, not the glyph's left edge
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = UiTheme::ScrollDownY;
 
     //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
-    struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
-    auto MakeBadge = [&](const char * letter, const char * hintKey, UiTheme::BadgeColor rim, UiTheme::BadgeColor fill) -> Badge
+    struct Badge { Texture letter; Texture label; Color rim; Color fill; };
+    auto MakeBadge = [&](const char * letter, const char * hintKey, Color rim, Color fill) -> Badge
     {
-        return { Texture(letter, 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor, true), Texture(Translate(hintKey), 16, renderer, 0, 0, false, UiTheme::TextColor, true), rim, fill };
+        return { Texture(letter, 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate(hintKey), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), rim, fill };
     };
     Badge badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
@@ -269,11 +267,11 @@ int main(int argc, char * argv[])
         int x = rightEdgeX - groupW;
         int y = UiTheme::BadgeBandY;
         badgeOuter.rect = { x, y, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
-        SDL_SetTextureColorMod(badgeOuter.texture.get(), badge.rim.r, badge.rim.g, badge.rim.b);
+        SetColorMod(badgeOuter.texture.get(), badge.rim);
         badgeOuter.Draw(renderer);
         int innerOffset = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
         badgeInner.rect = { x+innerOffset, y+innerOffset, UiTheme::BadgeInnerSize, UiTheme::BadgeInnerSize };
-        SDL_SetTextureColorMod(badgeInner.texture.get(), badge.fill.r, badge.fill.g, badge.fill.b);
+        SetColorMod(badgeInner.texture.get(), badge.fill);
         badgeInner.Draw(renderer);
         // glyph bearing makes the pure-math center look 1px down/left - nudged
         badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2 + 1;
@@ -290,7 +288,7 @@ int main(int argc, char * argv[])
     const int RowGlyphSize = 16;
     const int RowTextGapPx = 16; // gap kept between truncated text and preview image/switch
     Texture chevronIcon(optionsLocation + UiTheme::AssetChevronRight, renderer);
-    SDL_SetTextureColorMod(chevronIcon.texture.get(), UiTheme::AccentR, UiTheme::AccentG, UiTheme::AccentB);
+    SetColorMod(chevronIcon.texture.get(), UiTheme::Accent);
     for(Command & c : commands)
     {
         // self-relaunch into the same dir (e.g. language selection) isn't a submenu
@@ -329,7 +327,7 @@ int main(int argc, char * argv[])
                 label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
         }
 
-        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, UiTheme::TextColor, true);
+        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, ToAbgr(UiTheme::Text), true);
     }
 
     const int modernRowPitch = std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize));
@@ -422,31 +420,31 @@ int main(int argc, char * argv[])
         }
         // skip for separators and the last row - nothing to separate there
         if(!selected && !rowCommand.command.empty() && !isLastOverall)
-            DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB);
+            DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::Border);
     };
 
     // Draw the background before row text.
     auto DrawChrome = [&]()
     {
         // one continuous border across header+body+footer, plus the footer divider
-        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
+        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
         gearIcon.Draw(renderer);
         appTitleText.Draw(renderer);
         appVersionText.Draw(renderer);
-        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
-        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth);
+        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
+        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
         // vertically centered on titleText's own rendered height, not a fixed guess
         int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
-        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::AccentR, UiTheme::AccentG, UiTheme::AccentB);
+        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
 
-        DrawRoundedFillRect(renderer, selectedRowRect, UiTheme::SelectedRowBgR, UiTheme::SelectedRowBgG, UiTheme::SelectedRowBgB, UiTheme::BoxRadius);
-        DrawStrokeRect(renderer, selectedRowRect, UiTheme::AccentR, UiTheme::AccentG, UiTheme::AccentB, 2, UiTheme::BoxRadius);
+        DrawRoundedFillRect(renderer, selectedRowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
+        DrawStrokeRect(renderer, selectedRowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
 
         // no box when there's no preview - an empty frame looks broken
         if(PreviewImage.get())
         {
             SDL_Rect previewBox{ UiTheme::DetailX, UiTheme::PreviewBoxY, UiTheme::DetailW, UiTheme::PreviewBoxH };
-            DrawStrokeRect(renderer, previewBox, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BoxRadius);
+            DrawStrokeRect(renderer, previewBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
             PreviewImage->rect.x = previewBox.x + (previewBox.w - PreviewImage->rect.w) / 2;
             PreviewImage->rect.y = previewBox.y + (previewBox.h - PreviewImage->rect.h) / 2;
             PreviewImage->Draw(renderer);
@@ -459,15 +457,15 @@ int main(int argc, char * argv[])
         if(!commands[currentCommandId].deleteCommand.empty())
             rightEdge = DrawBadge(badgeHold, rightEdge);
         int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
-        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, 2);
+        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
     };
 
     // true if deleted - caller should break out of the main loop
     auto ConfirmDelete = [&]() -> bool
     {
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
-        Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, UiTheme::TextColor, true);
-        Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, UiTheme::TextColor, true);
+        Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, ToAbgr(UiTheme::Text), true);
+        Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, ToAbgr(UiTheme::Text), true);
         controller.GetButtonStatus(B); // consume the still-held B from the triggering long-press
         bool confirmed = false;
         for(;;)
@@ -481,11 +479,11 @@ int main(int argc, char * argv[])
                 break;
             }
             sdl_context.StartFrame();
-            DrawFillRect(renderer, UiTheme::FrameRect, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB);
-            DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::BorderR, UiTheme::BorderG, UiTheme::BorderB, UiTheme::BorderWidth, UiTheme::BorderRadius);
+            DrawFillRect(renderer, UiTheme::FrameRect, UiTheme::Bg);
+            DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
             confirmTitle.Draw(renderer);
             confirmHint.Draw(renderer);
-            SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF); // flat helpers leave the draw color dirty
+            SetDrawColor(renderer, bg); // flat helpers leave the draw color dirty
             sdl_context.EndFrame();
         }
         if(!confirmed)
@@ -520,7 +518,7 @@ int main(int argc, char * argv[])
         {
             if(commands[currentCommandId].runInternal)
             {
-                commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bgR, bgG, bgB);
+                commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bg);
                 if(commands[currentCommandId].isToggle)
                     commands[currentCommandId].UpdateState();
             }
@@ -576,7 +574,7 @@ int main(int argc, char * argv[])
             scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
 
         // flat-line helpers leave the draw color dirty - reset before EndFrame
-        SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
+        SetDrawColor(renderer, bg);
 
         //Render Framebuffer and Wait for Next Frame
         sdl_context.EndFrame();
