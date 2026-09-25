@@ -7,10 +7,11 @@ ESC_MOD_VER := $(subst .,_,$(MOD_VER))
 # hmods replacing the system copy. Off by default, costs ~225KB.
 ifdef FIX_LIBSTDCXX
 TARGET_NAME = options_deluxe_$(ESC_MOD_VER)_compat
+MOD_NAME := Options Menu $(MOD_VER) (compat)
 else
 TARGET_NAME = options_deluxe_$(ESC_MOD_VER)
-endif
 MOD_NAME := Options Menu $(MOD_VER)
+endif
 GIT_COMMIT := $(shell git describe --always --dirty=.dirty 2>/dev/null)
 BUILD_NUM_FILE := .build_number
 CXX = g++
