@@ -19,8 +19,4 @@
 source $mountpoint/etc/options_menu/network/scripts/om_vars
 script_init
 
-enable_cmds "RestoreUSB RestoreNAND"
-[ ! -d "$usb_backup" ] && disable_cmds "RestoreUSB"
-[ ! -d "$nand_backup" ] && disable_cmds "RestoreNAND"
-
 usleep 50000 && $optionsMenu/options --commandPath $omNetworkCmds/ --scriptPath $omNetworkScripts --title "NETWORK_OPTIONS" &

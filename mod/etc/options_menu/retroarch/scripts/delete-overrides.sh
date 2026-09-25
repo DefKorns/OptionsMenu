@@ -1,6 +1,8 @@
 #!/bin/sh
 
-mv /etc/libretro/.config/retroarch/config/remaps /etc/libretro/.config/retroarch/
-rm -r /etc/libretro/.config/retroarch/config/*
-mv /etc/libretro/.config/retroarch/remaps /etc/libretro/.config/retroarch/config/
+source $mountpoint/etc/options_menu/retroarch/scripts/ra_vars
+
+mv "$raConfig/remaps" /tmp/ra_remaps
+rm -r "${raConfig:?}"/*
+mv /tmp/ra_remaps "$raConfig/remaps"
 echo "Overrides deleted."

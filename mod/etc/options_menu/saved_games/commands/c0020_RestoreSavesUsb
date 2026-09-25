@@ -1,0 +1,4 @@
+COMMAND_NAME=RESTORE_SAVES_USB
+COMMAND_TYPE=INTERNAL
+COMMAND_STR=sh %script_dir%/RestoreSavesUsb.sh
+PREVIEW_IMAGE=/etc/options_menu/images/preview_saves_restore_usb.png

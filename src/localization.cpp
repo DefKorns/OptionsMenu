@@ -12,55 +12,78 @@
 #include <dirent.h>
 #include <fstream>
 #include <map>
+#include <memory>
 
-static std::map<std::string, std::string> strings;
-
-static void LoadLanguageFile(const std::string & path)
+namespace
 {
-    std::ifstream in(path);
-    std::string line;
-    while(std::getline(in, line))
+    const std::string DefaultLangCode = "en-US";
+
+    // I.2 exception: Translate() is a free function called from every screen
+    std::map<std::string, std::string> translations;
+
+    using DirHandle = std::unique_ptr<DIR, decltype(&closedir)>;
+
+    bool FileExists(const std::string & path)
     {
-        if(!line.empty() && line.back() == '\r')
-            line.pop_back();
-        if(line.empty() || line[0] == '#')
-            continue;
-        size_t index = line.find('=');
-        if(index == std::string::npos)
-            continue;
-        strings[line.substr(0, index)] = line.substr(index+1);
+        return std::ifstream(path).good();
     }
-}
 
-static void LoadLanguageDir(const std::string & langDir, const std::string & langCode)
-{
-    LoadLanguageFile(langDir + "en-US.lang");
-    if(langCode != "en-US")
-        LoadLanguageFile(langDir + langCode + ".lang");
+    void LoadLanguageFile(const std::string & path)
+    {
+        std::ifstream in(path);
+        std::string line;
+        while(std::getline(in, line))
+        {
+            if(!line.empty() && line.back() == '\r')
+                line.pop_back();
+            if(line.empty() || line[0] == '#')
+                continue;
+            const size_t eq = line.find('=');
+            if(eq == std::string::npos)
+                continue;
+            translations[line.substr(0, eq)] = line.substr(eq + 1);
+        }
+    }
+
+    // en-US first so keys missing from a partial translation still resolve
+    void LoadLanguageDir(const std::string & langDir, const std::string & langCode)
+    {
+        LoadLanguageFile(langDir + DefaultLangCode + ".lang");
+        if(langCode != DefaultLangCode)
+            LoadLanguageFile(langDir + langCode + ".lang");
+    }
 }
 
 void LoadLanguage(const std::string & optionsRoot, const std::string & langCode)
 {
-    strings.clear();
+    translations.clear();
     LoadLanguageDir(optionsRoot + "language/", langCode);
 
-    if(auto dir = opendir(optionsRoot.c_str()))
+    const DirHandle dir(opendir(optionsRoot.c_str()), &closedir);
+    if(!dir)
+        return;
+    while(const dirent * entry = readdir(dir.get()))
     {
-        while(auto entry = readdir(dir))
-        {
-            if(entry->d_type != DT_DIR || entry->d_name[0] == '.')
-                continue;
-            std::string pluginLangDir = optionsRoot + entry->d_name + "/lang/";
-            std::ifstream check(pluginLangDir + "en-US.lang");
-            if(check.good())
-                LoadLanguageDir(pluginLangDir, langCode);
-        }
-        closedir(dir);
+        if(entry->d_type != DT_DIR || entry->d_name[0] == '.')
+            continue;
+        const std::string pluginLangDir = optionsRoot + entry->d_name + "/lang/";
+        if(FileExists(pluginLangDir + DefaultLangCode + ".lang"))
+            LoadLanguageDir(pluginLangDir, langCode);
     }
+}
+
+void LoadLanguageFromConfig(const std::string & optionsRoot)
+{
+    std::string langCode;
+    std::ifstream in(optionsRoot + "language.cfg");
+    std::getline(in, langCode);
+    if(!langCode.empty() && langCode.back() == '\r')
+        langCode.pop_back();
+    LoadLanguage(optionsRoot, langCode.empty() ? DefaultLangCode : langCode);
 }
 
 std::string Translate(const std::string & key)
 {
-    auto it = strings.find(key);
-    return it == strings.end() ? key : it->second;
+    const auto it = translations.find(key);
+    return it == translations.end() ? key : it->second;
 }

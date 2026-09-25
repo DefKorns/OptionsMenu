@@ -78,7 +78,7 @@ translate() {
   [ -z "$langCode" ] && langCode="en-US"
 
   value=""
-  for langDir in "$optionsMenu/lang" "$optionsMenu"/*/lang; do
+  for langDir in "$optionsMenu/language" "$optionsMenu"/*/lang; do
     [ -z "$value" ] && [ -f "$langDir/$langCode.lang" ] && value="$(grep "^${key}=" "$langDir/$langCode.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
     [ -z "$value" ] && [ -f "$langDir/en-US.lang" ] && value="$(grep "^${key}=" "$langDir/en-US.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
   done
@@ -138,26 +138,6 @@ toggleDownloads() {
   else
     disable_cmds "Downloads"
   fi
-}
-
-is_classic_ui() {
-  # [X]-in-title markers only apply in classic UI; modern UI has a real switch
-  [ "$(cat /etc/options_menu/ui_style.cfg 2>/dev/null)" = "classic" ]
-}
-
-switchOff() {
-  is_classic_ui || return 0
-  for item in "$@"; do
-    [ -f "$item" ] && sed -r -i 's/ \[X\]//g' "$item"
-  done
-
-}
-
-switchOn() {
-  is_classic_ui || return 0
-  for item in "$@"; do
-    [ -f "$item" ] && sed -r -i "1 s|$| [X]|" "$item"
-  done
 }
 
 overlayFS() {
