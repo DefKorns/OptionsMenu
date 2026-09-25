@@ -41,6 +41,9 @@ jobs:
             MOD_VER_ARG="MOD_VER=${{ github.ref_name }}"
           fi
           docker run --rm -v "${{ github.workspace }}:/src" classicmini-cross-toolchain:jessie-armhf make -f Makefile.docker CROSS_PREFIX=arm-linux-gnueabihf- $MOD_VER_ARG
+          # _compat variant (private libstdc++.so.6) - must run after the plain
+          # build, which strips a leftover libstdc++ out of its own package
+          docker run --rm -v "${{ github.workspace }}:/src" classicmini-cross-toolchain:jessie-armhf make -f Makefile.docker CROSS_PREFIX=arm-linux-gnueabihf- $MOD_VER_ARG FIX_LIBSTDCXX=1
 
       - name: Upload .hmod build artifact
         uses: actions/upload-artifact@v7
