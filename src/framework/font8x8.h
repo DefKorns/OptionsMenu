@@ -10,6 +10,7 @@
 
 #include "font8x8_latin.h"
 #include "font8x8_cyrillic.h"
+#include "font8x8_cjk_punct.h"
 #include "font8x8_hiragana.h"
 #include "font8x8_katakana.h"
 #include "font8x8_kanji.h"

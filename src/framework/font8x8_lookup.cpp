@@ -41,6 +41,8 @@ const char * Font8x8Glyph(unsigned int codepoint)
         return font8x8_ext_latin[codepoint - 0xA0];
     if(codepoint >= 0x0400 && codepoint <= 0x04FF)
         return font8x8_cyrillic[codepoint - 0x0400];
+    if(codepoint >= 0x3000 && codepoint <= 0x303F)
+        return font8x8_cjk_punct[codepoint - 0x3000];
     if(codepoint >= 0x3040 && codepoint <= 0x309F)
         return font8x8_hiragana[codepoint - 0x3040];
     if(codepoint >= 0x30A0 && codepoint <= 0x30FF)
