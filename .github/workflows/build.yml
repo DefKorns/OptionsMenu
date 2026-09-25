@@ -64,3 +64,5 @@ jobs:
         with:
           files: out/*.hmod
           generate_release_notes: true
+          # -alpha/-beta/-rc tags must not take over "Latest"
+          prerelease: ${{ contains(github.ref_name, '-') }}
