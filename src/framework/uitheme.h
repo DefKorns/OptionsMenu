@@ -94,7 +94,7 @@ namespace UiTheme
     const int RowPitch = 36;
     const int RowTextYNudge = -4; // fine-tune vs. pure (slot-h - text-h)/2 centering
     const int RowTextX = ListX + 16;
-    const int PinnedBottomMargin = 10; // gap from the footer divider to the last pinned row (e.g. Exit)
+    const int ListBottomMargin = 10; // gap from the footer divider to the last list row
 
     // detail panel (right column), Modern UI only - just the preview image,
     // fixed Y independent of scroll/selection (it must not move as the list

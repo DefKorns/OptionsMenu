@@ -183,10 +183,7 @@ int main(int argc, char * argv[])
         exit(1);
     }
 
-    // B goes straight back (see the B-handling block below) rather than through a
-    // visible row, so only the root screen (no ancestors to go back to) gets Exit
-    static const char * const NavPreviewImage = "/etc/options_menu/images/preview_placeholder.png";
-    const int pinnedStartIndex = static_cast<int>(commands.size());
+    // B goes back to the parent, or closes the menu on the root screen (no ancestors)
     std::string backCommand;
     if(!backStack.empty())
     {
@@ -217,16 +214,6 @@ int main(int argc, char * argv[])
         backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
             + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
             + " --title \"" + backTitleKey + "\" &";
-    }
-    else
-    {
-        Command exitCmd;
-        exitCmd.name = "EXIT";
-        exitCmd.runInternal = false;
-        exitCmd.restartUI = true;
-        exitCmd.previewImage = NavPreviewImage;
-        exitCmd.command = "echo \"Closing Options Menu\"";
-        commands.push_back(exitCmd);
     }
 
     int currentCommandId = 0;
@@ -316,9 +303,6 @@ int main(int argc, char * argv[])
             if(targetPath == commandLocation)
                 c.hasSubmenu = false;
         }
-        // Back also relaunches elsewhere - name is the untranslated key, language-independent
-        if(c.name == "BACK")
-            c.hasSubmenu = false;
 
         int textX = UiTheme::RowTextX + (c.child ? ChildIndent : 0);
         std::string label = Translate(c.name);
@@ -349,19 +333,8 @@ int main(int argc, char * argv[])
     }
 
     const int modernRowPitch = std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize));
-    int pinnedAreaTop;
-    {
-        int slotBottom = UiTheme::FooterDividerY - UiTheme::PinnedBottomMargin;
-        for(int i = static_cast<int>(commands.size())-1; i >= pinnedStartIndex; --i)
-        {
-            int slotTop = slotBottom - modernRowPitch;
-            commands[i].texture.rect.y = slotTop + (modernRowPitch - commands[i].texture.rect.h) / 2 + UiTheme::RowTextYNudge;
-            slotBottom = slotTop;
-        }
-        pinnedAreaTop = slotBottom;
-    }
-    // scrollable rows that fit above the pinned block - varies per screen
-    const int DisplayItemCount = std::max(1, (pinnedAreaTop - UiTheme::RowFirstY) / modernRowPitch);
+    const int commandCount = static_cast<int>(commands.size());
+    const int DisplayItemCount = std::max(1, (UiTheme::FooterDividerY - UiTheme::ListBottomMargin - UiTheme::RowFirstY) / modernRowPitch);
 
     int topListItemNumber = 1;
     std::shared_ptr<Texture> PreviewImage;
@@ -370,24 +343,21 @@ int main(int argc, char * argv[])
         currentCommandId = newCommandId;
         const Command & currentCommand = commands[currentCommandId];
 
-        // pinned rows don't affect scroll position
-        int scrollTarget = std::min(currentCommandId, std::max(0, pinnedStartIndex-1));
-
         bool updateCommandYPos = false;
-        if(scrollTarget < topListItemNumber)
+        if(currentCommandId < topListItemNumber)
         {
-            topListItemNumber = scrollTarget;
+            topListItemNumber = currentCommandId;
             updateCommandYPos = true;
         }
-        else if(scrollTarget >= topListItemNumber+DisplayItemCount)
+        else if(currentCommandId >= topListItemNumber+DisplayItemCount)
         {
-            topListItemNumber = scrollTarget-DisplayItemCount+1;
+            topListItemNumber = currentCommandId-DisplayItemCount+1;
             updateCommandYPos = true;
         }
         if(updateCommandYPos)
         {
             int y = UiTheme::RowFirstY;
-            for(int i = 0, count = std::min(DisplayItemCount, pinnedStartIndex-topListItemNumber); i < count; ++i)
+            for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
             {
                 Texture & rowTexture = commands[i+topListItemNumber].texture;
                 // centered in its slot - TTF glyphs have ascender padding, top-align leaves a gap
@@ -595,20 +565,14 @@ int main(int argc, char * argv[])
         DrawChrome();
         titleText.Draw(renderer);
 
-        int lastCommandIndex = static_cast<int>(commands.size()) - 1;
-        for(int i = 0, count = std::min(DisplayItemCount, pinnedStartIndex-topListItemNumber); i < count; ++i)
-            DrawRow(commands[i+topListItemNumber], (i+topListItemNumber) == lastCommandIndex);
-
-        // pinned trailing rows (Back/Exit) - always visible near the footer
-        for(int i = pinnedStartIndex; i <= lastCommandIndex; ++i)
-            DrawRow(commands[i], i == lastCommandIndex);
+        for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
+            DrawRow(commands[i+topListItemNumber], (i+topListItemNumber) == commandCount-1);
 
         CompComText.Draw(renderer);
 
-        // bounded by pinnedStartIndex, not commands.size() - pinned rows need no scroll
         if(topListItemNumber != 0)
             scrollUp.Draw(renderer);
-        if((topListItemNumber + DisplayItemCount) < pinnedStartIndex)
+        if((topListItemNumber + DisplayItemCount) < commandCount)
             scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
 
         // flat-line helpers leave the draw color dirty - reset before EndFrame
