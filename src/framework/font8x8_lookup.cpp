@@ -20,13 +20,17 @@
 
 #include <algorithm>
 
-static const char * LookupKanjiGlyph(unsigned int codepoint)
+namespace
 {
-    auto it = std::lower_bound(std::begin(font8x8_kanji), std::end(font8x8_kanji), codepoint,
-        [](const Font8x8KanjiEntry & entry, unsigned int cp) { return entry.codepoint < cp; });
-    if(it != std::end(font8x8_kanji) && it->codepoint == codepoint)
-        return reinterpret_cast<const char *>(it->glyph);
-    return nullptr;
+    // font8x8_kanji is sparse (JIS level 1 only), sorted by codepoint
+    const char * LookupKanjiGlyph(unsigned int codepoint)
+    {
+        const auto it = std::lower_bound(std::begin(font8x8_kanji), std::end(font8x8_kanji), codepoint,
+            [](const Font8x8KanjiEntry & entry, unsigned int cp) { return entry.codepoint < cp; });
+        if(it != std::end(font8x8_kanji) && it->codepoint == codepoint)
+            return reinterpret_cast<const char *>(it->glyph);
+        return nullptr;
+    }
 }
 
 const char * Font8x8Glyph(unsigned int codepoint)
@@ -43,9 +47,8 @@ const char * Font8x8Glyph(unsigned int codepoint)
         return font8x8_katakana[codepoint - 0x30A0];
     if(codepoint >= 0x4E00 && codepoint <= 0x9FFF)
     {
-        const char * kanjiGlyph = LookupKanjiGlyph(codepoint);
-        if(kanjiGlyph)
+        if(const char * kanjiGlyph = LookupKanjiGlyph(codepoint))
             return kanjiGlyph;
     }
-    return font8x8_basic[0x3F];
+    return font8x8_basic['?'];
 }

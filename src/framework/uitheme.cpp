@@ -44,21 +44,30 @@ namespace UiTheme
     BadgeColor BadgeStart{ 0xC2, 0xA8, 0x5E }; // muted gold
     BadgeColor BadgeStartDark{ 0x74, 0x65, 0x38 };
 
-    static bool ParseTriple(const std::string & value, Uint8 & r, Uint8 & g, Uint8 & b)
+    namespace
     {
-        int rv, gv, bv;
-        if(std::sscanf(value.c_str(), "%d,%d,%d", &rv, &gv, &bv) != 3)
-            return false;
-        r = static_cast<Uint8>(rv);
-        g = static_cast<Uint8>(gv);
-        b = static_cast<Uint8>(bv);
-        return true;
-    }
+        bool ParseRgb(const std::string & value, Uint8 & r, Uint8 & g, Uint8 & b)
+        {
+            int rv = 0, gv = 0, bv = 0;
+            if(std::sscanf(value.c_str(), "%d,%d,%d", &rv, &gv, &bv) != 3)
+                return false;
+            r = static_cast<Uint8>(rv);
+            g = static_cast<Uint8>(gv);
+            b = static_cast<Uint8>(bv);
+            return true;
+        }
 
-    static Uint8 ClampedAdd(Uint8 base, int delta)
-    {
-        int v = base + delta;
-        return static_cast<Uint8>(v < 0 ? 0 : (v > 255 ? 255 : v));
+        Uint8 ClampedAdd(Uint8 base, int delta)
+        {
+            const int v = base + delta;
+            return static_cast<Uint8>(v < 0 ? 0 : (v > 255 ? 255 : v));
+        }
+
+        // opaque AABBGGRR, the layout Texture's text color expects
+        Uint32 PackAbgr(Uint8 r, Uint8 g, Uint8 b)
+        {
+            return 0xFF000000u | (static_cast<Uint32>(b) << 16) | (static_cast<Uint32>(g) << 8) | r;
+        }
     }
 
     void LoadThemeConfig(const std::string & optionsLocation)
@@ -73,13 +82,12 @@ namespace UiTheme
         {
             if(!line.empty() && line.back() == '\r')
                 line.pop_back();
-            size_t eq = line.find('=');
+            const size_t eq = line.find('=');
             if(eq == std::string::npos || line[0] == '#')
                 continue;
-            std::string key = line.substr(0, eq);
-            std::string value = line.substr(eq + 1);
-            Uint8 r, g, b;
-            if(!ParseTriple(value, r, g, b))
+            const std::string key = line.substr(0, eq);
+            Uint8 r = 0, g = 0, b = 0;
+            if(!ParseRgb(line.substr(eq + 1), r, g, b))
                 continue;
 
             if(key == "Bg") { BgR = r; BgG = g; BgB = b; bgSet = true; }
@@ -87,9 +95,9 @@ namespace UiTheme
             else if(key == "Accent") { AccentR = r; AccentG = g; AccentB = b; }
             else if(key == "SelectedRowBg") { SelectedRowBgR = r; SelectedRowBgG = g; SelectedRowBgB = b; selectedRowBgSet = true; }
             else if(key == "ScrollArrow") { ScrollArrowR = r; ScrollArrowG = g; ScrollArrowB = b; scrollArrowSet = true; }
-            else if(key == "Text") TextColor = 0xFF000000 | (b << 16) | (g << 8) | r;
-            else if(key == "TextDim") TextDimColor = 0xFF000000 | (b << 16) | (g << 8) | r;
-            else if(key == "BadgeLetter") BadgeLetterColor = 0xFF000000 | (b << 16) | (g << 8) | r;
+            else if(key == "Text") TextColor = PackAbgr(r, g, b);
+            else if(key == "TextDim") TextDimColor = PackAbgr(r, g, b);
+            else if(key == "BadgeLetter") BadgeLetterColor = PackAbgr(r, g, b);
             else if(key == "BadgeA") BadgeA = { r, g, b };
             else if(key == "BadgeADark") BadgeADark = { r, g, b };
             else if(key == "BadgeB") BadgeB = { r, g, b };

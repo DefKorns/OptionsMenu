@@ -21,14 +21,14 @@
 #include <SDL.h>
 
 // flat-line drawing for Modern UI - no textured art
-void DrawStrokeRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int width, int radius = 0);
-void DrawFillRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb);
-void DrawRoundedFillRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius);
-// paints just the 4 corner-square regions outside the rounded radius with
-// a flat color - draw over a rectangularly-clipped image to fake rounding
-// it to match a rounded container, without an actual alpha mask/render target
-void DrawRoundedCornerMask(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius);
-void DrawHLine(SDL_Renderer * r, int x0, int x1, int y, Uint8 cr, Uint8 cg, Uint8 cb, int width = 1);
-void DrawVLine(SDL_Renderer * r, int x, int y0, int y1, Uint8 cr, Uint8 cg, Uint8 cb, int width = 1);
+void DrawStrokeRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int width, int radius = 0);
+void DrawFillRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb);
+void DrawRoundedFillRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius);
+// paints the corner-square pixels outside the rounded radius with a flat
+// color - drawn over a rectangularly-clipped image, it fakes rounding it
+// without an alpha mask or render target
+void DrawRoundedCornerMask(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius);
+void DrawHLine(SDL_Renderer * renderer, int x0, int x1, int y, Uint8 cr, Uint8 cg, Uint8 cb, int width = 1);
+void DrawVLine(SDL_Renderer * renderer, int x, int y0, int y1, Uint8 cr, Uint8 cg, Uint8 cb, int width = 1);
 
 #endif

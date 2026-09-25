@@ -18,51 +18,81 @@
 #include "framework/controller.h"
 #include "localization.h"
 
-#include <iostream>
-#include <fstream>
-#include <string>
+#include <array>
 #include <cstdio>
+#include <fstream>
+#include <initializer_list>
+#include <iostream>
+#include <string>
 #include <unistd.h>
 
-static const GameButton AllButtons[] = { A, B, X, Y, L, R, SELECT, START, LEFT, RIGHT, UP, DOWN };
-
-static const char * ButtonName(GameButton button)
+namespace
 {
-    switch(button)
+    const std::string OptionsRoot = "/etc/options_menu/";
+    const std::string ButtonConfigPath = OptionsRoot + "button.cfg";
+    constexpr useconds_t PollIntervalUs = 50000;
+    constexpr size_t ComboLength = 3;
+
+    const std::array<GameButton, 12> AllButtons{ { A, B, X, Y, L, R, SELECT, START, LEFT, RIGHT, UP, DOWN } };
+
+    const char * ButtonName(GameButton button)
     {
-        case A: return "A";
-        case B: return "B";
-        case X: return "X";
-        case Y: return "Y";
-        case L: return "L";
-        case R: return "R";
-        case SELECT: return "SELECT";
-        case START: return "START";
-        case LEFT: return "LEFT";
-        case RIGHT: return "RIGHT";
-        case UP: return "UP";
-        default: return "DOWN";
+        switch(button)
+        {
+            case A: return "A";
+            case B: return "B";
+            case X: return "X";
+            case Y: return "Y";
+            case L: return "L";
+            case R: return "R";
+            case SELECT: return "SELECT";
+            case START: return "START";
+            case LEFT: return "LEFT";
+            case RIGHT: return "RIGHT";
+            case UP: return "UP";
+            case DOWN: return "DOWN";
+        }
+        return "?";
     }
-}
 
-// drops any button already held, so the next WaitForPress doesn't catch the
-// tail of a press that was meant for the previous step
-static void ConsumeHeldButtons(Controller & c)
-{
-    c.Update();
-    for(GameButton b : AllButtons)
-        c.GetButtonStatus(b);
-}
-
-static GameButton WaitForPress(Controller & c)
-{
-    for(;;)
+    // drops any button already held, so the next WaitForPress doesn't catch the
+    // tail of a press that was meant for the previous step
+    void ConsumeHeldButtons(Controller & controller)
     {
-        c.Update();
-        for(GameButton b : AllButtons)
-            if(c.GetButtonStatus(b))
-                return b;
-        usleep(50000);
+        controller.Update();
+        for(const GameButton button : AllButtons)
+            controller.GetButtonStatus(button);
+    }
+
+    GameButton WaitForPress(Controller & controller)
+    {
+        for(;;)
+        {
+            controller.Update();
+            for(const GameButton button : AllButtons)
+                if(controller.GetButtonStatus(button))
+                    return button;
+            usleep(PollIntervalUs);
+        }
+    }
+
+    void PrintLines(const std::initializer_list<const char *> keys)
+    {
+        for(const char * key : keys)
+            std::cout << Translate(key) << std::endl;
+    }
+
+    // temp file + rename: an interrupted write must never leave button.cfg
+    // truncated for daemon.cpp to trip over
+    bool SaveCombo(const std::array<GameButton, ComboLength> & combo)
+    {
+        const std::string tmpPath = ButtonConfigPath + ".tmp";
+        {
+            std::ofstream out(tmpPath);
+            if(!(out << static_cast<int>(combo[0]) << " " << static_cast<int>(combo[1]) << " " << static_cast<int>(combo[2])))
+                return false;
+        }
+        return std::rename(tmpPath.c_str(), ButtonConfigPath.c_str()) == 0;
     }
 }
 
@@ -72,54 +102,38 @@ int main()
     // there, so lines can sit unflushed instead of appearing as they're printed
     setvbuf(stdout, nullptr, _IONBF, 0);
 
-    LoadLanguageFromConfig("/etc/options_menu/");
+    LoadLanguageFromConfig(OptionsRoot);
 
-    Controller c(1);
+    Controller controller(1);
 
-    static const char * const intro[] = {
-        "CHANGE_COMBO_INTRO_1", "CHANGE_COMBO_INTRO_2", "CHANGE_COMBO_INTRO_3", "CHANGE_COMBO_CONTINUE"
-    };
-    for(const char * key : intro)
-        std::cout << Translate(key) << std::endl;
-    ConsumeHeldButtons(c);
-    GameButton gate;
-    do { gate = WaitForPress(c); } while(gate != A && gate != B);
-    if(gate == B)
+    PrintLines({ "CHANGE_COMBO_INTRO_1", "CHANGE_COMBO_INTRO_2", "CHANGE_COMBO_INTRO_3", "CHANGE_COMBO_CONTINUE" });
+    ConsumeHeldButtons(controller);
+    GameButton choice = WaitForPress(controller);
+    while(choice != A && choice != B)
+        choice = WaitForPress(controller);
+    if(choice == B)
         return 0;
 
-    static const char * const prompts[3] = {
-        "CHANGE_COMBO_PRESS_1",
-        "CHANGE_COMBO_PRESS_2",
-        "CHANGE_COMBO_PRESS_3"
-    };
+    const std::array<const char *, ComboLength> prompts{ { "CHANGE_COMBO_PRESS_1", "CHANGE_COMBO_PRESS_2", "CHANGE_COMBO_PRESS_3" } };
 
     for(;;)
     {
-        GameButton chosen[3];
-        for(int i = 0; i < 3; ++i)
+        std::array<GameButton, ComboLength> combo{};
+        for(size_t i = 0; i < ComboLength; ++i)
         {
             std::cout << Translate(prompts[i]) << std::endl;
-            ConsumeHeldButtons(c);
-            chosen[i] = WaitForPress(c);
+            ConsumeHeldButtons(controller);
+            combo[i] = WaitForPress(controller);
         }
 
         // button names (A, B, X...) stay untranslated, same as the footer badges
-        std::cout << Translate("CHANGE_COMBO_CHOSEN") << " " << ButtonName(chosen[0]) << " + " << ButtonName(chosen[1]) << " + " << ButtonName(chosen[2]) << std::endl;
+        std::cout << Translate("CHANGE_COMBO_CHOSEN") << " " << ButtonName(combo[0]) << " + " << ButtonName(combo[1]) << " + " << ButtonName(combo[2]) << std::endl;
         std::cout << Translate("CHANGE_COMBO_CONFIRM") << std::endl;
-        ConsumeHeldButtons(c);
-        if(WaitForPress(c) == A)
+        ConsumeHeldButtons(controller);
+        if(WaitForPress(controller) == A)
         {
-            // write to a temp file and rename into place - an interrupted write
-            // must never leave button.cfg truncated/empty for daemon.cpp to trip over
-            const char * const path = "/etc/options_menu/button.cfg";
-            const std::string tmpPath = std::string(path) + ".tmp";
-            std::ofstream out(tmpPath);
-            if(out << (int)chosen[0] << " " << (int)chosen[1] << " " << (int)chosen[2])
-            {
-                out.close();
-                std::rename(tmpPath.c_str(), path);
+            if(SaveCombo(combo))
                 std::cout << Translate("CHANGE_COMBO_DONE") << std::endl;
-            }
             else
                 std::cerr << Translate("CHANGE_COMBO_WRITE_ERROR") << std::endl;
             break;

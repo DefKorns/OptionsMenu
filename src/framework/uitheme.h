@@ -121,8 +121,7 @@ namespace UiTheme
     // (24px) from the last-drawn badge's own left edge; this closes the gap
     // to land the divider exactly 40px left of that badge, per hardware test
     const int BadgeDividerGapFromCluster = 16;
-    // packed AABBGGRR, kept in sync with the R/G/B triples below by
-    // LoadThemeConfig - not user-facing keys themselves
+    // packed AABBGGRR (Texture's text color layout), set by LoadThemeConfig
     extern Uint32 BadgeLetterColor;
     extern Uint32 TextColor; // primary text - titles, row labels, badge hints
     extern Uint32 TextDimColor; // muted grey for secondary text

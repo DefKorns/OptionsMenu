@@ -17,42 +17,71 @@
 
 #include "utf8.h"
 
+namespace
+{
+    constexpr unsigned int ReplacementChar = 0xFFFD;
+
+    bool IsContinuation(unsigned char byte)
+    {
+        return (byte & 0xC0) == 0x80;
+    }
+
+    // byte count implied by a lead byte; invalid leads count as 1 so callers
+    // always make progress
+    size_t SequenceLength(unsigned char lead)
+    {
+        if(lead >= 0xF0 && lead <= 0xF4) return 4;
+        if(lead >= 0xE0) return lead <= 0xEF ? 3 : 1;
+        if(lead >= 0xC2) return 2;
+        return 1;
+    }
+
+    struct DecodeResult
+    {
+        unsigned int codepoint;
+        bool valid; // false if the sequence is malformed or cut short
+    };
+
+    DecodeResult DecodeAt(const std::string & text, size_t pos, size_t length)
+    {
+        const unsigned char lead = static_cast<unsigned char>(text[pos]);
+        if(length == 1)
+            return { lead, lead < 0x80 };
+        if(pos + length > text.size())
+            return { ReplacementChar, false };
+
+        static const unsigned char LeadMask[] = { 0, 0, 0x1F, 0x0F, 0x07 };
+        unsigned int codepoint = lead & LeadMask[length];
+        for(size_t i = 1; i < length; ++i)
+        {
+            const unsigned char byte = static_cast<unsigned char>(text[pos + i]);
+            if(!IsContinuation(byte))
+                return { ReplacementChar, false };
+            codepoint = (codepoint << 6) | (byte & 0x3F);
+        }
+        return { codepoint, true };
+    }
+}
+
 std::vector<unsigned int> Utf8ToCodepoints(const std::string & text)
 {
     std::vector<unsigned int> codepoints;
-    for(size_t i = 0; i < text.size();)
+    for(size_t pos = 0; pos < text.size();)
     {
-        unsigned char firstByte = static_cast<unsigned char>(text[i]);
-        unsigned int codepoint = 0xFFFD;
-        size_t sequenceLength = 1;
-
-        if(firstByte < 0x80)
+        const size_t length = SequenceLength(static_cast<unsigned char>(text[pos]));
+        const DecodeResult decoded = DecodeAt(text, pos, length);
+        if(decoded.valid)
         {
-            codepoint = firstByte;
+            codepoints.push_back(decoded.codepoint);
+            pos += length;
         }
-        else if(firstByte >= 0xC2 && firstByte <= 0xDF && i + 1 < text.size())
+        else
         {
-            unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
-            if((secondByte & 0xC0) == 0x80)
-            {
-                codepoint = ((firstByte & 0x1F) << 6) | (secondByte & 0x3F);
-                sequenceLength = 2;
-            }
+            // only the lead byte is consumed, so a stray lead can't swallow
+            // the valid characters after it
+            codepoints.push_back(ReplacementChar);
+            ++pos;
         }
-        else if(firstByte >= 0xE0 && firstByte <= 0xEF && i + 2 < text.size())
-        {
-            unsigned char secondByte = static_cast<unsigned char>(text[i + 1]);
-            unsigned char thirdByte = static_cast<unsigned char>(text[i + 2]);
-            if((secondByte & 0xC0) == 0x80 && (thirdByte & 0xC0) == 0x80)
-            {
-                codepoint = ((firstByte & 0x0F) << 12) |
-                            ((secondByte & 0x3F) << 6) | (thirdByte & 0x3F);
-                sequenceLength = 3;
-            }
-        }
-
-        codepoints.push_back(codepoint);
-        i += sequenceLength;
     }
     return codepoints;
 }
@@ -60,25 +89,15 @@ std::vector<unsigned int> Utf8ToCodepoints(const std::string & text)
 int Utf8Length(const std::string & text)
 {
     int count = 0;
-    for(size_t i = 0; i < text.size();)
-    {
-        unsigned char c = static_cast<unsigned char>(text[i]);
-        i += (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
+    for(size_t pos = 0; pos < text.size(); pos += SequenceLength(static_cast<unsigned char>(text[pos])))
         ++count;
-    }
     return count;
 }
 
 std::string TruncateUtf8(const std::string & text, int maxCodepoints)
 {
-    size_t i = 0;
-    int count = 0;
-    while(i < text.size() && count < maxCodepoints)
-    {
-        unsigned char c = static_cast<unsigned char>(text[i]);
-        size_t len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
-        i += len;
-        ++count;
-    }
-    return text.substr(0, i);
+    size_t pos = 0;
+    for(int count = 0; pos < text.size() && count < maxCodepoints; ++count)
+        pos += SequenceLength(static_cast<unsigned char>(text[pos]));
+    return text.substr(0, pos);
 }

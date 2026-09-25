@@ -19,145 +19,112 @@
 
 #include <cmath>
 #include <map>
+#include <tuple>
 #include <vector>
 
-// corner arc points within [radius-width, radius], cached per (radius,width)
-static const std::vector<SDL_Point> & RoundedCornerArc(int radius, int width)
+namespace
 {
-    static std::map<std::pair<int,int>, std::vector<SDL_Point>> cache;
-    auto key = std::make_pair(radius, width);
-    auto it = cache.find(key);
-    if(it != cache.end())
-        return it->second;
-    std::vector<SDL_Point> pts;
-    for(int dy = 0; dy <= radius; ++dy)
-        for(int dx = 0; dx <= radius; ++dx)
+    using CornerPoints = std::vector<SDL_Point>;
+
+    enum class CornerRegion { Arc, Disk, Outside };
+
+    // offsets (dx, dy) from a corner's circle center, within one quadrant.
+    // Arc: ring of the given width on the radius. Disk: full quarter-disk.
+    // Outside: corner-square pixels beyond the radius. Cached per shape.
+    const CornerPoints & CornerOffsets(CornerRegion region, int radius, int width = 0)
+    {
+        static std::map<std::tuple<CornerRegion, int, int>, CornerPoints> cache;
+        const auto key = std::make_tuple(region, radius, width);
+        const auto it = cache.find(key);
+        if(it != cache.end())
+            return it->second;
+
+        CornerPoints points;
+        for(int dy = 0; dy <= radius; ++dy)
+            for(int dx = 0; dx <= radius; ++dx)
+            {
+                const double dist = std::sqrt(static_cast<double>(dx*dx + dy*dy));
+                const bool insideRadius = dist <= radius + 0.5;
+                const bool inRegion =
+                    region == CornerRegion::Arc ? insideRadius && dist > radius - width + 0.5 :
+                    region == CornerRegion::Disk ? insideRadius :
+                    !insideRadius;
+                if(inRegion)
+                    points.push_back({ dx, dy });
+            }
+        return cache.emplace(key, std::move(points)).first->second;
+    }
+
+    // mirrors quadrant offsets into all 4 corners of rect and plots them
+    void DrawMirroredCorners(SDL_Renderer * renderer, SDL_Rect rect, int radius, const CornerPoints & offsets)
+    {
+        const int x0 = rect.x, y0 = rect.y, x1 = rect.x + rect.w - 1, y1 = rect.y + rect.h - 1;
+        // reused across calls (single render thread) to avoid per-frame heap allocation
+        static CornerPoints points;
+        points.clear();
+        points.reserve(offsets.size() * 4);
+        for(const SDL_Point & p : offsets)
         {
-            double dist = std::sqrt(static_cast<double>(dx*dx + dy*dy));
-            if(dist <= radius + 0.5 && dist > radius - width + 0.5)
-                pts.push_back({dx, dy});
+            points.push_back({ x0 + radius - p.x, y0 + radius - p.y }); // top-left
+            points.push_back({ x1 - radius + p.x, y0 + radius - p.y }); // top-right
+            points.push_back({ x0 + radius - p.x, y1 - radius + p.y }); // bottom-left
+            points.push_back({ x1 - radius + p.x, y1 - radius + p.y }); // bottom-right
         }
-    return cache.emplace(key, std::move(pts)).first->second;
+        SDL_RenderDrawPoints(renderer, points.data(), static_cast<int>(points.size()));
+    }
 }
 
-void DrawStrokeRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int width, int radius)
+void DrawStrokeRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int width, int radius)
 {
-    SDL_SetRenderDrawColor(r, cr, cg, cb, 0xFF);
-    int x0 = rect.x, y0 = rect.y, x1 = rect.x+rect.w-1, y1 = rect.y+rect.h-1;
+    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
+    const int x0 = rect.x, y0 = rect.y, x1 = rect.x + rect.w - 1, y1 = rect.y + rect.h - 1;
     for(int i = 0; i < width; ++i)
     {
-        SDL_RenderDrawLine(r, x0+radius, y0+i, x1-radius, y0+i);   // top
-        SDL_RenderDrawLine(r, x0+radius, y1-i, x1-radius, y1-i);   // bottom
-        SDL_RenderDrawLine(r, x0+i, y0+radius, x0+i, y1-radius);   // left
-        SDL_RenderDrawLine(r, x1-i, y0+radius, x1-i, y1-radius);   // right
+        SDL_RenderDrawLine(renderer, x0 + radius, y0 + i, x1 - radius, y0 + i); // top
+        SDL_RenderDrawLine(renderer, x0 + radius, y1 - i, x1 - radius, y1 - i); // bottom
+        SDL_RenderDrawLine(renderer, x0 + i, y0 + radius, x0 + i, y1 - radius); // left
+        SDL_RenderDrawLine(renderer, x1 - i, y0 + radius, x1 - i, y1 - radius); // right
     }
-    if(radius <= 0)
-        return;
-    const std::vector<SDL_Point> & arc = RoundedCornerArc(radius, width);
-    // reused across calls (single render thread) to avoid per-frame heap allocation
-    static std::vector<SDL_Point> points;
-    points.clear();
-    points.reserve(arc.size() * 4);
-    for(const SDL_Point & p : arc)
-    {
-        points.push_back({ x0+radius-p.x, y0+radius-p.y }); // top-left
-        points.push_back({ x1-radius+p.x, y0+radius-p.y }); // top-right
-        points.push_back({ x0+radius-p.x, y1-radius+p.y }); // bottom-left
-        points.push_back({ x1-radius+p.x, y1-radius+p.y }); // bottom-right
-    }
-    SDL_RenderDrawPoints(r, points.data(), static_cast<int>(points.size()));
+    if(radius > 0)
+        DrawMirroredCorners(renderer, rect, radius, CornerOffsets(CornerRegion::Arc, radius, width));
 }
 
-void DrawFillRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb)
+void DrawFillRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb)
 {
-    SDL_SetRenderDrawColor(r, cr, cg, cb, 0xFF);
-    SDL_RenderFillRect(r, &rect);
+    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
+    SDL_RenderFillRect(renderer, &rect);
 }
 
-// like RoundedCornerArc but the full quarter-disk, for a solid fill
-static const std::vector<SDL_Point> & RoundedCornerDisk(int radius)
+void DrawRoundedFillRect(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius)
 {
-    static std::map<int, std::vector<SDL_Point>> cache;
-    auto it = cache.find(radius);
-    if(it != cache.end())
-        return it->second;
-    std::vector<SDL_Point> pts;
-    for(int dy = 0; dy <= radius; ++dy)
-        for(int dx = 0; dx <= radius; ++dx)
-            if(std::sqrt(static_cast<double>(dx*dx + dy*dy)) <= radius + 0.5)
-                pts.push_back({dx, dy});
-    return cache.emplace(radius, std::move(pts)).first->second;
-}
-
-void DrawRoundedFillRect(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius)
-{
-    SDL_SetRenderDrawColor(r, cr, cg, cb, 0xFF);
+    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
     if(radius <= 0)
     {
-        SDL_RenderFillRect(r, &rect);
+        SDL_RenderFillRect(renderer, &rect);
         return;
     }
-    int x0 = rect.x, y0 = rect.y, x1 = rect.x+rect.w-1, y1 = rect.y+rect.h-1;
-    SDL_Rect mid{ x0, y0+radius, rect.w, rect.h-2*radius };
-    SDL_Rect midV{ x0+radius, y0, rect.w-2*radius, rect.h };
-    SDL_RenderFillRect(r, &mid);
-    SDL_RenderFillRect(r, &midV);
-    const std::vector<SDL_Point> & disk = RoundedCornerDisk(radius);
-    static std::vector<SDL_Point> points; // reused - see DrawStrokeRect
-    points.clear();
-    points.reserve(disk.size() * 4);
-    for(const SDL_Point & p : disk)
-    {
-        points.push_back({ x0+radius-p.x, y0+radius-p.y });
-        points.push_back({ x1-radius+p.x, y0+radius-p.y });
-        points.push_back({ x0+radius-p.x, y1-radius+p.y });
-        points.push_back({ x1-radius+p.x, y1-radius+p.y });
-    }
-    SDL_RenderDrawPoints(r, points.data(), static_cast<int>(points.size()));
+    // cross of two bands, corners filled by the quarter-disks
+    const SDL_Rect hBand{ rect.x, rect.y + radius, rect.w, rect.h - 2*radius };
+    const SDL_Rect vBand{ rect.x + radius, rect.y, rect.w - 2*radius, rect.h };
+    SDL_RenderFillRect(renderer, &hBand);
+    SDL_RenderFillRect(renderer, &vBand);
+    DrawMirroredCorners(renderer, rect, radius, CornerOffsets(CornerRegion::Disk, radius));
 }
 
-// complement of RoundedCornerDisk: corner-square pixels outside the rounded rect,
-// for painting over a rectangularly-clipped image to fake rounding
-static const std::vector<SDL_Point> & RoundedCornerOutside(int radius)
-{
-    static std::map<int, std::vector<SDL_Point>> cache;
-    auto it = cache.find(radius);
-    if(it != cache.end())
-        return it->second;
-    std::vector<SDL_Point> pts;
-    for(int dy = 0; dy <= radius; ++dy)
-        for(int dx = 0; dx <= radius; ++dx)
-            if(std::sqrt(static_cast<double>(dx*dx + dy*dy)) > radius + 0.5)
-                pts.push_back({dx, dy});
-    return cache.emplace(radius, std::move(pts)).first->second;
-}
-
-void DrawRoundedCornerMask(SDL_Renderer * r, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius)
+void DrawRoundedCornerMask(SDL_Renderer * renderer, SDL_Rect rect, Uint8 cr, Uint8 cg, Uint8 cb, int radius)
 {
     if(radius <= 0)
         return;
-    SDL_SetRenderDrawColor(r, cr, cg, cb, 0xFF);
-    int x0 = rect.x, y0 = rect.y, x1 = rect.x+rect.w-1, y1 = rect.y+rect.h-1;
-    const std::vector<SDL_Point> & outside = RoundedCornerOutside(radius);
-    static std::vector<SDL_Point> points; // reused - see DrawStrokeRect
-    points.clear();
-    points.reserve(outside.size() * 4);
-    for(const SDL_Point & p : outside)
-    {
-        points.push_back({ x0+radius-p.x, y0+radius-p.y });
-        points.push_back({ x1-radius+p.x, y0+radius-p.y });
-        points.push_back({ x0+radius-p.x, y1-radius+p.y });
-        points.push_back({ x1-radius+p.x, y1-radius+p.y });
-    }
-    SDL_RenderDrawPoints(r, points.data(), static_cast<int>(points.size()));
+    SDL_SetRenderDrawColor(renderer, cr, cg, cb, 0xFF);
+    DrawMirroredCorners(renderer, rect, radius, CornerOffsets(CornerRegion::Outside, radius));
 }
 
-void DrawHLine(SDL_Renderer * r, int x0, int x1, int y, Uint8 cr, Uint8 cg, Uint8 cb, int width)
+void DrawHLine(SDL_Renderer * renderer, int x0, int x1, int y, Uint8 cr, Uint8 cg, Uint8 cb, int width)
 {
-    DrawFillRect(r, { x0, y, x1-x0, width }, cr, cg, cb);
+    DrawFillRect(renderer, { x0, y, x1 - x0, width }, cr, cg, cb);
 }
 
-void DrawVLine(SDL_Renderer * r, int x, int y0, int y1, Uint8 cr, Uint8 cg, Uint8 cb, int width)
+void DrawVLine(SDL_Renderer * renderer, int x, int y0, int y1, Uint8 cr, Uint8 cg, Uint8 cb, int width)
 {
-    DrawFillRect(r, { x, y0, width, y1-y0 }, cr, cg, cb);
+    DrawFillRect(renderer, { x, y0, width, y1 - y0 }, cr, cg, cb);
 }
