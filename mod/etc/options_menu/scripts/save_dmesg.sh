@@ -14,17 +14,12 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# mod_uninstall exit: 0 = back, 2 = uninstalling (reboots), else leave menu
-optionsPath="${1%/}"
+# shellcheck source=/dev/null
+source /etc/preinit
+script_init
+source "$mountpoint/etc/options_menu/scripts/om_functions"
 
-"$optionsPath/mod_uninstall/mod_uninstall"
-case $? in
-0)
-  usleep 50000
-  "$optionsPath/options" --commandPath "$optionsPath/advanced_commands/" --title "ADVANCED_OPTIONS"
-  ;;
-2) ;;
-*)
-  sh "$optionsPath/scripts/ResumeUI.sh"
-  ;;
-esac
+log_dir="$mountpoint/media/data/log"
+mkdir -pm 777 "$log_dir"
+dmesg > "$log_dir/dmesg.log"
+translate SAVE_DMESG_DONE

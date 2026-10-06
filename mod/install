@@ -1,14 +1,14 @@
 #!/bin/sh
 # shellcheck disable=SC2154
 omRoot="$rootfs/etc/options_menu"
-omSettings="button.cfg language.cfg"
+omSettings="button.cfg language.cfg controller/home_combination.prev"
 omBackup="$temppath/om_settings"
 
 # Uninstall any previous or legacy install first to ensure a clean installation
 rm -rf "$omBackup"
 mkdir -p "$omBackup"
 for omFile in $omSettings; do
-  [ -f "$omRoot/$omFile" ] && cp -p "$omRoot/$omFile" "$omBackup/"
+  [ -f "$omRoot/$omFile" ] && mkdir -p "$(dirname "$omBackup/$omFile")" && cp -p "$omRoot/$omFile" "$omBackup/$omFile"
 done
 for omUnfile in "$installpath/hmod/uninstall-options_deluxe"* \
               "$installpath/hmod/uninstall-options_menu_"* \
@@ -20,7 +20,7 @@ cd "$transferpath" || return 1
 
 transfer_default
 for omFile in $omSettings; do
-  [ -f "$omBackup/$omFile" ] && cp -p "$omBackup/$omFile" "$omRoot/"
+  [ -f "$omBackup/$omFile" ] && mkdir -p "$(dirname "$omRoot/$omFile")" && cp -p "$omBackup/$omFile" "$omRoot/$omFile"
 done
 rm -rf "$omBackup"
 

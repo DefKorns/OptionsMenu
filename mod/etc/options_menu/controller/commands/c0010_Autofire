@@ -1,0 +1,5 @@
+COMMAND_NAME=AUTOFIRE
+COMMAND_TYPE=INTERNAL
+COMMAND_STR=sh %script_dir%/clovercon.sh toggle autofire
+STATE_STR=sh %script_dir%/clovercon.sh state autofire
+PREVIEW_IMAGE=/etc/options_menu/images/preview_autofire.png

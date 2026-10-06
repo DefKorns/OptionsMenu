@@ -14,17 +14,17 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# mod_uninstall exit: 0 = back, 2 = uninstalling (reboots), else leave menu
-optionsPath="${1%/}"
+# armet.sh state|toggle
+# protection is on unless cfg_disable_armet=y (clover-kachikachi-wr)
+source /etc/preinit
+script_init
 
-"$optionsPath/mod_uninstall/mod_uninstall"
-case $? in
-0)
-  usleep 50000
-  "$optionsPath/options" --commandPath "$optionsPath/advanced_commands/" --title "ADVANCED_OPTIONS"
+case "$1" in
+state)
+  if [ "$cfg_disable_armet" = "y" ]; then echo "off"; else echo "on"; fi
   ;;
-2) ;;
-*)
-  sh "$optionsPath/scripts/ResumeUI.sh"
+toggle)
+  if [ "$cfg_disable_armet" = "y" ]; then cfg_disable_armet='n'; else cfg_disable_armet='y'; fi
+  save_config
   ;;
 esac
