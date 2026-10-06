@@ -5,12 +5,17 @@ The Options Menu is a custom, easily extendable menu for your console, letting o
 
 ### Features
 
-- Modern UI
-- Hmod Uninstaller
-- Hibernate Mod
-- Retroarch Settings Management
-- Wifi Backup
-- Multi-language Support
+- **Modern UI** with smooth TTF fonts and preview images
+- **Power:** Hibernate/Standby, Shutdown, Restart
+- **RetroArch:** back up/restore settings (NAND or USB), restore defaults, transfer BIOS files, clean up overrides/remaps/BIOS, toggle load screens
+- **Network:** show IP, reconnect, search for SSIDs, back up/restore your wifi config (NAND or USB)
+- **Saved Games:** back up/restore saves to USB
+- **Language:** English, Français, Deutsch, Español, Italiano, Nederlands, Português, Русский, 日本語
+- **Advanced:**
+  - Controller: change the menu button combo, autofire (speed, X/Y as turbo A/B), Home menu combo, Start on the 2nd controller
+  - Diagnostics: system info, temperature, top, benchmark, RetroArch debugger, file structure and kernel log dumps to USB
+  - Module Uninstaller, Clear Cache, USB write access toggle, epilepsy protection (NES)
+- Extendable: other hmods (e.g. Theme Selector) add their own menus
 
 ### How to open
 
@@ -41,6 +46,7 @@ Extra thanks to **DNA64 (viral_dna)** and **Swingflip** for always testing featu
 
 Also thanks to the following people for testing the options menu:
 
+- **Aranthys**
 - **BsLeNuL**
 - **DefKorns**
 - **DR1001**
