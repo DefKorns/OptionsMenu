@@ -23,12 +23,24 @@
 namespace
 {
     const std::string OptionsLocation = "/etc/options_menu/";
+    // never list the menu itself
+    const std::string HiddenModPrefix = "options_deluxe";
     const int ListFontSize = 16;
+    const int PanelFontSize = 16;
+    const int PanelHeaderFontSize = 18;
+    const int NoteFontSize = 15;
+
+    const int ExitBack = 0;
+    const int ExitLeaveMenu = 1;
+    const int ExitUninstallStarted = 2;
+
+    const Color White{ 255, 255, 255 };
 
     struct Mod
     {
         std::string name;
         Texture text;
+        bool marked = false;
     };
 
     // "hakchi pack_list" lines keep their trailing newline
@@ -39,14 +51,71 @@ namespace
         return s;
     }
 
-    std::string TruncateToWidth(const std::string & text, int maxWidth)
+    // Texture falls back to font8x8 (fontSize px per codepoint) when TTF lacks a glyph
+    int TextWidth(const std::string & text, int fontSize)
     {
-        if(MeasureTTFWidth(text, ListFontSize) <= maxWidth)
+        if(CanRenderWithTTF(text, fontSize))
+            return MeasureTTFWidth(text, fontSize);
+        return Utf8Length(text) * fontSize;
+    }
+
+    std::string TruncateToWidth(const std::string & text, int fontSize, int maxWidth)
+    {
+        if(TextWidth(text, fontSize) <= maxWidth)
             return text;
         int n = Utf8Length(text);
-        while(n > 0 && MeasureTTFWidth(TruncateUtf8(text, n) + "...", ListFontSize) > maxWidth)
+        while(n > 0 && TextWidth(TruncateUtf8(text, n) + "...", fontSize) > maxWidth)
             --n;
         return TruncateUtf8(text, n) + "...";
+    }
+
+    // unspaced (CJK) or overlong words break per codepoint
+    std::vector<std::string> WrapToWidth(const std::string & text, int fontSize, int maxWidth)
+    {
+        std::vector<std::string> lines;
+        std::string line;
+        size_t pos = 0;
+        while(pos < text.size())
+        {
+            size_t end = text.find(' ', pos);
+            std::string word = text.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
+            pos = (end == std::string::npos) ? text.size() : end + 1;
+
+            std::string candidate = line.empty() ? word : line + " " + word;
+            if(TextWidth(candidate, fontSize) <= maxWidth)
+            {
+                line = candidate;
+                continue;
+            }
+            if(!line.empty())
+                lines.push_back(line);
+            line = word;
+            while(TextWidth(line, fontSize) > maxWidth && Utf8Length(line) > 1)
+            {
+                int n = Utf8Length(line) - 1;
+                while(n > 1 && TextWidth(TruncateUtf8(line, n), fontSize) > maxWidth)
+                    --n;
+                std::string head = TruncateUtf8(line, n);
+                lines.push_back(head);
+                line = line.substr(head.size());
+            }
+        }
+        if(!line.empty())
+            lines.push_back(line);
+        return lines;
+    }
+
+    std::vector<Texture> MakeLines(const std::vector<std::string> & lines, int fontSize, SDL_Renderer * renderer, Color color)
+    {
+        std::vector<Texture> textures;
+        for(const std::string & line : lines)
+            textures.emplace_back(line, fontSize, renderer, 0, 0, false, ToAbgr(color), true);
+        return textures;
+    }
+
+    void DrawDot(SDL_Renderer * renderer, int x, int centerY)
+    {
+        DrawRoundedFillRect(renderer, { x, centerY - 4, 8, 8 }, UiTheme::CheckboxOn, 4);
     }
 }
 
@@ -55,7 +124,7 @@ int main(int argc, char * argv[])
     std::string folderLocation(argv[0]);
     folderLocation = folderLocation.substr(0, folderLocation.find_last_of('/')+1);
 
-    std::vector<Mod> installedMods;
+    std::vector<Mod> mods;
     {
         char buf[256];
         auto pipe = popen("hakchi pack_list", "r");
@@ -63,15 +132,17 @@ int main(int argc, char * argv[])
         {
             while(!feof(pipe))
                 if(fgets(buf, sizeof(buf), pipe))
-                    installedMods.push_back({TrimTrailingNewline(buf), {}});
+                {
+                    std::string name = TrimTrailingNewline(buf);
+                    if(!name.empty() && name.compare(0, HiddenModPrefix.size(), HiddenModPrefix) != 0)
+                    {
+                        Mod mod;
+                        mod.name = name;
+                        mods.push_back(mod);
+                    }
+                }
             pclose(pipe);
         }
-    }
-
-    if(installedMods.empty())
-    {
-        std::cerr << "Cannot find mods";
-        return 1;
     }
 
     LoadLanguageFromConfig(OptionsLocation);
@@ -93,36 +164,58 @@ int main(int argc, char * argv[])
     Texture titleText(Translate("MODULE_UNINSTALLER"), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
     Texture creditText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
 
-    // two columns sharing the row list's usual width, split by a center divider
-    const int ColumnGap = 40;
-    const int ColumnW = (UiTheme::ListContentRightX - UiTheme::ListX - ColumnGap) / 2;
-    const int LeftColumnX = UiTheme::ListX;
-    const int RightColumnX = LeftColumnX + ColumnW + ColumnGap;
-    const int DividerX = LeftColumnX + ColumnW + ColumnGap/2;
-    const int ColumnHeaderY = UiTheme::SectionTitleY + 46;
-    const int ListTopY = ColumnHeaderY + 32;
-    const int ListBottomY = UiTheme::FooterDividerY - 16;
-    const int rowPitch = GetTTFLineHeight(ListFontSize);
-    const int displayCount = std::max(1, (ListBottomY - ListTopY) / rowPitch);
+    const int RowBoxH = UiTheme::RowPitch - 6;
+    Texture checkboxOn(OptionsLocation + UiTheme::AssetCheckboxOn, renderer);
+    SetColorMod(checkboxOn.texture.get(), UiTheme::CheckboxOn);
+    Texture checkboxOff(OptionsLocation + UiTheme::AssetCheckboxOff, renderer);
+    SetColorMod(checkboxOff.texture.get(), UiTheme::CheckboxOff);
+    const int CheckboxSize = 20;
+    const int CheckboxX = UiTheme::RowControlRightX - CheckboxSize;
+    const int RowTextMaxW = CheckboxX - 16 - UiTheme::RowTextX;
+    const int displayCount = std::max(1, (UiTheme::FooterDividerY - UiTheme::ListBottomMargin - UiTheme::RowFirstY) / UiTheme::RowPitch);
 
-    Texture installedHeader(Translate("MOD_UNINSTALLER_INSTALLED"), 18, renderer, LeftColumnX, ColumnHeaderY, false, ToAbgr(UiTheme::TextDim), true);
-    Texture toRemoveHeader(Translate("MOD_UNINSTALLER_TO_REMOVE"), 18, renderer, RightColumnX, ColumnHeaderY, false, ToAbgr(UiTheme::TextDim), true);
+    // white, tinted per mark state at draw time
+    for(Mod & mod : mods)
+        mod.text = Texture(TruncateToWidth(mod.name, ListFontSize, RowTextMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
+    Texture emptyText(Translate("MOD_UNINSTALL_EMPTY"), ListFontSize, renderer, UiTheme::RowTextX, UiTheme::RowFirstY, false, ToAbgr(UiTheme::TextDim), true);
 
-    for(Mod & mod : installedMods)
-        mod.text = Texture(TruncateToWidth(mod.name, ColumnW), ListFontSize, renderer, LeftColumnX, 0, false, ToAbgr(UiTheme::Text), true);
-
-    // Anchor chevrons to the local list range.
-    Texture scrollUp(OptionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, ListTopY + 10);
+    Texture scrollUp(OptionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
     SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
-    scrollUp.rect.x -= scrollUp.rect.w / 2;
     Texture scrollDown = scrollUp;
-    scrollDown.rect.y = ListBottomY - 50;
+    scrollDown.rect.y = UiTheme::ScrollDownY;
+
+    const int PanelPad = 16;
+    const int PanelInnerX = UiTheme::DetailX + PanelPad;
+    const int PanelInnerW = UiTheme::DetailW - 2*PanelPad;
+    const SDL_Rect summaryBox{ UiTheme::DetailX, UiTheme::RowFirstY, UiTheme::DetailW, 260 };
+    const int SummaryDividerY = summaryBox.y + 46;
+    const int SummaryListY = summaryBox.y + 62;
+    const int SummaryRowPitch = 28;
+    const int SummaryMaxRows = (summaryBox.y + summaryBox.h - PanelPad - SummaryListY) / SummaryRowPitch;
+    const int BulletTextGap = 18;
+    const SDL_Rect noteBox{ UiTheme::DetailX, summaryBox.y + summaryBox.h + 16, UiTheme::DetailW, 72 };
+    const int NoteIconCX = noteBox.x + 26;
+    const int NoteTextX = noteBox.x + 46;
+
+    Texture summaryHeader(Translate("MOD_UNINSTALLER_TO_REMOVE"), PanelHeaderFontSize, renderer, PanelInnerX, summaryBox.y + 14, false, ToAbgr(UiTheme::TextDim), true);
+    Texture summaryCount;
+    Texture noneMarkedText(Translate("MOD_UNINSTALL_NONE_MARKED"), PanelFontSize, renderer, PanelInnerX, SummaryListY, false, ToAbgr(UiTheme::Text), true);
+    std::vector<Texture> noneHintLines = MakeLines(WrapToWidth(Translate("MOD_UNINSTALL_NONE_HINT"), PanelFontSize, PanelInnerW), PanelFontSize, renderer, UiTheme::TextDim);
+    std::vector<Texture> rebootNoteLines = MakeLines(WrapToWidth(Translate("MOD_UNINSTALL_REBOOT_NOTE"), NoteFontSize, noteBox.x + noteBox.w - PanelPad - NoteTextX), NoteFontSize, renderer, UiTheme::TextDim);
+    Texture moreText;
+    std::vector<Texture> summaryNames;
 
     Texture badgeOuter(OptionsLocation + UiTheme::AssetBadgeOuter, renderer);
     Texture badgeInner(OptionsLocation + UiTheme::AssetBadgeInner, renderer);
     struct Badge { Texture letter; Texture label; Color rim; Color fill; };
-    Badge badgeAdd{ Texture("A", 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate("HINT_ADD"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), UiTheme::BadgeADark, UiTheme::BadgeA };
-    Badge badgeUndo{ Texture("B", 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate("HINT_UNDO"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), UiTheme::BadgeBDark, UiTheme::BadgeB };
+    auto MakeBadge = [&](const std::string & letter, const std::string & labelKey, Color rim, Color fill) -> Badge
+    {
+        return { Texture(letter, 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate(labelKey), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), rim, fill };
+    };
+    Badge badgeMark = MakeBadge("A", "HINT_MARK", UiTheme::BadgeADark, UiTheme::BadgeA);
+    Badge badgeUnmark = MakeBadge("A", "HINT_UNMARK", UiTheme::BadgeADark, UiTheme::BadgeA);
+    Badge badgeBack = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
+    Badge badgeCancel = MakeBadge("B", "HINT_CANCEL", UiTheme::BadgeBDark, UiTheme::BadgeB);
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
@@ -145,9 +238,11 @@ int main(int argc, char * argv[])
     };
 
     // Use a wide chip to distinguish Start from Select.
-    Texture pillText("Start", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
-    Texture uninstallLabel(Translate("HINT_UNINSTALL"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
-    auto DrawPillBadge = [&](Texture & pill, Texture & label, const Color & rim, const Color & fill, int rightEdgeX) -> int
+    Texture startPill("Start", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
+    Texture startSelectPill("Start + Select", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
+    Texture uninstallLabel;
+    Texture confirmLabel(Translate("HINT_CONFIRM"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
+    auto DrawPillBadge = [&](Texture & pill, Texture & label, int rightEdgeX) -> int
     {
         const int pillPadX = 10;
         int pillW = pill.rect.w + pillPadX*2;
@@ -155,11 +250,11 @@ int main(int argc, char * argv[])
         int x = rightEdgeX - groupW;
         int y = UiTheme::BadgeBandY;
         SDL_Rect pillRect{ x, y, pillW, UiTheme::BadgeOuterSize };
-        DrawRoundedFillRect(renderer, pillRect, rim, pillRect.h/2);
+        DrawRoundedFillRect(renderer, pillRect, UiTheme::BadgeStartDark, pillRect.h/2);
         // same ring thickness as the letter badges' outer/inner circle pair
         int border = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
         SDL_Rect fillRect{ x+border, y+border, pillW-border*2, UiTheme::BadgeInnerSize };
-        DrawRoundedFillRect(renderer, fillRect, fill, fillRect.h/2);
+        DrawRoundedFillRect(renderer, fillRect, UiTheme::BadgeStart, fillRect.h/2);
         pill.rect.x = x + (pillW - pill.rect.w)/2;
         pill.rect.y = y + (UiTheme::BadgeOuterSize - pill.rect.h)/2;
         pill.Draw(renderer);
@@ -168,10 +263,45 @@ int main(int argc, char * argv[])
         label.Draw(renderer);
         return x - UiTheme::BadgeGroupGap;
     };
+    auto DrawFooterDivider = [&](int rightEdge)
+    {
+        int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
+        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
+    };
 
-    int installListOffset = 0;
+    int listOffset = 0;
     int currentId = 0;
-    std::vector<Mod> uninstallList;
+    int markedCount = 0;
+    const int modCount = static_cast<int>(mods.size());
+
+    auto MarkedMods = [&]()
+    {
+        std::vector<const Mod *> marked;
+        for(const Mod & mod : mods)
+            if(mod.marked)
+                marked.push_back(&mod);
+        return marked;
+    };
+
+    auto RefreshSummary = [&]()
+    {
+        auto marked = MarkedMods();
+        const int count = static_cast<int>(marked.size());
+        markedCount = count;
+        summaryCount = Texture(std::to_string(count), PanelHeaderFontSize, renderer, 0, summaryBox.y + 14, false, ToAbgr(count ? UiTheme::CheckboxOn : UiTheme::TextDim), true);
+        summaryCount.rect.x = summaryBox.x + summaryBox.w - PanelPad - summaryCount.rect.w;
+        uninstallLabel = Texture(Translate("HINT_UNINSTALL") + " (" + std::to_string(count) + ")", 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
+
+        // keep the last row for "+N" when the list overflows the panel
+        int shown = (count > SummaryMaxRows) ? SummaryMaxRows - 1 : count;
+        summaryNames.clear();
+        for(int i = 0; i < shown; ++i)
+            summaryNames.emplace_back(TruncateToWidth(marked[i]->name, PanelFontSize, PanelInnerW - BulletTextGap), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::Text), true);
+        moreText = (shown < count)
+            ? Texture("+" + std::to_string(count - shown), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::TextDim), true)
+            : Texture();
+    };
+    RefreshSummary();
 
     auto DrawChrome = [&]()
     {
@@ -187,60 +317,150 @@ int main(int argc, char * argv[])
         creditText.Draw(renderer);
     };
 
+    auto DrawList = [&]()
+    {
+        if(mods.empty())
+        {
+            emptyText.rect.y = UiTheme::RowFirstY + (RowBoxH - emptyText.rect.h)/2;
+            emptyText.Draw(renderer);
+            return;
+        }
+        int count = std::min(displayCount, modCount - listOffset);
+        for(int i = 0; i < count; ++i)
+        {
+            Mod & mod = mods[listOffset + i];
+            SDL_Rect rowRect{ UiTheme::ListX, UiTheme::RowFirstY + i*UiTheme::RowPitch, UiTheme::ListContentRightX - UiTheme::ListX, RowBoxH };
+            int centerY = rowRect.y + rowRect.h/2;
+            if(i == currentId)
+            {
+                DrawRoundedFillRect(renderer, rowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
+                DrawStrokeRect(renderer, rowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
+            }
+            else
+                DrawHLine(renderer, rowRect.x, rowRect.x + rowRect.w, rowRect.y + rowRect.h + 3, UiTheme::Border, 1);
+
+            mod.text.rect.y = centerY - mod.text.rect.h/2;
+            SetColorMod(mod.text.texture.get(), mod.marked ? UiTheme::TextDim : UiTheme::Text);
+            mod.text.Draw(renderer);
+            if(mod.marked)
+                DrawHLine(renderer, mod.text.rect.x, mod.text.rect.x + mod.text.rect.w, centerY + 1, UiTheme::TextDim, 1);
+            Texture & checkbox = mod.marked ? checkboxOn : checkboxOff;
+            checkbox.rect.x = CheckboxX;
+            checkbox.rect.y = centerY - checkbox.rect.h/2;
+            checkbox.Draw(renderer);
+        }
+        if(listOffset != 0)
+            scrollUp.Draw(renderer);
+        if(listOffset + displayCount < modCount)
+            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
+    };
+
+    auto DrawSummary = [&]()
+    {
+        DrawStrokeRect(renderer, summaryBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
+        summaryHeader.Draw(renderer);
+        summaryCount.Draw(renderer);
+        DrawHLine(renderer, PanelInnerX, PanelInnerX + PanelInnerW, SummaryDividerY, UiTheme::Border, 1);
+        if(markedCount == 0)
+        {
+            noneMarkedText.Draw(renderer);
+            int y = SummaryListY + 28;
+            for(Texture & line : noneHintLines)
+            {
+                line.rect.x = PanelInnerX;
+                line.rect.y = y;
+                line.Draw(renderer);
+                y += 22;
+            }
+        }
+        else
+        {
+            int y = SummaryListY;
+            for(Texture & name : summaryNames)
+            {
+                int centerY = y + SummaryRowPitch/2 - 4;
+                DrawDot(renderer, PanelInnerX, centerY);
+                name.rect.y = centerY - name.rect.h/2;
+                name.Draw(renderer);
+                y += SummaryRowPitch;
+            }
+            if(moreText.texture)
+            {
+                moreText.rect.y = y + SummaryRowPitch/2 - 4 - moreText.rect.h/2;
+                moreText.Draw(renderer);
+            }
+        }
+
+        DrawStrokeRect(renderer, noteBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
+        int noteCenterY = noteBox.y + noteBox.h/2;
+        DrawStrokeRect(renderer, { NoteIconCX - 9, noteCenterY - 9, 18, 18 }, UiTheme::TextDim, 2, 9);
+        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 5, 2, 2 }, UiTheme::TextDim);
+        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 1, 2, 6 }, UiTheme::TextDim);
+        const int noteLinePitch = 20;
+        int y = noteCenterY - (static_cast<int>(rebootNoteLines.size()) * noteLinePitch)/2;
+        for(Texture & line : rebootNoteLines)
+        {
+            line.rect.x = NoteTextX;
+            line.rect.y = y + (noteLinePitch - line.rect.h)/2;
+            line.Draw(renderer);
+            y += noteLinePitch;
+        }
+    };
+
     auto render = [&]()
     {
         sdl_context.StartFrame();
         DrawChrome();
-        installedHeader.Draw(renderer);
-        toRemoveHeader.Draw(renderer);
-        DrawVLine(renderer, DividerX, ColumnHeaderY, ListBottomY, UiTheme::Border, UiTheme::BorderWidth);
-
-        int count = std::min(displayCount, (int)installedMods.size()-installListOffset);
-        for(int i = 0; i < count; ++i)
-        {
-            Texture & rowText = installedMods[installListOffset+i].text;
-            rowText.rect.x = LeftColumnX;
-            rowText.rect.y = ListTopY + i*rowPitch + (rowPitch - rowText.rect.h)/2;
-            if(i == currentId)
-            {
-                SDL_Rect rowRect{ LeftColumnX - 8, rowText.rect.y - 2, ColumnW + 8, rowText.rect.h + 4 };
-                DrawRoundedFillRect(renderer, rowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
-                DrawStrokeRect(renderer, rowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
-            }
-            rowText.Draw(renderer);
-        }
-        if(installListOffset != 0)
-            scrollUp.Draw(renderer);
-        if(installListOffset + displayCount < (int)installedMods.size())
-            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
-
-        int uninstallCount = std::min(displayCount, (int)uninstallList.size());
-        for(int i = 0; i < uninstallCount; ++i)
-        {
-            Texture & rowText = uninstallList[i].text;
-            rowText.rect.x = RightColumnX;
-            rowText.rect.y = ListTopY + i*rowPitch + (rowPitch - rowText.rect.h)/2;
-            rowText.Draw(renderer);
-        }
+        DrawList();
+        DrawSummary();
 
         int rightEdge = UiTheme::BadgeClusterRightX;
-        rightEdge = DrawBadge(badgeAdd, rightEdge);
-        rightEdge = DrawBadge(badgeUndo, rightEdge);
-        DrawPillBadge(pillText, uninstallLabel, UiTheme::BadgeStartDark, UiTheme::BadgeStart, rightEdge);
+        if(!mods.empty())
+            rightEdge = DrawBadge(mods[listOffset + currentId].marked ? badgeUnmark : badgeMark, rightEdge);
+        rightEdge = DrawBadge(badgeBack, rightEdge);
+        if(markedCount > 0)
+            rightEdge = DrawPillBadge(startPill, uninstallLabel, rightEdge);
+        DrawFooterDivider(rightEdge);
 
         SetDrawColor(renderer, bg); // flat helpers leave the draw color dirty
         sdl_context.EndFrame();
     };
 
-    // true if the uninstall was confirmed and kicked off - caller should break out of the main loop
     auto ConfirmUninstall = [&]() -> bool
     {
-        Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, 320, true, ToAbgr(UiTheme::Text), true);
-        Texture confirmHint(Translate("MOD_UNINSTALL_CONFIRM_HINT"), 16, renderer, 640, 360, true, ToAbgr(UiTheme::Text), true);
-        controller.GetButtonStatus(B); // consume the still-held B from whatever press opened this dialog
+        auto marked = MarkedMods();
+        const int maxNames = 8;
+        const int namePitch = 30;
+        const int shown = std::min(maxNames, static_cast<int>(marked.size()));
+        const bool overflow = static_cast<int>(marked.size()) > shown;
+        const int listRows = shown + (overflow ? 1 : 0);
+
+        const int boxW = 560;
+        const int boxH = 150 + listRows*namePitch;
+        const int bodyCenterY = (UiTheme::HeaderDividerY + UiTheme::FooterDividerY) / 2;
+        const SDL_Rect box{ 640 - boxW/2, bodyCenterY - boxH/2, boxW, boxH };
+
+        Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, box.y + 36, true, ToAbgr(UiTheme::Text), true);
+        std::vector<Texture> names;
+        int nameW = 0;
+        for(int i = 0; i < shown; ++i)
+        {
+            names.emplace_back(TruncateToWidth(marked[i]->name, PanelFontSize, boxW - 80), PanelFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
+            nameW = std::max(nameW, names.back().rect.w);
+        }
+        if(overflow)
+            names.emplace_back("+" + std::to_string(marked.size() - shown), PanelFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::TextDim), true);
+        const int listX = 640 - (nameW + BulletTextGap)/2;
+        std::vector<Texture> noteLines = MakeLines(WrapToWidth(Translate("MOD_UNINSTALL_REBOOT_NOTE"), NoteFontSize, boxW - 48), NoteFontSize, renderer, UiTheme::TextDim);
+
+        controller.GetButtonStatus(B); // drop a stale B press
         bool confirmed = false;
         for(;;)
         {
+            SDL_Event e;
+            while(SDL_PollEvent(&e))
+                if(e.type == SDL_QUIT)
+                    return false;
             controller.Update();
             if(sdl_context.powerwatch->buttonPress() || controller.GetButtonStatus(B))
                 break;
@@ -249,11 +469,36 @@ int main(int argc, char * argv[])
                 confirmed = true;
                 break;
             }
+
             sdl_context.StartFrame();
-            DrawFillRect(renderer, UiTheme::FrameRect, bg);
-            DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
+            DrawChrome();
+            DrawRoundedFillRect(renderer, box, UiTheme::SelectedRowBg, UiTheme::BorderRadius);
+            DrawStrokeRect(renderer, box, UiTheme::Accent, 2, UiTheme::BorderRadius);
             confirmTitle.Draw(renderer);
-            confirmHint.Draw(renderer);
+            int y = box.y + 78;
+            for(int i = 0; i < static_cast<int>(names.size()); ++i)
+            {
+                if(i < shown)
+                    DrawDot(renderer, listX, y);
+                names[i].rect.x = listX + BulletTextGap;
+                names[i].rect.y = y - names[i].rect.h/2;
+                names[i].Draw(renderer);
+                y += namePitch;
+            }
+            int noteY = box.y + box.h - 34 - (static_cast<int>(noteLines.size()) - 1) * 10;
+            for(Texture & line : noteLines)
+            {
+                line.rect.x = 640 - line.rect.w/2;
+                line.rect.y = noteY - line.rect.h/2;
+                line.Draw(renderer);
+                noteY += 20;
+            }
+
+            int rightEdge = UiTheme::BadgeClusterRightX;
+            rightEdge = DrawBadge(badgeCancel, rightEdge);
+            rightEdge = DrawPillBadge(startSelectPill, confirmLabel, rightEdge);
+            DrawFooterDivider(rightEdge);
+
             SetDrawColor(renderer, bg);
             sdl_context.EndFrame();
         }
@@ -261,13 +506,12 @@ int main(int argc, char * argv[])
             return false;
 
         std::ofstream out("/tmp/uninstall");
-        if(out.is_open())
-        {
-            for(auto & mod : uninstallList)
-                out << mod.name << " ";
-            out.close();
-            system(("/bin/sh " + folderLocation + "/FinishUninstall.sh &").c_str());
-        }
+        if(!out.is_open())
+            return false;
+        for(const Mod * mod : marked)
+            out << mod->name << " ";
+        out.close();
+        system(("/bin/sh " + folderLocation + "/FinishUninstall.sh &").c_str());
         return true;
     };
 
@@ -276,56 +520,40 @@ int main(int argc, char * argv[])
         SDL_Event e;
         while(SDL_PollEvent(&e))
             if(e.type == SDL_QUIT)
-                return 0;
+                return ExitLeaveMenu;
 
         controller.Update();
         if(sdl_context.powerwatch->buttonPress())
-            break;
+            return ExitLeaveMenu;
 
-        if(controller.GetButtonStatus(UP))
+        if(controller.HeldRepeat(UP) && !mods.empty())
         {
             if(currentId > 0)
                 --currentId;
-            else if(installListOffset)
-                --installListOffset;
+            else if(listOffset > 0)
+                --listOffset;
         }
-        else if(controller.GetButtonStatus(DOWN))
+        else if(controller.HeldRepeat(DOWN) && !mods.empty())
         {
-            if(currentId < displayCount-1 && installListOffset+currentId+1 < (int)installedMods.size())
+            if(currentId < displayCount-1 && listOffset+currentId+1 < modCount)
                 ++currentId;
-            else if(installListOffset+displayCount < (int)installedMods.size())
-                ++installListOffset;
+            else if(listOffset+displayCount < modCount)
+                ++listOffset;
         }
-        else if(controller.GetButtonStatus(A))
+        else if(controller.GetButtonStatus(A) && !mods.empty())
         {
-            if(currentId != -1 && !installedMods.empty())
-            {
-                uninstallList.push_back(installedMods[installListOffset+currentId]);
-                installedMods.erase(installedMods.begin()+installListOffset+currentId);
-                if(installListOffset && installListOffset+displayCount > (int)installedMods.size())
-                    --installListOffset;
-                if(installListOffset == 0 && currentId >= (int)installedMods.size())
-                    currentId = static_cast<int>(installedMods.size()) - 1; // -1 (empty) is a valid sentinel here
-            }
+            Mod & mod = mods[listOffset + currentId];
+            mod.marked = !mod.marked;
+            RefreshSummary();
         }
         else if(controller.GetButtonStatus(B))
+            return ExitBack;
+        else if(controller.GetButtonStatus(START) && markedCount > 0)
         {
-            if(!uninstallList.empty())
-            {
-                installedMods.push_back(uninstallList.back());
-                uninstallList.pop_back();
-                if(currentId == -1)
-                    currentId = 0;
-            }
-        }
-        else if(controller.GetButtonStatus(START))
-        {
-            if(uninstallList.empty() || ConfirmUninstall())
-                break;
+            if(ConfirmUninstall())
+                return ExitUninstallStarted;
         }
 
         render();
     }
-
-    return 0;
 }

@@ -42,6 +42,8 @@ namespace UiTheme
     Color BadgeYDark{ 0x8F, 0x47, 0x50 };
     Color BadgeStart{ 0xC2, 0xA8, 0x5E };
     Color BadgeStartDark{ 0x74, 0x65, 0x38 };
+    Color CheckboxOn{ 0xE1, 0x55, 0x54 };
+    Color CheckboxOff{ 0x8D, 0x8D, 0x93 };
 
     namespace
     {
@@ -77,6 +79,7 @@ namespace UiTheme
                 { "BadgeX", &BadgeX }, { "BadgeXDark", &BadgeXDark },
                 { "BadgeY", &BadgeY }, { "BadgeYDark", &BadgeYDark },
                 { "BadgeStart", &BadgeStart }, { "BadgeStartDark", &BadgeStartDark },
+                { "CheckboxOn", &CheckboxOn }, { "CheckboxOff", &CheckboxOff },
             };
             return keys;
         }
@@ -114,5 +117,9 @@ namespace UiTheme
 
         if(!isSet["ScrollArrow"])
             ScrollArrow = Text;
+        if(!isSet["CheckboxOn"])
+            CheckboxOn = BadgeB;
+        if(!isSet["CheckboxOff"])
+            CheckboxOff = TextDim;
     }
 }

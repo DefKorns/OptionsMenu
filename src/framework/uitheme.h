@@ -54,6 +54,8 @@ namespace UiTheme
     extern Color BadgeYDark;
     extern Color BadgeStart; // muted gold, for a wide "Start" pill instead of a letter circle
     extern Color BadgeStartDark;
+    extern Color CheckboxOn; // follows BadgeB unless set
+    extern Color CheckboxOff; // follows TextDim unless set
 
     // TV overscan safe area
     const int SafeMarginX = 64;
@@ -155,6 +157,8 @@ namespace UiTheme
     const char * const AssetGear = "/images/ui/gear.png";
     const char * const AssetChevronRight = "/images/ui/chevron_right.png";
     const char * const AssetChevronUp = "/images/ui/chevron_up.png";
+    const char * const AssetCheckboxOn = "/images/ui/checkbox_on.png";
+    const char * const AssetCheckboxOff = "/images/ui/checkbox_off.png";
 }
 
 #endif
