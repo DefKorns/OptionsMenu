@@ -13,7 +13,6 @@ TARGET_NAME = options_deluxe_$(ESC_MOD_VER)
 MOD_NAME := Options Menu $(MOD_VER)
 endif
 GIT_COMMIT := $(shell git describe --always --dirty=.dirty 2>/dev/null)
-BUILD_NUM_FILE := .build_number
 CXX = g++
 STRIP = strip
 ifdef CROSS_PREFIX
@@ -57,8 +56,9 @@ define inject-readme =
 	"Name: $(MOD_NAME)" \
 	"Creator: $(MOD_CREATOR)" \
 	"Category: $(MOD_CATEGORY)" \
-	"Version: $(MOD_VER) build #$(shell cat $(BUILD_NUM_FILE))$(if $(GIT_COMMIT), ($(GIT_COMMIT)))" \
+	"Version: $(MOD_VER)" \
 	"Built on: $(shell date +"%A, %d %b %Y - %T") by $(MOD_BUILDER)" \
+	"Git commit: $(GIT_COMMIT)" \
 	"---" > mod/readme.md
 
 	sed 1d temp/readme.md >> mod/readme.md
@@ -75,10 +75,7 @@ endef
 
 all: $(OUT)/$(TARGET_NAME).hmod
 
-bump-build-number:
-	echo $$(( $$(cat $(BUILD_NUM_FILE) 2>/dev/null || echo 0) + 1 )) > $(BUILD_NUM_FILE)
-
-$(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo $(VENDORED_LIBS) bump-build-number
+$(OUT)/$(TARGET_NAME).hmod: mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo $(VENDORED_LIBS)
 	$(call strip-bin,mod/etc/options_menu/options)
 	$(call strip-bin,mod/etc/options_menu/optiond)
 	$(call strip-and-upx,mod/etc/options_menu/mod_uninstall/mod_uninstall)
@@ -137,4 +134,4 @@ clean:
 	rm -rf mod/etc/options_menu/lib
 	rm -rf out/ temp/
 
-.PHONY: clean bump-build-number
+.PHONY: clean

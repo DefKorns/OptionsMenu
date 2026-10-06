@@ -8,3 +8,5 @@
 *.png binary
 *.xz binary
 *.hmod binary
+*.ttf binary
+mod/etc/options_menu/retroarch/scripts/RASettingsBackup binary
