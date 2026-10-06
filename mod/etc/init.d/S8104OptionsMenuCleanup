@@ -14,16 +14,25 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Removes the Mega Drive Mini / original-size covers hakchi syncs into every
-# game folder; the NES/SNES Mini home menu only reads <code>.png and _small.png.
+# the home menu only reads <code>.png and _small.png
+clean_extra_covers() {
+  gStorage="$(findGameStorage)"
+  [ -d "$gStorage" ] || return 0
+  find "$gStorage" -type f \( -name "*_mdmini.png" -o -name "*_original.png" \) -exec rm -f {} +
+}
+
+# left by RetroArch hmods' install, missed by their uninstall
+clean_retroarch_defaults() {
+  [ -e /bin/retroarch ] || [ -e /bin/retroarch-clover ] && return 0
+  rm -rf "$mountpoint/etc/options_menu/retroarch/default_files"
+}
 
 clean() {
   source /etc/preinit
   script_init
 
-  gStorage="$(findGameStorage)"
-  [ -d "$gStorage" ] || return 0
-  find "$gStorage" -type f \( -name "*_mdmini.png" -o -name "*_original.png" \) -exec rm -f {} +
+  clean_extra_covers
+  clean_retroarch_defaults
 }
 
 case "$1" in
@@ -33,7 +42,7 @@ start)
 stop|restart)
 ;;
 *)
-	echo "CleanExtraCovers: Please use start."
+	echo "OptionsMenuCleanup: Please use start."
 	exit 1
 ;;
 esac
