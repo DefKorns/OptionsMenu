@@ -25,7 +25,7 @@ home_disabled="0x7FFF"
 home_default="0x0024"
 home_prev_file="$mountpoint/etc/options_menu/controller/home_combination.prev"
 
-get_cfg() {
+getCfg() {
   eval "echo \"\$cfg_clovercon_$1\""
 }
 
@@ -36,24 +36,24 @@ apply() {
   [ -w "$param_file" ] && echo "$2" > "$param_file"
 }
 
-on_off() {
+onOff() {
   if [ "$1" = "y" ]; then echo "on"; else echo "off"; fi
 }
 
-home_enabled() {
-  current="$(get_cfg home_combination)"
+homeEnabled() {
+  current="$(getCfg home_combination)"
   [ -n "$current" ] && [ "$(printf '%d' "$current")" != "$(printf '%d' "$home_disabled")" ]
 }
 
 case "$1" in
 state)
-  [ "$(get_cfg "$2")" = "1" ] && on_off y || on_off n
+  [ "$(getCfg "$2")" = "1" ] && onOff y || onOff n
   ;;
 toggle)
-  if [ "$(get_cfg "$2")" = "1" ]; then apply "$2" 0; else apply "$2" 1; fi
+  if [ "$(getCfg "$2")" = "1" ]; then apply "$2" 0; else apply "$2" 1; fi
   ;;
 is)
-  [ "$(get_cfg "$2")" = "$3" ] && on_off y || on_off n
+  [ "$(getCfg "$2")" = "$3" ] && onOff y || onOff n
   ;;
 set)
   apply "$2" "$3"
@@ -61,12 +61,12 @@ set)
 home)
   case "$2" in
   state)
-    home_enabled && on_off y || on_off n
+    homeEnabled && onOff y || onOff n
     ;;
   toggle)
-    if home_enabled; then
+    if homeEnabled; then
       mkdir -p "$(dirname "$home_prev_file")"
-      get_cfg home_combination > "$home_prev_file"
+      getCfg home_combination > "$home_prev_file"
       apply home_combination "$home_disabled"
     else
       prev="$(cat "$home_prev_file" 2>/dev/null)"

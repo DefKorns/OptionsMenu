@@ -15,16 +15,16 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # mod_uninstall exit: 0 = back, 2 = uninstalling (reboots), else leave menu
-optionsPath="${1%/}"
+options_path="${1%/}"
 
-"$optionsPath/mod_uninstall/mod_uninstall"
+"$options_path/mod_uninstall/mod_uninstall"
 case $? in
 0)
   usleep 50000
-  "$optionsPath/options" --commandPath "$optionsPath/advanced_commands/" --title "ADVANCED_OPTIONS"
+  "$options_path/options" --commandPath "$options_path/advanced_commands/" --title "ADVANCED_OPTIONS"
   ;;
 2) ;;
 *)
-  sh "$optionsPath/scripts/ResumeUI.sh"
+  sh "$options_path/scripts/ResumeUI.sh"
   ;;
 esac

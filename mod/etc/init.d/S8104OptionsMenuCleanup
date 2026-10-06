@@ -15,14 +15,14 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # the home menu only reads <code>.png and _small.png
-clean_extra_covers() {
-  gStorage="$(findGameStorage)"
-  [ -d "$gStorage" ] || return 0
-  find "$gStorage" -type f \( -name "*_mdmini.png" -o -name "*_original.png" \) -exec rm -f {} +
+cleanExtraCovers() {
+  game_storage="$(findGameStorage)"
+  [ -d "$game_storage" ] || return 0
+  find "$game_storage" -type f \( -name "*_mdmini.png" -o -name "*_original.png" \) -exec rm -f {} +
 }
 
 # left by RetroArch hmods' install, missed by their uninstall
-clean_retroarch_defaults() {
+cleanRetroarchDefaults() {
   [ -e /bin/retroarch ] || [ -e /bin/retroarch-clover ] && return 0
   rm -rf "$mountpoint/etc/options_menu/retroarch/default_files"
 }
@@ -31,8 +31,8 @@ clean() {
   source /etc/preinit
   script_init
 
-  clean_extra_covers
-  clean_retroarch_defaults
+  cleanExtraCovers
+  cleanRetroarchDefaults
 }
 
 case "$1" in

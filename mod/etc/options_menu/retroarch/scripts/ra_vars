@@ -22,7 +22,7 @@ script_init
 # per-core config/overrides moved from .config/retroarch/config (Neo, discontinued)
 # to a plain config/ folder (_km Ozone builds) - detect which is actually installed
 if [ -d "$rootfs/etc/libretro/.config/retroarch/config" ]; then
-  raConfig="$rootfs/etc/libretro/.config/retroarch/config"
+  ra_config="$rootfs/etc/libretro/.config/retroarch/config"
 else
-  raConfig="$rootfs/etc/libretro/config"
+  ra_config="$rootfs/etc/libretro/config"
 fi

@@ -19,4 +19,4 @@
 source $mountpoint/etc/options_menu/retroarch/scripts/ra_vars
 script_init
 
-usleep 50000 && $optionsMenu/options --commandPath $optionsMenu/retroarch/commands/ --scriptPath $optionsMenu/retroarch/scripts --title "RETROARCH_OPTIONS" &
+usleep 50000 && $options_menu/options --commandPath $options_menu/retroarch/commands/ --scriptPath $options_menu/retroarch/scripts --title "RETROARCH_OPTIONS" &

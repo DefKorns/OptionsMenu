@@ -21,10 +21,10 @@ script_init
 
 if [ "$1" = "nand" ]; then
   backup_path="$rootfs/etc/wifi_backup"
-  dst="$1"
+  backup_dest="$1"
 fi
 
-find "$omWifiRestoreCmds" -type f -name 'c0001_*' -exec rm {} \;
+find "$om_wifi_restore_cmds" -type f -name 'c0001_*' -exec rm {} \;
 
 find "$backup_path/." -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -n 1 basename | while IFS= read -r wifi_network; do
   wpa_supplicant_conf="$backup_path/$wifi_network/wpa_supplicant.conf"
@@ -35,9 +35,9 @@ find "$backup_path/." -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -n 1 ba
   echo "COMMAND_NAME=$ssid
 COMMAND_TYPE=INTERNAL
 RESTART_UI=FALSE
-COMMAND_STR=sh $omNetworkScripts/backup-wifi.sh $dst restore $ssid_lower
-DELETE_STR=rm -rf \"$backup_path/$wifi_network\" && sh $omNetworkScripts/restore_settings.sh $1
-DELETE_CONFIRM_KEY=DELETE_BACKUP_CONFIRM" >"$omWifiRestoreCmds/c0001_$ssid_lower"
+COMMAND_STR=sh $om_network_scripts/backup-wifi.sh $backup_dest restore $ssid_lower
+DELETE_STR=rm -rf \"$backup_path/$wifi_network\" && sh $om_network_scripts/restore_settings.sh $1
+DELETE_CONFIRM_KEY=DELETE_BACKUP_CONFIRM" >"$om_wifi_restore_cmds/c0001_$ssid_lower"
 done
 
-$optionsMenu/options --commandPath $omWifiRestoreCmds/ --scriptPath $omWifiRestoreScripts --title "RESTORE_WIFI_CONFIG" &
+$options_menu/options --commandPath $om_wifi_restore_cmds/ --scriptPath $om_wifi_restore_scripts --title "RESTORE_WIFI_CONFIG" &

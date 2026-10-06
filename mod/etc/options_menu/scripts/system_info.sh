@@ -19,7 +19,7 @@ source /etc/preinit
 script_init
 source "$mountpoint/etc/options_menu/scripts/om_functions"
 
-disk_usage() {
+diskUsage() {
   df -h "$1" 2>/dev/null | tail -1 | awk -v free="$(translate SYSINFO_FREE)" '{ print $3 " / " $2 " (" $4 " " free ")" }'
 }
 
@@ -31,7 +31,7 @@ echo "Kernel: $kernelVersion"
 echo "Boot: $bootVersion"
 echo "$(translate SYSINFO_FIRMWARE): $(hakchi currentFirmware 2>/dev/null | sed "s/^_nand_$/NAND/")"
 echo " "
-echo "NAND: $(disk_usage "$mountpoint/var/lib")"
-[ -d "$usb_path" ] && echo "USB/SD: $(disk_usage "$usb_path")"
+echo "NAND: $(diskUsage "$mountpoint/var/lib")"
+[ -d "$usb_path" ] && echo "USB/SD: $(diskUsage "$usb_path")"
 saves="$(readlink -f /var/saves)"
 [ -d "$saves" ] && echo "$(translate SYSINFO_SAVES): $(du -sh "$saves" 2>/dev/null | cut -f1)"

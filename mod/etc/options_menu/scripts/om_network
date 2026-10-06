@@ -19,4 +19,4 @@
 source $mountpoint/etc/options_menu/network/scripts/om_vars
 script_init
 
-usleep 50000 && $optionsMenu/options --commandPath $omNetworkCmds/ --scriptPath $omNetworkScripts --title "NETWORK_OPTIONS" &
+usleep 50000 && $options_menu/options --commandPath $om_network_cmds/ --scriptPath $om_network_scripts --title "NETWORK_OPTIONS" &

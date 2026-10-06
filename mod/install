@@ -1,28 +1,28 @@
 #!/bin/sh
 # shellcheck disable=SC2154
-omRoot="$rootfs/etc/options_menu"
-omSettings="button.cfg language.cfg controller/home_combination.prev"
-omBackup="$temppath/om_settings"
+om_root="$rootfs/etc/options_menu"
+om_settings="button.cfg language.cfg controller/home_combination.prev"
+om_backup="$temppath/om_settings"
 
 # Uninstall any previous or legacy install first to ensure a clean installation
-rm -rf "$omBackup"
-mkdir -p "$omBackup"
-for omFile in $omSettings; do
-  [ -f "$omRoot/$omFile" ] && mkdir -p "$(dirname "$omBackup/$omFile")" && cp -p "$omRoot/$omFile" "$omBackup/$omFile"
+rm -rf "$om_backup"
+mkdir -p "$om_backup"
+for om_file in $om_settings; do
+  [ -f "$om_root/$om_file" ] && mkdir -p "$(dirname "$om_backup/$om_file")" && cp -p "$om_root/$om_file" "$om_backup/$om_file"
 done
-for omUnfile in "$installpath/hmod/uninstall-options_deluxe"* \
+for om_unfile in "$installpath/hmod/uninstall-options_deluxe"* \
               "$installpath/hmod/uninstall-options_menu_"* \
               "$installpath/hmod/uninstall-hibernate_mod"* \
               "$installpath/hmod/uninstall-Hakchi_Options_Loadscreen_toggle"; do
-  [ -f "$omUnfile" ] && pack_uninstall "${omUnfile##*/uninstall-}"
+  [ -f "$om_unfile" ] && pack_uninstall "${om_unfile##*/uninstall-}"
 done
 cd "$transferpath" || return 1
 
 transfer_default
-for omFile in $omSettings; do
-  [ -f "$omBackup/$omFile" ] && mkdir -p "$(dirname "$omRoot/$omFile")" && cp -p "$omBackup/$omFile" "$omRoot/$omFile"
+for om_file in $om_settings; do
+  [ -f "$om_backup/$om_file" ] && mkdir -p "$(dirname "$om_root/$om_file")" && cp -p "$om_backup/$om_file" "$om_root/$om_file"
 done
-rm -rf "$omBackup"
+rm -rf "$om_backup"
 
 chmod +x "$rootfs/etc/options_menu/options"
 chmod +x "$rootfs/etc/options_menu/optiond"
