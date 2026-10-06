@@ -519,8 +519,11 @@ int main(int argc, char * argv[])
             if(commands[currentCommandId].runInternal)
             {
                 commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bg);
+                // refresh all: preset rows form a radio group
                 if(commands[currentCommandId].isToggle)
-                    commands[currentCommandId].UpdateState();
+                    for(Command & c : commands)
+                        if(c.isToggle)
+                            c.UpdateState();
             }
             else
             {

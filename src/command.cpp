@@ -180,10 +180,17 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                     break;
             }
 
-            render();
+            // no output: skip the output screen
+            if(!textList.empty())
+                render();
         }
         pclose(pipe);
 
+        if(textList.empty())
+        {
+            SetDrawColor(renderer, bg);
+            return;
+        }
         while (!controller->GetButtonStatus(B))
         {
             controller->Update();
