@@ -1,4 +1,29 @@
+#!/bin/sh
+# shellcheck disable=SC2154
+omRoot="$rootfs/etc/options_menu"
+omSettings="button.cfg language.cfg"
+omBackup="$temppath/om_settings"
+
+# Uninstall any previous or legacy install first to ensure a clean installation
+rm -rf "$omBackup"
+mkdir -p "$omBackup"
+for omFile in $omSettings; do
+  [ -f "$omRoot/$omFile" ] && cp -p "$omRoot/$omFile" "$omBackup/"
+done
+for omUnfile in "$installpath/hmod/uninstall-options_deluxe"* \
+              "$installpath/hmod/uninstall-options_menu_"* \
+              "$installpath/hmod/uninstall-hibernate_mod"* \
+              "$installpath/hmod/uninstall-Hakchi_Options_Loadscreen_toggle"; do
+  [ -f "$omUnfile" ] && pack_uninstall "${omUnfile##*/uninstall-}"
+done
+cd "$transferpath" || return 1
+
 transfer_default
+for omFile in $omSettings; do
+  [ -f "$omBackup/$omFile" ] && cp -p "$omBackup/$omFile" "$omRoot/"
+done
+rm -rf "$omBackup"
+
 chmod +x "$rootfs/etc/options_menu/options"
 chmod +x "$rootfs/etc/options_menu/optiond"
 chmod +x "$rootfs/etc/options_menu/mod_uninstall/mod_uninstall"
@@ -8,8 +33,4 @@ chmod +x "$rootfs/bin/standby"
 chmod +x "$rootfs/bin/standby_watchdog"
 rm -f "$rootfs/etc/init.d/S83standby_watchdog"
 rm -f "$rootfs/etc/options_menu/retroarch/commands/c0025_ToggleLoadScreens"
-rm -f "$installpath/hmod/uninstall-hibernate_mod"*
-rm -f "$installpath/hmod/uninstall-options_deluxe_"*
-rm -f "$installpath/hmod/uninstall-options_menu_"*
-rm -f "$installpath/hmod/uninstall-Hakchi_Options_Loadscreen_toggle"
 return 1
