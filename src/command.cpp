@@ -18,6 +18,51 @@
 #include <vector>
 #include <poll.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+// like popen(), but in its own process group so an aborted command can be
+// stopped along with everything it started in the background
+struct CommandProcess
+{
+    FILE * out;
+    pid_t pid;
+};
+
+static CommandProcess StartCommand(const std::string & command)
+{
+    int fds[2];
+    if(pipe(fds) != 0)
+        return { nullptr, -1 };
+    const pid_t pid = fork();
+    if(pid < 0)
+    {
+        close(fds[0]);
+        close(fds[1]);
+        return { nullptr, -1 };
+    }
+    if(pid == 0)
+    {
+        setpgid(0, 0);
+        dup2(fds[1], STDOUT_FILENO);
+        close(fds[0]);
+        close(fds[1]);
+        execl("/bin/sh", "sh", "-c", command.c_str(), static_cast<char *>(nullptr));
+        _exit(127);
+    }
+    setpgid(pid, pid);
+    close(fds[1]);
+    return { fdopen(fds[0], "r"), pid };
+}
+
+static void FinishCommand(const CommandProcess & process, bool abort)
+{
+    if(abort)
+        kill(-process.pid, SIGTERM);
+    fclose(process.out);
+    waitpid(process.pid, nullptr, 0);
+}
 
 // std::stoi throws on non-numeric input; avoid crashing on a bad command file
 static int SafeStoi(const std::string & value, int fallback = 0)
@@ -102,8 +147,9 @@ Command::Command(std::ifstream & in)
 void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Color bg) const
 {
     std::list<Texture> textList;
-    FILE* pipe = popen(command.c_str(), "r");
-    if(pipe)
+    const CommandProcess process = StartCommand(command);
+    FILE * out = process.out;
+    if(out)
     {
         auto renderer = sdl_context.renderer;
         SetDrawColor(renderer, UiTheme::Bg);
@@ -145,17 +191,19 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
             sdl_context.EndFrame();
         };
 
-        int fd = fileno(pipe);
+        int fd = fileno(out);
         fcntl(fd, F_SETFL, O_NONBLOCK); // so a drained-but-still-buffered fgets() below never blocks
-        while(!feof(pipe))
+        const int PollTimeoutMs = 20; // short enough that a quick B tap isn't lost between Update() calls
+        bool aborted = false;
+        while(!feof(out))
         {
             // poll just paces the loop now (avoids busy-spinning) - it only reflects
             // kernel-level readiness, so a burst of lines that all arrive in one
             // read() would otherwise pile up in stdio's own buffer, invisible to
             // poll() until some later line's arrival makes it true again
             struct pollfd pfd{fd, POLLIN, 0};
-            poll(&pfd, 1, 100);
-            while(fgets(buffer, 128, pipe) != nullptr)
+            poll(&pfd, 1, PollTimeoutMs);
+            while(fgets(buffer, 128, out) != nullptr)
             {
                 std::string sBuffer(buffer);
                 int pos = sBuffer.find('\n');
@@ -168,8 +216,8 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                     textList.erase(textList.begin());
                 }
             }
-            if(!feof(pipe))
-                clearerr(pipe); // last fgets() failed because nothing's ready yet, not EOF - stay readable
+            if(!feof(out))
+                clearerr(out); // last fgets() failed because nothing's ready yet, not EOF - stay readable
 
             // ignoreInterrupt commands read the controller directly
             // stop polling here to avoid racing for the same button events
@@ -177,16 +225,19 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
             {
                 controller->Update();
                 if(controller->GetButtonStatus(B))
+                {
+                    aborted = true;
                     break;
+                }
             }
 
             // no output: skip the output screen
             if(!textList.empty())
                 render();
         }
-        pclose(pipe);
+        FinishCommand(process, aborted);
 
-        if(textList.empty())
+        if(textList.empty() || aborted)
         {
             SetDrawColor(renderer, bg);
             return;
