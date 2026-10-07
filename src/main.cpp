@@ -7,6 +7,8 @@
   * of the License, or (at your option) any later version.
   */
 
+#include "framework/badge.h"
+#include "framework/dialog.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
@@ -215,8 +217,6 @@ int main(int argc, char * argv[])
     Texture gearIcon(optionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
     Texture switchOn(optionsLocation + UiTheme::AssetSwitchOn, renderer);
     Texture switchOff(optionsLocation + UiTheme::AssetSwitchOff, renderer);
-    Texture badgeOuter(optionsLocation + UiTheme::AssetBadgeOuter, renderer);
-    Texture badgeInner(optionsLocation + UiTheme::AssetBadgeInner, renderer);
 
     Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
     appTitleText.rect.y -= appTitleText.rect.h / 2;
@@ -231,10 +231,10 @@ int main(int argc, char * argv[])
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = UiTheme::ScrollDownY;
 
-    struct Badge { Texture letter; Texture label; Color rim; Color fill; };
+    BadgePainter badges(optionsLocation, renderer);
     auto MakeBadge = [&](const char * letter, const char * hintKey, Color rim, Color fill) -> Badge
     {
-        return { Texture(letter, 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate(hintKey), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), rim, fill };
+        return badges.Make(letter, Translate(hintKey), rim, fill);
     };
     Badge badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
@@ -242,23 +242,7 @@ int main(int argc, char * argv[])
     Badge badgeHold = MakeBadge("B", "HINT_DELETE", UiTheme::BadgeXDark, UiTheme::BadgeX);
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
-        int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
-        int x = rightEdgeX - groupW;
-        int y = UiTheme::BadgeBandY;
-        badgeOuter.rect = { x, y, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
-        SetColorMod(badgeOuter.texture.get(), badge.rim);
-        badgeOuter.Draw(renderer);
-        int innerOffset = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
-        badgeInner.rect = { x+innerOffset, y+innerOffset, UiTheme::BadgeInnerSize, UiTheme::BadgeInnerSize };
-        SetColorMod(badgeInner.texture.get(), badge.fill);
-        badgeInner.Draw(renderer);
-        badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2 + 1;
-        badge.letter.rect.y = y + (UiTheme::BadgeOuterSize - badge.letter.rect.h)/2 - 1;
-        badge.letter.Draw(renderer);
-        badge.label.rect.x = x + UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap;
-        badge.label.rect.y = y + (UiTheme::BadgeOuterSize - badge.label.rect.h)/2;
-        badge.label.Draw(renderer);
-        return x - UiTheme::BadgeGroupGap;
+        return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
     };
 
     const int ChildIndent = 4*16;
@@ -424,11 +408,28 @@ int main(int argc, char * argv[])
         DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
     };
 
+    auto DrawScreen = [&]()
+    {
+        DrawChrome();
+        titleText.Draw(renderer);
+
+        for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
+            DrawRow(commands[i+topListItemNumber], (i+topListItemNumber) == commandCount-1);
+
+        CompComText.Draw(renderer);
+
+        if(topListItemNumber != 0)
+            scrollUp.Draw(renderer);
+        if((topListItemNumber + DisplayItemCount) < commandCount)
+            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
+    };
+
     auto ConfirmDelete = [&]() -> bool
     {
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
-        Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, ToAbgr(UiTheme::Text), true);
-        Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, ToAbgr(UiTheme::Text), true);
+        ConfirmDialog dialog(renderer, badges, Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey),
+                             MakeBadge("A", "HINT_CONFIRM", UiTheme::BadgeADark, UiTheme::BadgeA),
+                             MakeBadge("B", "HINT_CANCEL", UiTheme::BadgeBDark, UiTheme::BadgeB));
         controller.GetButtonStatus(B);
         bool confirmed = false;
         for(;;)
@@ -442,10 +443,8 @@ int main(int argc, char * argv[])
                 break;
             }
             sdl_context.StartFrame();
-            DrawFillRect(renderer, UiTheme::FrameRect, UiTheme::Bg);
-            DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
-            confirmTitle.Draw(renderer);
-            confirmHint.Draw(renderer);
+            DrawScreen();
+            dialog.Draw();
             SetDrawColor(renderer, bg);
             sdl_context.EndFrame();
         }
@@ -520,21 +519,8 @@ int main(int argc, char * argv[])
         }
         bWasHeld = bHeldNow;
 
-        DrawChrome();
-        titleText.Draw(renderer);
-
-        for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
-            DrawRow(commands[i+topListItemNumber], (i+topListItemNumber) == commandCount-1);
-
-        CompComText.Draw(renderer);
-
-        if(topListItemNumber != 0)
-            scrollUp.Draw(renderer);
-        if((topListItemNumber + DisplayItemCount) < commandCount)
-            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
-
+        DrawScreen();
         SetDrawColor(renderer, bg);
-
         sdl_context.EndFrame();
     }
 

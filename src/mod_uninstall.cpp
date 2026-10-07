@@ -7,6 +7,8 @@
   * of the License, or (at your option) any later version.
   */
 
+#include "framework/badge.h"
+#include "framework/dialog.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
@@ -200,61 +202,20 @@ int main(int argc, char * argv[])
     Texture moreText;
     std::vector<Texture> summaryNames;
 
-    Texture badgeOuter(OptionsLocation + UiTheme::AssetBadgeOuter, renderer);
-    Texture badgeInner(OptionsLocation + UiTheme::AssetBadgeInner, renderer);
-    struct Badge { Texture letter; Texture label; Color rim; Color fill; };
+    BadgePainter badges(OptionsLocation, renderer);
     auto MakeBadge = [&](const std::string & letter, const std::string & labelKey, Color rim, Color fill) -> Badge
     {
-        return { Texture(letter, 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true), Texture(Translate(labelKey), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true), rim, fill };
+        return badges.Make(letter, Translate(labelKey), rim, fill);
     };
     Badge badgeMark = MakeBadge("A", "HINT_MARK", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeUnmark = MakeBadge("A", "HINT_UNMARK", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeBack = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
     Badge badgeCancel = MakeBadge("B", "HINT_CANCEL", UiTheme::BadgeBDark, UiTheme::BadgeB);
+    Badge uninstallPill = badges.MakePill("Start", "");
+    Badge confirmPill = badges.MakePill("Start + Select", Translate("HINT_CONFIRM"));
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
-        int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
-        int x = rightEdgeX - groupW;
-        int y = UiTheme::BadgeBandY;
-        badgeOuter.rect = { x, y, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
-        SetColorMod(badgeOuter.texture.get(), badge.rim);
-        badgeOuter.Draw(renderer);
-        int innerOffset = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
-        badgeInner.rect = { x+innerOffset, y+innerOffset, UiTheme::BadgeInnerSize, UiTheme::BadgeInnerSize };
-        SetColorMod(badgeInner.texture.get(), badge.fill);
-        badgeInner.Draw(renderer);
-        badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2;
-        badge.letter.rect.y = y + (UiTheme::BadgeOuterSize - badge.letter.rect.h)/2;
-        badge.letter.Draw(renderer);
-        badge.label.rect.x = x + UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap;
-        badge.label.rect.y = y + (UiTheme::BadgeOuterSize - badge.label.rect.h)/2;
-        badge.label.Draw(renderer);
-        return x - UiTheme::BadgeGroupGap;
-    };
-
-    Texture startPill("Start", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
-    Texture startSelectPill("Start + Select", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
-    Texture uninstallLabel;
-    Texture confirmLabel(Translate("HINT_CONFIRM"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
-    auto DrawPillBadge = [&](Texture & pill, Texture & label, int rightEdgeX) -> int
-    {
-        const int pillPadX = 10;
-        int pillW = pill.rect.w + pillPadX*2;
-        int groupW = pillW + UiTheme::BadgeLabelGap + label.rect.w;
-        int x = rightEdgeX - groupW;
-        int y = UiTheme::BadgeBandY;
-        SDL_Rect pillRect{ x, y, pillW, UiTheme::BadgeOuterSize };
-        DrawRoundedFillRect(renderer, pillRect, UiTheme::BadgeStartDark, pillRect.h/2);
-        int border = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
-        SDL_Rect fillRect{ x+border, y+border, pillW-border*2, UiTheme::BadgeInnerSize };
-        DrawRoundedFillRect(renderer, fillRect, UiTheme::BadgeStart, fillRect.h/2);
-        pill.rect.x = x + (pillW - pill.rect.w)/2;
-        pill.rect.y = y + (UiTheme::BadgeOuterSize - pill.rect.h)/2;
-        pill.Draw(renderer);
-        label.rect.x = x + pillW + UiTheme::BadgeLabelGap;
-        label.rect.y = y + (UiTheme::BadgeOuterSize - label.rect.h)/2;
-        label.Draw(renderer);
-        return x - UiTheme::BadgeGroupGap;
+        return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
     };
     auto DrawFooterDivider = [&](int rightEdge)
     {
@@ -283,7 +244,7 @@ int main(int argc, char * argv[])
         markedCount = count;
         summaryCount = Texture(std::to_string(count), PanelHeaderFontSize, renderer, 0, summaryBox.y + 14, false, ToAbgr(count ? UiTheme::CheckboxOn : UiTheme::TextDim), true);
         summaryCount.rect.x = summaryBox.x + summaryBox.w - PanelPad - summaryCount.rect.w;
-        uninstallLabel = Texture(Translate("HINT_UNINSTALL") + " (" + std::to_string(count) + ")", 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
+        uninstallPill.label = Texture(Translate("HINT_UNINSTALL") + " (" + std::to_string(count) + ")", 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
 
         int shown = (count > SummaryMaxRows) ? SummaryMaxRows - 1 : count;
         summaryNames.clear();
@@ -399,9 +360,8 @@ int main(int argc, char * argv[])
         }
     };
 
-    auto render = [&]()
+    auto DrawScreen = [&]()
     {
-        sdl_context.StartFrame();
         DrawChrome();
         DrawList();
         DrawSummary();
@@ -411,9 +371,14 @@ int main(int argc, char * argv[])
             rightEdge = DrawBadge(mods[listOffset + currentId].marked ? badgeUnmark : badgeMark, rightEdge);
         rightEdge = DrawBadge(badgeBack, rightEdge);
         if(markedCount > 0)
-            rightEdge = DrawPillBadge(startPill, uninstallLabel, rightEdge);
+            rightEdge = DrawBadge(uninstallPill, rightEdge);
         DrawFooterDivider(rightEdge);
+    };
 
+    auto render = [&]()
+    {
+        sdl_context.StartFrame();
+        DrawScreen();
         SetDrawColor(renderer, bg);
         sdl_context.EndFrame();
     };
@@ -428,9 +393,9 @@ int main(int argc, char * argv[])
         const int listRows = shown + (overflow ? 1 : 0);
 
         const int boxW = 560;
-        const int boxH = 150 + listRows*namePitch;
-        const int bodyCenterY = (UiTheme::HeaderDividerY + UiTheme::FooterDividerY) / 2;
-        const SDL_Rect box{ 640 - boxW/2, bodyCenterY - boxH/2, boxW, boxH };
+        const int badgeRowH = Dialog::BadgeRowGap + UiTheme::BadgeOuterSize;
+        const int boxH = 150 + listRows*namePitch + badgeRowH;
+        const SDL_Rect box = Dialog::PanelRect(boxW, boxH);
 
         Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, box.y + 36, true, ToAbgr(UiTheme::Text), true);
         std::vector<Texture> names;
@@ -463,9 +428,9 @@ int main(int argc, char * argv[])
             }
 
             sdl_context.StartFrame();
-            DrawChrome();
-            DrawRoundedFillRect(renderer, box, UiTheme::SelectedRowBg, UiTheme::BorderRadius);
-            DrawStrokeRect(renderer, box, UiTheme::Accent, 2, UiTheme::BorderRadius);
+            DrawScreen();
+            Dialog::DrawBackdrop(renderer);
+            Dialog::DrawPanel(renderer, box);
             confirmTitle.Draw(renderer);
             int y = box.y + 78;
             for(int i = 0; i < static_cast<int>(names.size()); ++i)
@@ -477,7 +442,7 @@ int main(int argc, char * argv[])
                 names[i].Draw(renderer);
                 y += namePitch;
             }
-            int noteY = box.y + box.h - 34 - (static_cast<int>(noteLines.size()) - 1) * 10;
+            int noteY = box.y + box.h - badgeRowH - 34 - (static_cast<int>(noteLines.size()) - 1) * 10;
             for(Texture & line : noteLines)
             {
                 line.rect.x = 640 - line.rect.w/2;
@@ -486,10 +451,7 @@ int main(int argc, char * argv[])
                 noteY += 20;
             }
 
-            int rightEdge = UiTheme::BadgeClusterRightX;
-            rightEdge = DrawBadge(badgeCancel, rightEdge);
-            rightEdge = DrawPillBadge(startSelectPill, confirmLabel, rightEdge);
-            DrawFooterDivider(rightEdge);
+            badges.DrawCentered({ &badgeCancel, &confirmPill }, box.x + box.w / 2, box.y + box.h - Dialog::BottomPad - UiTheme::BadgeOuterSize);
 
             SetDrawColor(renderer, bg);
             sdl_context.EndFrame();
