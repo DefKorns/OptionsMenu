@@ -10,7 +10,7 @@ MOD_NAME := Options Menu
 VARIANT  := plain
 endif
 MOD_CREATOR  := CompCom, DefKorns
-MOD_CATEGORY := System
+MOD_CATEGORY := Options Menu
 BINARIES     := mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo
 
 CXX = g++
