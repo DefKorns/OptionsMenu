@@ -3,7 +3,7 @@
 [![Build](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml/badge.svg)](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-A menu you can open at any moment on your NES, SNES, Famicom or Super Famicom Classic — on the Home screen or in the middle of a game — to power off, back up your saves and settings, manage Wi-Fi and RetroArch, tweak the controllers and more. Other hmods plug their own screens into it, like [Theme Selector](https://github.com/DefKorns/om_theme-selector).
+A menu you can open at any moment on your NES, SNES, Famicom or Super Famicom Classic — on the Home screen or in the middle of a game — to power off, back up your saves and settings, manage Wi-Fi and RetroArch, tweak the controllers and more. Other hmods can add their own entries and screens to it.
 
 This is my continuation of [CompCom's Options Menu](https://github.com/CompCom/OptionsMenu) (last release 1.3.4, 2019). Version 2 is a rewrite of the interface and a large part of the scripts:
 
@@ -50,7 +50,6 @@ The footer always shows the buttons for the current screen.
 | Network › | IP address, Wi-Fi scan and Wi-Fi config backups |
 | Saved Games › | Back up and restore your saves. Needs a USB/SD drive |
 | Language › | Menu language; the menu restarts in the new language |
-| Theme Options › | Added by [Theme Selector](https://github.com/DefKorns/om_theme-selector) when it's installed |
 | Advanced Options › | Controller, diagnostics and system tools |
 
 \*Don't shut down or restart from the menu while RetroArch is running: exit RetroArch first, or you may lose saves.
@@ -179,7 +178,7 @@ One file per entry, named `cNNNN_Name`; entries are sorted by name. Each line is
 
 `COMMAND_STR`, `DELETE_STR` and `STATE_STR` can use `%options_path%` (the folder with the `options` binary) and `%script_dir%` (the current `--scriptPath`).
 
-The shared framework also reads a few grid-only fields (`PREVIEW_NEAREST`, `PREVIEW_SQUARE`, `PREVIEW_GRID_COLS`, `PREVIEW_FIT_CONTAIN`, `PREVIEW_HIDE_LABEL`). Only Theme Selector's grid screens use them. `PREVIEW_IMAGE_X/Y/WIDTH/HEIGHT` from the original format are accepted and ignored.
+The shared framework also reads a few grid-only fields (`PREVIEW_NEAREST`, `PREVIEW_SQUARE`, `PREVIEW_GRID_COLS`, `PREVIEW_FIT_CONTAIN`, `PREVIEW_HIDE_LABEL`). The menu itself always shows a list; they're for apps built on the shared framework that use a grid layout. `PREVIEW_IMAGE_X/Y/WIDTH/HEIGHT` from the original format are accepted and ignored.
 
 ### Translations
 
@@ -189,19 +188,27 @@ Your hmod can ship its own strings in `/etc/options_menu/<your_mod>/lang/<code>.
 
 ### Colors
 
-`/etc/options_menu/theme.cfg` holds the UI colors, one `Key=R,G,B` per line (0–255, `#` for comments). Missing keys use the defaults.
+`/etc/options_menu/theme.cfg` holds the UI colors, one `Key=R,G,B` per line (0–255, `#` for comments). It's read once at startup: reopen the menu to see a change. A missing file, line or key uses the default.
 
-| Key | Used for |
-| --- | --- |
-| `Bg` | Background |
-| `Border` | Dividers and outlines |
-| `Accent` | Selected entry border, section title bar, **›** |
-| `SelectedRowBg` | Selected entry fill (follows `Bg` unless set) |
-| `Text` / `TextDim` | Main and secondary text |
-| `ScrollArrow` | Scroll arrows (follows `Text` unless set) |
-| `BadgeLetter` | Letter inside button-hint badges |
-| `BadgeA`, `BadgeB`, `BadgeX`, `BadgeStart` (+ `…Dark` rims) | Button-hint badges; X is the hold-to-delete hint |
-| `BadgeY` (+ `BadgeYDark`) | Reserved |
+| Key | Default | Used for |
+| --- | --- | --- |
+| `Bg` | `12,15,22` | Background |
+| `Border` | `42,44,51` | Dividers, box outlines, unselected tile border |
+| `Accent` | `240,196,61` | Selected entry border, section title bar, **›**, highlights |
+| `SelectedRowBg` | `20,22,26` | Selected entry and tile fill. If only `Bg` is set, it follows `Bg` (slightly lighter) so rounded corners don't show the old color |
+| `Text` | `255,255,255` | Titles, entry labels, button hints |
+| `TextDim` | `141,141,147` | Secondary text, e.g. column headers |
+| `ScrollArrow` | follows `Text` | List scroll arrows |
+| `BadgeLetter` | `28,22,22` | Letter inside the button-hint badges |
+| `BadgeA` / `BadgeADark` | `76,175,110` / `46,107,66` | A badge (Select): fill / rim |
+| `BadgeB` / `BadgeBDark` | `225,85,84` / `140,52,51` | B badge (Back): fill / rim |
+| `BadgeX` / `BadgeXDark` | `108,142,191` / `63,89,127` | Hold-to-delete hint: fill / rim |
+| `BadgeStart` / `BadgeStartDark` | `194,168,94` / `116,101,56` | Start pill: fill / rim |
+| `BadgeY` / `BadgeYDark` | `201,123,132` / `143,71,80` | Reserved |
+| `CheckboxOn` | follows `BadgeB` | Module Uninstaller: marked checkbox |
+| `CheckboxOff` | follows `TextDim` | Module Uninstaller: unmarked checkbox |
+
+Apps built on the same framework read this file too, so they match the menu.
 
 ### Icons
 

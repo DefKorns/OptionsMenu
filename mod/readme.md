@@ -15,7 +15,7 @@ The Options Menu is a custom, easily extendable menu for your console, letting o
   - Controller: change the menu button combo, autofire (speed, X/Y as turbo A/B), Home menu combo, Start on the 2nd controller
   - Diagnostics: system info, temperature, top, benchmark, RetroArch debugger, file structure and kernel log dumps to USB
   - Module Uninstaller, Clear Cache, USB write access toggle, epilepsy protection (NES)
-- Extendable: other hmods (e.g. Theme Selector) add their own menus
+- Extendable: other hmods can add their own entries and menus
 
 ### How to open
 
@@ -23,7 +23,7 @@ Hold **L + R** for about 1 second, at any point during the console's operation. 
 
 ## Documentation
 
-Full documentation for the options menu can be found in the [OptionsMenu README](https://github.com/DefKorns/OptionsMenu).
+Every menu, step by step, and how to add your own entries from an hmod: [github.com/DefKorns/OptionsMenu/wiki](https://github.com/DefKorns/OptionsMenu/wiki)
 
 ## Contributions and Thanks
 
