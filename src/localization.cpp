@@ -45,7 +45,6 @@ namespace
         }
     }
 
-    // en-US first so keys missing from a partial translation still resolve
     void LoadLanguageDir(const std::string & langDir, const std::string & langCode)
     {
         LoadLanguageFile(langDir + DefaultLangCode + ".lang");

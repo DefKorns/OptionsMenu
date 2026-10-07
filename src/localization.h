@@ -12,15 +12,10 @@
 
 #include <string>
 
-// optionsRoot is the options_menu install directory, with a trailing slash
-// (e.g. "/etc/options_menu/"). Loads <optionsRoot>/language/, then merges in
-// <optionsRoot>/<plugin>/lang/ for every plugin subfolder that has one.
 void LoadLanguage(const std::string & optionsRoot, const std::string & langCode);
 
-// reads <optionsRoot>/language.cfg (en-US if missing or empty) and loads it
 void LoadLanguageFromConfig(const std::string & optionsRoot);
 
-// key itself when there is no translation for it
 std::string Translate(const std::string & key);
 
 #endif

@@ -32,16 +32,14 @@ private:
     std::map<GameButton,unsigned int> heldPressedAt;
     std::map<GameButton,bool> heldActive;
 #ifndef __arm__
-    unsigned char prevKeys[512] = {0}; // keyboard fallback for desktop testing builds
+    unsigned char prevKeys[512] = {0};
 #endif
 public:
     Controller(int id);
     ~Controller();
     bool PeekButtonStatus(GameButton button);
     bool GetButtonStatus(GameButton button);
-    // fires once on press, then repeats after an initial delay while held
     bool HeldRepeat(GameButton button);
-    // ms this button has been continuously held, 0 if not currently held
     unsigned int HeldMillis(GameButton button);
     void Update();
     void Reset();

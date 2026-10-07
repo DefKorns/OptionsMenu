@@ -20,8 +20,6 @@
 #include <SDL.h>
 #endif
 
-// avoids linking SDL just for a millisecond timer - optiond (Controller's
-// other caller) doesn't otherwise need it
 static unsigned int MonotonicMillis()
 {
     struct timespec ts;
@@ -35,9 +33,7 @@ Controller::Controller(int id)
     std::stringstream s;
     s << "/dev/input/by-path/platform-twi." << id << "-event-joystick";
 
-    //Right after boot this node sometimes doesn't exist yet (input driver
-    //still enumerating) and optiond, started from init.d, hits it before
-    //it's there. Retry for ~10s instead of exiting immediately.
+    // the input node can appear a few seconds after boot
     const int maxAttempts = 50;
     const useconds_t retryDelay = 200000;
     for(int attempt = 0; fd == -1 && attempt < maxAttempts; ++attempt)
@@ -51,7 +47,7 @@ Controller::Controller(int id)
       std::cerr << "Cannot access controller.\n";
       exit(1);
     }
-#endif // __arm__
+#endif
 
     Reset();
 }
@@ -60,7 +56,7 @@ Controller::~Controller()
 #ifdef __arm__
     if(fd != -1)
         close(fd);
-#endif // __arm__
+#endif
 }
 bool Controller::PeekButtonStatus(GameButton button)
 {
@@ -82,7 +78,7 @@ void Controller::Update()
         for(int i = 0; i < len; ++i)
         {
             auto & buttonEvent = buttonBuffer[i];
-            //Unk1 equals 1 when displaying button press status
+            // unk1 == 1 marks a button event
             if(buttonEvent.unk1 == 1)
             {
                 buttons[buttonEvent.button] = buttonEvent.pressed;
@@ -90,9 +86,7 @@ void Controller::Update()
         }
     }
 #else
-    // keyboard fallback for desktop builds - only write buttons[] on an edge,
-    // matching evdev's own press/release-only stream
-    SDL_PumpEvents(); // nested loops (confirm dialog) don't otherwise pump
+    SDL_PumpEvents();
     const Uint8 * keys = SDL_GetKeyboardState(nullptr);
     auto press = [&](SDL_Scancode sc, GameButton button)
     {
@@ -113,7 +107,7 @@ void Controller::Update()
     press(SDL_SCANCODE_TAB, SELECT);
     press(SDL_SCANCODE_Q, L);
     press(SDL_SCANCODE_E, R);
-#endif // __arm__
+#endif
 }
 bool Controller::HeldRepeat(GameButton button)
 {

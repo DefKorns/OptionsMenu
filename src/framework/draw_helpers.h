@@ -23,16 +23,11 @@
 #include <SDL.h>
 
 void SetDrawColor(SDL_Renderer * renderer, Color color);
-// tints a white asset texture
 void SetColorMod(SDL_Texture * texture, Color color);
 
-// flat-line drawing for Modern UI - no textured art
 void DrawStrokeRect(SDL_Renderer * renderer, SDL_Rect rect, Color color, int width, int radius = 0);
 void DrawFillRect(SDL_Renderer * renderer, SDL_Rect rect, Color color);
 void DrawRoundedFillRect(SDL_Renderer * renderer, SDL_Rect rect, Color color, int radius);
-// paints the corner-square pixels outside the rounded radius with a flat
-// color - drawn over a rectangularly-clipped image, it fakes rounding it
-// without an alpha mask or render target
 void DrawRoundedCornerMask(SDL_Renderer * renderer, SDL_Rect rect, Color color, int radius);
 void DrawHLine(SDL_Renderer * renderer, int x0, int x1, int y, Color color, int width = 1);
 void DrawVLine(SDL_Renderer * renderer, int x, int y0, int y1, Color color, int width = 1);

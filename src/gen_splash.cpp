@@ -22,14 +22,13 @@ namespace
     constexpr int ScreenW = 1280;
     constexpr int ScreenH = 720;
     constexpr int BytesPerPixel = 3;
-    constexpr int GlyphBits = 8; // font8x8 glyphs are 8x8 bitmaps
+    constexpr int GlyphBits = 8;
     constexpr int Scale = 3;
     constexpr int GlyphPx = GlyphBits * Scale;
     constexpr int LineGap = GlyphPx / 2;
     constexpr int LineSpacing = GlyphPx + LineGap;
     constexpr unsigned char White = 255;
 
-    // one line of text, horizontally centered, top edge at topY
     void DrawTextLine(std::vector<unsigned char> & pixels, const std::string & text, int topY)
     {
         const std::vector<unsigned int> codepoints = Utf8ToCodepoints(text);

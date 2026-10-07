@@ -74,7 +74,6 @@ SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect 
         std::cerr << "Cannot open png file: " << file << "\n";
         return nullptr;
     }
-    //Set PNG Format
     png.format = PNG_FORMAT_RGBA;
     if(png.width == 0 || png.height == 0)
     {
@@ -87,15 +86,12 @@ SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect 
         rect->h = png.height;
         rect->w = png.width;
     }
-    //Create surface
     auto surface = SDL_CreateRGBSurface(0, png.width, png.height, 32, rmask, gmask, bmask, amask);
 
     if(surface)
     {
-        //Read png data to surface
         png_image_finish_read(&png, NULL, surface->pixels, 0, NULL);
         png_image_free(&png);
-        //Convert surface to texture
         texture = SDL_CreateTextureFromSurface(renderer, surface);
         SDL_FreeSurface(surface);
     }
@@ -141,14 +137,12 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
 
 static std::string ttfFontPath;
 
-// CJK font comes from the optional addon hmod if installed, else the bundled Latin-only one
 void SetTTFFontPath(const std::string & optionsLocation)
 {
     static const char * const cjkFontPath = "/etc/options_menu/fonts/NotoSansJP-CJK.ttf";
     ttfFontPath = std::ifstream(cjkFontPath).good() ? cjkFontPath : optionsLocation + "fonts/NotoSansJP-Latin-subset.ttf";
 }
 
-// one TTF_Font per point size actually used, opened once and kept for the process lifetime
 static TTF_Font * GetTTFFont(int pointSize)
 {
     static std::map<int, TTF_Font *> fonts;
@@ -173,7 +167,6 @@ SDL_Texture * WriteTextTTF(const std::string & text, int fontSize, SDL_Renderer*
         return nullptr;
     }
 
-    // color is packed 0xAABBGGRR, same convention as WriteText/the rest of the codebase
     SDL_Color sdlColor{
         static_cast<Uint8>(color & 0xFF),
         static_cast<Uint8>((color >> 8) & 0xFF),
@@ -203,7 +196,6 @@ bool CanRenderWithTTF(const std::string & text, int fontSize)
         return false;
 
     for(unsigned int codepoint : Utf8ToCodepoints(text))
-        // TTF_GlyphIsProvided only takes a 16-bit code
         if(codepoint > 0xFFFF || !TTF_GlyphIsProvided(font, static_cast<Uint16>(codepoint)))
             return false;
     return true;

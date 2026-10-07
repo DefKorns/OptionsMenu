@@ -23,7 +23,6 @@
 namespace
 {
     const std::string OptionsLocation = "/etc/options_menu/";
-    // never list the menu itself
     const std::string HiddenModPrefix = "options_deluxe";
     const int ListFontSize = 16;
     const int PanelFontSize = 16;
@@ -43,7 +42,6 @@ namespace
         bool marked = false;
     };
 
-    // "hakchi pack_list" lines keep their trailing newline
     std::string TrimTrailingNewline(std::string s)
     {
         while(!s.empty() && (s.back() == '\n' || s.back() == '\r'))
@@ -51,7 +49,6 @@ namespace
         return s;
     }
 
-    // Texture falls back to font8x8 (fontSize px per codepoint) when TTF lacks a glyph
     int TextWidth(const std::string & text, int fontSize)
     {
         if(CanRenderWithTTF(text, fontSize))
@@ -69,7 +66,6 @@ namespace
         return TruncateUtf8(text, n) + "...";
     }
 
-    // unspaced (CJK) or overlong words break per codepoint
     std::vector<std::string> WrapToWidth(const std::string & text, int fontSize, int maxWidth)
     {
         std::vector<std::string> lines;
@@ -174,7 +170,6 @@ int main(int argc, char * argv[])
     const int RowTextMaxW = CheckboxX - 16 - UiTheme::RowTextX;
     const int displayCount = std::max(1, (UiTheme::FooterDividerY - UiTheme::ListBottomMargin - UiTheme::RowFirstY) / UiTheme::RowPitch);
 
-    // white, tinted per mark state at draw time
     for(Mod & mod : mods)
         mod.text = Texture(TruncateToWidth(mod.name, ListFontSize, RowTextMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
     Texture emptyText(Translate("MOD_UNINSTALL_EMPTY"), ListFontSize, renderer, UiTheme::RowTextX, UiTheme::RowFirstY, false, ToAbgr(UiTheme::TextDim), true);
@@ -237,7 +232,6 @@ int main(int argc, char * argv[])
         return x - UiTheme::BadgeGroupGap;
     };
 
-    // Use a wide chip to distinguish Start from Select.
     Texture startPill("Start", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
     Texture startSelectPill("Start + Select", 14, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
     Texture uninstallLabel;
@@ -251,7 +245,6 @@ int main(int argc, char * argv[])
         int y = UiTheme::BadgeBandY;
         SDL_Rect pillRect{ x, y, pillW, UiTheme::BadgeOuterSize };
         DrawRoundedFillRect(renderer, pillRect, UiTheme::BadgeStartDark, pillRect.h/2);
-        // same ring thickness as the letter badges' outer/inner circle pair
         int border = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
         SDL_Rect fillRect{ x+border, y+border, pillW-border*2, UiTheme::BadgeInnerSize };
         DrawRoundedFillRect(renderer, fillRect, UiTheme::BadgeStart, fillRect.h/2);
@@ -292,7 +285,6 @@ int main(int argc, char * argv[])
         summaryCount.rect.x = summaryBox.x + summaryBox.w - PanelPad - summaryCount.rect.w;
         uninstallLabel = Texture(Translate("HINT_UNINSTALL") + " (" + std::to_string(count) + ")", 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
 
-        // keep the last row for "+N" when the list overflows the panel
         int shown = (count > SummaryMaxRows) ? SummaryMaxRows - 1 : count;
         summaryNames.clear();
         for(int i = 0; i < shown; ++i)
@@ -422,7 +414,7 @@ int main(int argc, char * argv[])
             rightEdge = DrawPillBadge(startPill, uninstallLabel, rightEdge);
         DrawFooterDivider(rightEdge);
 
-        SetDrawColor(renderer, bg); // flat helpers leave the draw color dirty
+        SetDrawColor(renderer, bg);
         sdl_context.EndFrame();
     };
 
@@ -453,7 +445,7 @@ int main(int argc, char * argv[])
         const int listX = 640 - (nameW + BulletTextGap)/2;
         std::vector<Texture> noteLines = MakeLines(WrapToWidth(Translate("MOD_UNINSTALL_REBOOT_NOTE"), NoteFontSize, boxW - 48), NoteFontSize, renderer, UiTheme::TextDim);
 
-        controller.GetButtonStatus(B); // drop a stale B press
+        controller.GetButtonStatus(B);
         bool confirmed = false;
         for(;;)
         {

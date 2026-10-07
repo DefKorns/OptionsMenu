@@ -14,7 +14,6 @@
 
 class Controller;
 
-// header/footer textures, shared by reference with the main screen
 struct ModernChrome
 {
     Texture & gearIcon;
@@ -35,7 +34,7 @@ struct Command
     std::string deleteCommand;
     std::string deleteConfirmKey;
     std::string stateCommand;
-    std::string enableIfCommand; // shell condition; row is skipped unless it exits 0
+    std::string enableIfCommand;
     bool runInternal = true;
     bool restartUI = false;
     bool ignoreInterrupt = false;
@@ -46,15 +45,15 @@ struct Command
     bool hasSubmenu = false;
     Texture texture;
     std::string previewImage;
-    int previewImageX = 920; // default position when a command sets PREVIEW_IMAGE without _X/_Y
+    int previewImageX = 920;
     int previewImageY = 300;
     int previewImageWidth = -1;
     int previewImageHeight = -1;
-    bool previewNearest = false; // nearest-neighbor scaling instead of linear - for small pixel-art sprites blown up a lot, where linear just blurs them
-    bool previewSquare = false; // this screen's preview art is square/near-square - grid tiles should be too, not the default wide tile
-    int previewGridCols = -1; // explicit grid column count override, unset (-1) defers to the square/wide default
-    bool previewFitContain = false; // scale to fit within the tile instead of cropping to cover it - for portrait art in a wide/square tile
-    bool previewHideLabel = false; // no caption below this tile - the art speaks for itself
+    bool previewNearest = false;
+    bool previewSquare = false;
+    int previewGridCols = -1;
+    bool previewFitContain = false;
+    bool previewHideLabel = false;
 };
 
 #endif

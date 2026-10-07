@@ -26,7 +26,7 @@ namespace UiTheme
 {
     Color Bg{ 0x0C, 0x0F, 0x16 };
     Color Border{ 0x2A, 0x2C, 0x33 };
-    Color Accent{ 0xF0, 0xC4, 0x3D }; // yellow
+    Color Accent{ 0xF0, 0xC4, 0x3D };
     Color SelectedRowBg{ 0x14, 0x16, 0x1A };
     Color Text{ 0xFF, 0xFF, 0xFF };
     Color TextDim{ 0x8D, 0x8D, 0x93 };
@@ -53,7 +53,6 @@ namespace UiTheme
             bool valid;
         };
 
-        // "R,G,B", each 0-255
         ParsedColor ParseRgb(const std::string & value)
         {
             int r = 0, g = 0, b = 0;
@@ -108,10 +107,7 @@ namespace UiTheme
             isSet[key->first] = true;
         }
 
-        // SelectedRowBg (tile/row fill - shows at rounded-corner masks, so a
-        // stale default next to a customized Bg reads as a leftover old
-        // color) tracks a custom Bg unless set explicitly itself, keeping
-        // the same +8/+7/+4 offset as the built-in defaults
+        // SelectedRowBg follows a custom Bg unless set itself
         if(isSet["Bg"] && !isSet["SelectedRowBg"])
             SelectedRowBg = { ClampedAdd(Bg.r, 8), ClampedAdd(Bg.g, 7), ClampedAdd(Bg.b, 4) };
 

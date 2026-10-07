@@ -26,8 +26,6 @@ namespace
         return (byte & 0xC0) == 0x80;
     }
 
-    // byte count implied by a lead byte; invalid leads count as 1 so callers
-    // always make progress
     size_t SequenceLength(unsigned char lead)
     {
         if(lead >= 0xF0 && lead <= 0xF4) return 4;
@@ -39,7 +37,7 @@ namespace
     struct DecodeResult
     {
         unsigned int codepoint;
-        bool valid; // false if the sequence is malformed or cut short
+        bool valid;
     };
 
     DecodeResult DecodeAt(const std::string & text, size_t pos, size_t length)
@@ -77,8 +75,6 @@ std::vector<unsigned int> Utf8ToCodepoints(const std::string & text)
         }
         else
         {
-            // only the lead byte is consumed, so a stray lead can't swallow
-            // the valid characters after it
             codepoints.push_back(ReplacementChar);
             ++pos;
         }

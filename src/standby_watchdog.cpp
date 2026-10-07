@@ -27,31 +27,27 @@ int DisplayMenu()
 {
     system("standby reloadImagePayload");
     system("cat /tmp/power_menu_screen > /dev/fb0");
-    auto fpsTime = std::chrono::milliseconds(33); // Check for input faster
-    //system("echo DEBUG: Displaying hibernate menu...");
+    auto fpsTime = std::chrono::milliseconds(33);
     for(;;)
     {
         c.Update();
-        if(c.PeekButtonStatus(A)) //Accept (Hibernate)
+        if(c.PeekButtonStatus(A))
         {
-            //system("echo DEBUG: Accepted hibernate...");
             return 1;
         }
-        else if(c.PeekButtonStatus(X)) //Accept (Standby)
+        else if(c.PeekButtonStatus(X))
         {
-            //system("echo DEBUG: Accepted standby...");
             return 2;
         }
-        else if(c.PeekButtonStatus(Y)) //Cancel
+        else if(c.PeekButtonStatus(Y))
         {
-            //system("echo DEBUG: Cancelled hibernate...");
             return 3;
         }
         else if(pw.buttonPress())
         {
             return 3;
         }
-        system("cat /tmp/power_menu_screen > /dev/fb0"); // This will fix the framebuffer getting overwritten by a stack process
+        system("cat /tmp/power_menu_screen > /dev/fb0"); // another process can overwrite the framebuffer
         std::this_thread::sleep_until(nextUpdateTime);
         nextUpdateTime+=fpsTime;
     }
@@ -82,15 +78,13 @@ void Hibernate()
     for(;;)
     {
         c.Update();
-        if(c.PeekButtonStatus(L) && c.PeekButtonStatus(R) && c.GetButtonStatus(UP)) //L+R+SELECT = Hibernate / Reboot from Hibernate
+        if(c.PeekButtonStatus(L) && c.PeekButtonStatus(R) && c.GetButtonStatus(UP))
         {
-            //system("echo Core Temperature at the time of reboot out of hibernation: $(hakchi hwmon)c");
             system("echo 1 > /sys/devices/virtual/disp/disp/attr/lcd");
             break;
         }
         else if(c.PeekButtonStatus(L) && c.PeekButtonStatus(R) && c.GetButtonStatus(DOWN))
         {
-            //system("echo Core Temperature at the time of shutdown out of hibernation: $(hakchi hwmon)c");
             system("standby hibernateReboot &");
             exit(0);
         }
@@ -111,9 +105,8 @@ void Standby()
     for(;;)
     {
         c.Update();
-        if(c.PeekButtonStatus(L) && c.PeekButtonStatus(R) && c.GetButtonStatus(UP)) //L+R+SELECT = Hibernate / Reboot from Hibernate
+        if(c.PeekButtonStatus(L) && c.PeekButtonStatus(R) && c.GetButtonStatus(UP))
         {
-            //system("echo Core Temperature at the time of reboot out of standby: $(hakchi hwmon)c");
             system("echo Rebooting console out from standby mode...");
             sync();
             setuid(0);
@@ -122,7 +115,6 @@ void Standby()
         }
         if(c.PeekButtonStatus(L) && c.PeekButtonStatus(R) && c.GetButtonStatus(DOWN))
         {
-            //system("echo Core Temperature at the time of shutdown out of standby: $(hakchi hwmon)c");
             system("echo Shutting down console out from standby mode...");
             sync();
             setuid(0);

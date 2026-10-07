@@ -22,8 +22,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// like popen(), but in its own process group so an aborted command can be
-// stopped along with everything it started in the background
 struct CommandProcess
 {
     FILE * out;
@@ -64,7 +62,6 @@ static void FinishCommand(const CommandProcess & process, bool abort)
     waitpid(process.pid, nullptr, 0);
 }
 
-// std::stoi throws on non-numeric input; avoid crashing on a bad command file
 static int SafeStoi(const std::string & value, int fallback = 0)
 {
     try
@@ -157,7 +154,6 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
         const int textX = UiTheme::FrameRect.x + UiTheme::FrameInset;
         const int textFirstY = UiTheme::HeaderDividerY + 24;
 
-        // same app header/footer chrome as the main screen, plus a persistent B/Exit badge
         Texture exitLetter("B", 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
         Texture exitLabel(Translate("EXIT"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
         int badgeGroupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + exitLabel.rect.w;
@@ -187,20 +183,17 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                 t.Draw(renderer);
                 y+=10;
             }
-            SetDrawColor(renderer, UiTheme::Bg); // must be the LAST color-setting call, or it leaks into next frame's clear
+            SetDrawColor(renderer, UiTheme::Bg); // must be the last color call, or it leaks into the next frame's clear
             sdl_context.EndFrame();
         };
 
         int fd = fileno(out);
-        fcntl(fd, F_SETFL, O_NONBLOCK); // so a drained-but-still-buffered fgets() below never blocks
-        const int PollTimeoutMs = 20; // short enough that a quick B tap isn't lost between Update() calls
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+        const int PollTimeoutMs = 20;
         bool aborted = false;
         while(!feof(out))
         {
-            // poll just paces the loop now (avoids busy-spinning) - it only reflects
-            // kernel-level readiness, so a burst of lines that all arrive in one
-            // read() would otherwise pile up in stdio's own buffer, invisible to
-            // poll() until some later line's arrival makes it true again
+            // stdio can hold lines poll() never sees, so fgets drains every pass
             struct pollfd pfd{fd, POLLIN, 0};
             poll(&pfd, 1, PollTimeoutMs);
             while(fgets(buffer, 128, out) != nullptr)
@@ -217,10 +210,9 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                 }
             }
             if(!feof(out))
-                clearerr(out); // last fgets() failed because nothing's ready yet, not EOF - stay readable
+                clearerr(out);
 
-            // ignoreInterrupt commands read the controller directly
-            // stop polling here to avoid racing for the same button events
+            // ignoreInterrupt commands read the controller themselves
             if(!ignoreInterrupt)
             {
                 controller->Update();
@@ -231,7 +223,6 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                 }
             }
 
-            // no output: skip the output screen
             if(!textList.empty())
                 render();
         }
@@ -263,7 +254,6 @@ void Command::UpdateState()
 
     char buffer[64] = {0};
     std::string result;
-    // Prevent stalled state scripts from blocking menu load.
     struct pollfd pfd{fileno(pipe), POLLIN, 0};
     if(poll(&pfd, 1, 1000) > 0 && fgets(buffer, sizeof(buffer), pipe))
         result = buffer;

@@ -12,13 +12,11 @@
 
 #include <SDL.h>
 
-// opaque RGB; alpha is always 0xFF wherever it's drawn
 struct Color
 {
     Uint8 r, g, b;
 };
 
-// packed AABBGGRR, the layout Texture's text color parameter takes
 constexpr Uint32 ToAbgr(Color color)
 {
     return 0xFF000000u | (static_cast<Uint32>(color.b) << 16) | (static_cast<Uint32>(color.g) << 8) | color.r;

@@ -24,7 +24,6 @@ int main()
     if(in.is_open())
     {
         int b1, b2, b3;
-        // all 3 must parse - a truncated/empty file falls through to auto-detect below
         if(in >> b1 >> b2 >> b3)
         {
             button1 = (GameButton)b1;
@@ -37,8 +36,7 @@ int main()
 
     if(!haveCustomCombo)
     {
-        // no valid user-set combo - NES/Famicom pads have no L/R, fall back to B+Down.
-        // matches softwareCheck()'s own dp-shvc check in /etc/preinit.d/b0010_functions
+        // NES/Famicom pads have no L/R, so fall back to B+Down
         std::ifstream boardtypeFile("/var/squashfs/etc/clover/boardtype");
         std::string boardtype;
         std::getline(boardtypeFile, boardtype);

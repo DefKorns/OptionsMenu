@@ -38,7 +38,6 @@ void sReplace(std::string & command, std::string oldString, std::string newStrin
     }
 }
 
-// Collapse duplicate slashes for stable path comparisons.
 std::string CollapseSlashes(const std::string & path)
 {
     std::string result;
@@ -73,11 +72,9 @@ int main(int argc, char * argv[])
 
     std::string titleString(Translate("OPTIONS_TITLE"));
     std::string titleKey = "OPTIONS_TITLE";
-    // ancestors, root-first: "path,scriptPath,titleKey;..." - inherited via env, no argv needed
     const char * backStackEnv = getenv("OM_BACK_STACK");
     std::string backStack = backStackEnv ? backStackEnv : "";
 
-    //Check for external drive
     bool usbReady = false;
     if(auto dir = opendir("/media/hakchi/"))
     {
@@ -85,7 +82,6 @@ int main(int argc, char * argv[])
         usbReady = true;
     }
 
-    //Parse args
     for(int i = 1; i < argc; ++i)
     {
         if(strcmp(argv[i], "--commandPath") == 0)
@@ -108,10 +104,7 @@ int main(int argc, char * argv[])
     commandLocation = CollapseSlashes(commandLocation);
     scriptLocation = CollapseSlashes(scriptLocation);
 
-    // value inherited by child screens as OM_BACK_STACK
     std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey;
-    // a self-relaunch re-enters the same screen with an existing stack entry
-    // remove it so Back and child screens point to the parent
     size_t lastSep = backStack.find_last_of(';');
     std::string lastEntry = backStack.empty() ? "" : (lastSep == std::string::npos ? backStack : backStack.substr(lastSep + 1));
     if(lastEntry == myEntry)
@@ -124,12 +117,10 @@ int main(int argc, char * argv[])
         sReplace(cmd, "%script_dir%", scriptLocation);
     };
 
-    //Read commands from command folder
     std::vector<Command> commands;
     std::ifstream in;
     if(auto dir = opendir(commandLocation.c_str()))
     {
-        //Find all commands in folder
         std::list<std::string> fileList;
         while(auto entry = readdir(dir))
         {
@@ -152,8 +143,6 @@ int main(int argc, char * argv[])
                         if(!c.enableIfCommand.empty())
                         {
                             ExpandTemplates(c.enableIfCommand);
-                            // ENABLE_IF conditions reference $rootfs/$mountpoint like any
-                            // other options_menu script, so source preinit the same way
                             if(system(("source /etc/preinit; script_init; " + c.enableIfCommand).c_str()) != 0)
                                 continue;
                         }
@@ -176,18 +165,15 @@ int main(int argc, char * argv[])
         exit(1);
     }
 
-    // commands[0] below would be UB on an empty vector
     if(commands.empty())
     {
         std::cerr << "No usable commands in " << commandLocation << "\n";
         exit(1);
     }
 
-    // B goes back to the parent, or closes the menu on the root screen (no ancestors)
     std::string backCommand;
     if(!backStack.empty())
     {
-        // pop the last entry (parent), re-join the rest for the parent's Back chain
         std::vector<std::string> entries;
         for(size_t start = 0; start < backStack.size();)
         {
@@ -210,7 +196,6 @@ int main(int argc, char * argv[])
         std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
         std::string backTitleKey = lastEntry.substr(c2+1);
 
-        // env prefix overrides OM_BACK_STACK for just this launch, to the parent's own remaining ancestors
         backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
             + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
             + " --title \"" + backTitleKey + "\" &";
@@ -218,12 +203,10 @@ int main(int argc, char * argv[])
 
     int currentCommandId = 0;
 
-    //Create SDL Window/Renderer and Controller Handler
     SDL_Context sdl_context(std::chrono::milliseconds(33), false);
     auto renderer = sdl_context.renderer;
     Controller controller(1);
 
-    //Create Options Flag to prevent multiple menu launches
     system("touch /tmp/options.flag");
 
     const Color bg = UiTheme::Bg;
@@ -235,9 +218,8 @@ int main(int argc, char * argv[])
     Texture badgeOuter(optionsLocation + UiTheme::AssetBadgeOuter, renderer);
     Texture badgeInner(optionsLocation + UiTheme::AssetBadgeInner, renderer);
 
-    //Create Textures for Strings
     Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appTitleText.rect.y -= appTitleText.rect.h / 2; // vertically center on the gear (Texture only supports centering both axes together)
+    appTitleText.rect.y -= appTitleText.rect.h / 2;
     Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
     Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
@@ -245,11 +227,10 @@ int main(int argc, char * argv[])
     Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
     Texture scrollUp(optionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
     SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
-    scrollUp.rect.x -= scrollUp.rect.w / 2; // ScrollX is the gutter's center, not the glyph's left edge
+    scrollUp.rect.x -= scrollUp.rect.w / 2;
     Texture scrollDown = scrollUp;
     scrollDown.rect.y = UiTheme::ScrollDownY;
 
-    //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
     struct Badge { Texture letter; Texture label; Color rim; Color fill; };
     auto MakeBadge = [&](const char * letter, const char * hintKey, Color rim, Color fill) -> Badge
     {
@@ -257,9 +238,7 @@ int main(int argc, char * argv[])
     };
     Badge badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
-    // root screen: B closes the menu instead of going back
     Badge badgeBExit = MakeBadge("B", "EXIT", UiTheme::BadgeBDark, UiTheme::BadgeB);
-    // hold-to-delete hint, different color than the real B badge
     Badge badgeHold = MakeBadge("B", "HINT_DELETE", UiTheme::BadgeXDark, UiTheme::BadgeX);
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
@@ -273,7 +252,6 @@ int main(int argc, char * argv[])
         badgeInner.rect = { x+innerOffset, y+innerOffset, UiTheme::BadgeInnerSize, UiTheme::BadgeInnerSize };
         SetColorMod(badgeInner.texture.get(), badge.fill);
         badgeInner.Draw(renderer);
-        // glyph bearing makes the pure-math center look 1px down/left - nudged
         badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2 + 1;
         badge.letter.rect.y = y + (UiTheme::BadgeOuterSize - badge.letter.rect.h)/2 - 1;
         badge.letter.Draw(renderer);
@@ -283,15 +261,13 @@ int main(int argc, char * argv[])
         return x - UiTheme::BadgeGroupGap;
     };
 
-    //Create Command Texture
     const int ChildIndent = 4*16;
     const int RowGlyphSize = 16;
-    const int RowTextGapPx = 16; // gap kept between truncated text and preview image/switch
+    const int RowTextGapPx = 16;
     Texture chevronIcon(optionsLocation + UiTheme::AssetChevronRight, renderer);
     SetColorMod(chevronIcon.texture.get(), UiTheme::Accent);
     for(Command & c : commands)
     {
-        // self-relaunch into the same dir (e.g. language selection) isn't a submenu
         if(c.hasSubmenu)
         {
             size_t pos = c.command.find("--commandPath");
@@ -305,13 +281,11 @@ int main(int argc, char * argv[])
         int textX = UiTheme::RowTextX + (c.child ? ChildIndent : 0);
         std::string label = Translate(c.name);
 
-        // Keep previews inside the detail panel.
         int maxRight = UiTheme::RowControlRightX - RowTextGapPx;
         bool rowUsesTTF = CanRenderWithTTF(label, RowGlyphSize);
         int available = std::max(0, maxRight - textX);
         if(rowUsesTTF)
         {
-            // proportional font: shrink by measured width, not a fixed px/char guess
             if(MeasureTTFWidth(label, RowGlyphSize) > available)
             {
                 int n = Utf8Length(label);
@@ -358,19 +332,16 @@ int main(int argc, char * argv[])
             for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
             {
                 Texture & rowTexture = commands[i+topListItemNumber].texture;
-                // centered in its slot - TTF glyphs have ascender padding, top-align leaves a gap
                 rowTexture.rect.y = y + (modernRowPitch - rowTexture.rect.h) / 2 + UiTheme::RowTextYNudge;
                 y += modernRowPitch;
             }
         }
 
         selectedRowRect.y = currentCommand.texture.rect.y - 2;
-        selectedRowRect.h = currentCommand.texture.rect.h + 4; // wrap the row's actual text height (16px font8x8 or variable-height TTF), not a fixed guess
+        selectedRowRect.h = currentCommand.texture.rect.h + 4;
 
-        // scaled to fit the detail panel box, ignores the command's own previewImageX/Y/W/H
         if(currentCommand.previewImage.size())
         {
-            // linear only for this one texture - baked in at creation, so toggle around it
             SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
             PreviewImage = std::make_shared<Texture>(currentCommand.previewImage, renderer, 0, 0);
             SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
@@ -388,7 +359,6 @@ int main(int argc, char * argv[])
     };
     SetCurrentCommand(0);
 
-    // bounded so an all-headers list can't spin forever
     auto MoveSelection = [&](int step)
     {
         int newCommandId = currentCommandId;
@@ -418,29 +388,24 @@ int main(int argc, char * argv[])
             chevronIcon.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - chevronIcon.rect.h) / 2;
             chevronIcon.Draw(renderer);
         }
-        // skip for separators and the last row - nothing to separate there
         if(!selected && !rowCommand.command.empty() && !isLastOverall)
             DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::Border);
     };
 
-    // Draw the background before row text.
     auto DrawChrome = [&]()
     {
-        // one continuous border across header+body+footer, plus the footer divider
         DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
         gearIcon.Draw(renderer);
         appTitleText.Draw(renderer);
         appVersionText.Draw(renderer);
         DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
         DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        // vertically centered on titleText's own rendered height, not a fixed guess
         int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
         DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
 
         DrawRoundedFillRect(renderer, selectedRowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
         DrawStrokeRect(renderer, selectedRowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
 
-        // no box when there's no preview - an empty frame looks broken
         if(PreviewImage.get())
         {
             SDL_Rect previewBox{ UiTheme::DetailX, UiTheme::PreviewBoxY, UiTheme::DetailW, UiTheme::PreviewBoxH };
@@ -450,7 +415,6 @@ int main(int argc, char * argv[])
             PreviewImage->Draw(renderer);
         }
 
-        // footer: A rightmost, B left of it, hold-to-delete hint further left
         int rightEdge = UiTheme::BadgeClusterRightX;
         rightEdge = DrawBadge(badgeA, rightEdge);
         rightEdge = DrawBadge(backStack.empty() ? badgeBExit : badgeB, rightEdge);
@@ -460,13 +424,12 @@ int main(int argc, char * argv[])
         DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
     };
 
-    // true if deleted - caller should break out of the main loop
     auto ConfirmDelete = [&]() -> bool
     {
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
         Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true, ToAbgr(UiTheme::Text), true);
         Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true, ToAbgr(UiTheme::Text), true);
-        controller.GetButtonStatus(B); // consume the still-held B from the triggering long-press
+        controller.GetButtonStatus(B);
         bool confirmed = false;
         for(;;)
         {
@@ -483,7 +446,7 @@ int main(int argc, char * argv[])
             DrawStrokeRect(renderer, UiTheme::FrameRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
             confirmTitle.Draw(renderer);
             confirmHint.Draw(renderer);
-            SetDrawColor(renderer, bg); // flat helpers leave the draw color dirty
+            SetDrawColor(renderer, bg);
             sdl_context.EndFrame();
         }
         if(!confirmed)
@@ -498,12 +461,10 @@ int main(int argc, char * argv[])
 
     for(;;)
     {
-        //Clear Buffer and Update Input State
         sdl_context.StartFrame();
         controller.Update();
 
         SDL_Event e;
-        //Poll for quit event (CTRL+C)/Close
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 return 0;
@@ -519,7 +480,6 @@ int main(int argc, char * argv[])
             if(commands[currentCommandId].runInternal)
             {
                 commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bg);
-                // refresh all: preset rows form a radio group
                 if(commands[currentCommandId].isToggle)
                     for(Command & c : commands)
                         if(c.isToggle)
@@ -537,7 +497,6 @@ int main(int argc, char * argv[])
         else if(controller.HeldRepeat(DOWN))
             MoveSelection(1);
 
-        // tap = go back, or close the menu on the root screen; hold ~1s = delete
         bool bHeldNow = controller.PeekButtonStatus(B);
         if(bHeldNow)
         {
@@ -552,7 +511,6 @@ int main(int argc, char * argv[])
         {
             if(bWasHeld && !bHoldFired)
             {
-                // root screen: no backCommand, so this closes the menu instead
                 if(!backCommand.empty())
                     system(backCommand.c_str());
                 _exitManager.runExitCommand = backCommand.empty();
@@ -562,7 +520,6 @@ int main(int argc, char * argv[])
         }
         bWasHeld = bHeldNow;
 
-        //Draw all textures
         DrawChrome();
         titleText.Draw(renderer);
 
@@ -576,10 +533,8 @@ int main(int argc, char * argv[])
         if((topListItemNumber + DisplayItemCount) < commandCount)
             scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
 
-        // flat-line helpers leave the draw color dirty - reset before EndFrame
         SetDrawColor(renderer, bg);
 
-        //Render Framebuffer and Wait for Next Frame
         sdl_context.EndFrame();
     }
 

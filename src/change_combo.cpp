@@ -55,8 +55,6 @@ namespace
         return "?";
     }
 
-    // drops any button already held, so the next WaitForPress doesn't catch the
-    // tail of a press that was meant for the previous step
     void ConsumeHeldButtons(Controller & controller)
     {
         controller.Update();
@@ -82,8 +80,6 @@ namespace
             std::cout << Translate(key) << std::endl;
     }
 
-    // temp file + rename: an interrupted write must never leave button.cfg
-    // truncated for daemon.cpp to trip over
     bool SaveCombo(const std::array<GameButton, ComboLength> & combo)
     {
         const std::string tmpPath = ButtonConfigPath + ".tmp";
@@ -98,8 +94,7 @@ namespace
 
 int main()
 {
-    // RunCommand's popen pipe isn't a tty - stdio defaults to fully buffered
-    // there, so lines can sit unflushed instead of appearing as they're printed
+    // stdout is a pipe here, so it is fully buffered unless flushed
     setvbuf(stdout, nullptr, _IONBF, 0);
 
     LoadLanguageFromConfig(OptionsRoot);
@@ -126,7 +121,6 @@ int main()
             combo[i] = WaitForPress(controller);
         }
 
-        // button names (A, B, X...) stay untranslated, same as the footer badges
         std::cout << Translate("CHANGE_COMBO_CHOSEN") << " " << ButtonName(combo[0]) << " + " << ButtonName(combo[1]) << " + " << ButtonName(combo[2]) << std::endl;
         std::cout << Translate("CHANGE_COMBO_CONFIRM") << std::endl;
         ConsumeHeldButtons(controller);

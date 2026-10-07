@@ -21,13 +21,10 @@
 #include <string>
 #include <vector>
 
-// decodes UTF-8 into Unicode codepoints - malformed sequences become U+FFFD
 std::vector<unsigned int> Utf8ToCodepoints(const std::string & text);
 
-// number of codepoints, not bytes
 int Utf8Length(const std::string & text);
 
-// truncates by codepoint, not byte, so multi-byte glyphs (e.g. Japanese) aren't split
 std::string TruncateUtf8(const std::string & text, int maxCodepoints);
 
 #endif
