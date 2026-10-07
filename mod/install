@@ -11,6 +11,7 @@ for om_file in $om_settings; do
   [ -f "$om_root/$om_file" ] && mkdir -p "$(dirname "$om_backup/$om_file")" && cp -p "$om_root/$om_file" "$om_backup/$om_file"
 done
 for om_unfile in "$installpath/hmod/uninstall-options_deluxe"* \
+              "$installpath/hmod/uninstall-options_menu" \
               "$installpath/hmod/uninstall-options_menu_"* \
               "$installpath/hmod/uninstall-hibernate_mod"* \
               "$installpath/hmod/uninstall-Hakchi_Options_Loadscreen_toggle"; do
