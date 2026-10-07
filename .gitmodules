@@ -1,3 +1,6 @@
 [submodule "toolchain"]
 	path = toolchain
 	url = https://github.com/DefKorns/classicmini-cross-toolchain.git
+[submodule "hmod-build"]
+	path = hmod-build
+	url = https://github.com/DefKorns/hmod-build.git
