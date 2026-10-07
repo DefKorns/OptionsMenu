@@ -12,13 +12,22 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <fcntl.h>
+#include <algorithm>
+#include <cerrno>
+#include <fstream>
 #include <iostream>
-#include <sstream>
 #include <ctime>
 #ifndef __arm__
 #include <SDL.h>
 #endif
+
+namespace
+{
+    const std::string CloverconNamePrefix = "Nintendo Clovercon";
+    constexpr unsigned int RescanIntervalMs = 1000;
+}
 
 static unsigned int MonotonicMillis()
 {
@@ -27,26 +36,21 @@ static unsigned int MonotonicMillis()
     return static_cast<unsigned int>(ts.tv_sec)*1000 + ts.tv_nsec/1000000;
 }
 
-Controller::Controller(int id)
+Controller::Controller(int)
 {
 #ifdef __arm__
-    std::stringstream s;
-    s << "/dev/input/by-path/platform-twi." << id << "-event-joystick";
-
     // the input node can appear a few seconds after boot
     const int maxAttempts = 50;
     const useconds_t retryDelay = 200000;
-    for(int attempt = 0; fd == -1 && attempt < maxAttempts; ++attempt)
+    for(int attempt = 0; attempt < maxAttempts; ++attempt)
     {
-        fd = open(s.str().c_str(), O_RDONLY | O_NONBLOCK);
-        if(fd == -1)
-            usleep(retryDelay);
+        ScanCloverconPads();
+        if(!fds.empty())
+            break;
+        usleep(retryDelay);
     }
-    if(fd == -1)
-    {
-      std::cerr << "Cannot access controller.\n";
-      exit(1);
-    }
+    if(fds.empty())
+        std::cerr << "No controller yet, waiting for one.\n";
 #endif
 
     Reset();
@@ -54,9 +58,38 @@ Controller::Controller(int id)
 Controller::~Controller()
 {
 #ifdef __arm__
-    if(fd != -1)
+    for(int fd : fds)
         close(fd);
 #endif
+}
+void Controller::OpenNode(const std::string & node)
+{
+    if(std::find(openNodes.begin(), openNodes.end(), node) != openNodes.end())
+        return;
+    const int fd = open(("/dev/input/" + node).c_str(), O_RDONLY | O_NONBLOCK);
+    if(fd == -1)
+        return;
+    fds.push_back(fd);
+    openNodes.push_back(node);
+}
+void Controller::ScanCloverconPads()
+{
+    lastScan = MonotonicMillis();
+    DIR * dir = opendir("/sys/class/input");
+    if(!dir)
+        return;
+    while(dirent * entry = readdir(dir))
+    {
+        const std::string node = entry->d_name;
+        if(node.compare(0, 5, "event") != 0)
+            continue;
+        std::ifstream nameFile("/sys/class/input/" + node + "/device/name");
+        std::string name;
+        std::getline(nameFile, name);
+        if(name.compare(0, CloverconNamePrefix.size(), CloverconNamePrefix) == 0)
+            OpenNode(node);
+    }
+    closedir(dir);
 }
 bool Controller::PeekButtonStatus(GameButton button)
 {
@@ -71,20 +104,33 @@ bool Controller::GetButtonStatus(GameButton button)
 void Controller::Update()
 {
 #ifdef __arm__
-    int len;
-    while((len = read(fd, &buttonBuffer, sizeof(ButtonEvent)*10)) > 0)
+    for(size_t device = 0; device < fds.size();)
     {
-        len/=sizeof(ButtonEvent);
-        for(int i = 0; i < len; ++i)
+        int len;
+        while((len = read(fds[device], &buttonBuffer, sizeof(ButtonEvent)*10)) > 0)
         {
-            auto & buttonEvent = buttonBuffer[i];
-            // unk1 == 1 marks a button event
-            if(buttonEvent.unk1 == 1)
+            len/=sizeof(ButtonEvent);
+            for(int i = 0; i < len; ++i)
             {
-                buttons[buttonEvent.button] = buttonEvent.pressed;
+                auto & buttonEvent = buttonBuffer[i];
+                // unk1 == 1 marks a button event
+                if(buttonEvent.unk1 == 1)
+                {
+                    buttons[buttonEvent.button] = buttonEvent.pressed;
+                }
             }
         }
+        if(len == -1 && errno == ENODEV)
+        {
+            close(fds[device]);
+            fds.erase(fds.begin() + device);
+            openNodes.erase(openNodes.begin() + device);
+            continue;
+        }
+        ++device;
     }
+    if(MonotonicMillis() - lastScan >= RescanIntervalMs)
+        ScanCloverconPads();
 #else
     SDL_PumpEvents();
     const Uint8 * keys = SDL_GetKeyboardState(nullptr);

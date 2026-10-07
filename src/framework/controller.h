@@ -9,6 +9,8 @@
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 #include <map>
+#include <string>
+#include <vector>
 
 enum GameButton : uint16_t { A=304, B=305, X=307, Y=308, L=310, R=311, SELECT=314, START=315, LEFT=704, RIGHT=705, UP=706, DOWN=707  };
 
@@ -24,7 +26,9 @@ struct ButtonEvent
 class Controller
 {
 private:
-    int fd = -1;
+    std::vector<int> fds;
+    std::vector<std::string> openNodes;
+    unsigned int lastScan = 0;
     ButtonEvent buttonBuffer[10];
     std::map<GameButton,bool> buttons;
     std::map<GameButton,unsigned int> repeatPressedAt, repeatLastFired;
@@ -34,6 +38,8 @@ private:
 #ifndef __arm__
     unsigned char prevKeys[512] = {0};
 #endif
+    void OpenNode(const std::string & node);
+    void ScanCloverconPads();
 public:
     Controller(int id);
     ~Controller();
