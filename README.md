@@ -48,7 +48,7 @@ The footer always shows the buttons for the current screen.
 | Reboot Device | Safely restarts the console\* |
 | RetroArch › | RetroArch settings, backups and BIOS files. Shown when RetroArch is installed |
 | Network › | IP address, Wi-Fi scan and Wi-Fi config backups |
-| Saved Games › | Back up and restore your saves. Needs a USB/SD drive |
+| Save Manager › | Back up, restore and clean up your saves. Needs a USB/SD drive |
 | Language › | Menu language; the menu restarts in the new language |
 | Advanced Options › | Controller, diagnostics and system tools |
 
@@ -92,14 +92,16 @@ The USB entries only show up with a USB/SD drive connected.
 
 Restore entries only show up when there's a backup to restore.
 
-### Saved Games
+### Save Manager
 
-Needs a USB/SD drive with your saves on it.
+Needs a USB/SD drive with your saves on it. One screen lists the actions on the left; the right panel explains the selected one and shows how many saves are on the console, in the USB backup, left over from removed games and moved aside. Every action asks for confirmation (**Start + Select**).
 
-| Entry | What it does |
+| Action | What it does |
 | --- | --- |
 | Backup Saved Games to USB | Mirrors your saves folder to `/media/data/saves_backup`. Saves you deleted since the last backup are removed from it too; system folders (`FOLDER`, `hakchi`, `home-menu`, `mcp-state`) are skipped |
 | Restore Saved Games from USB | Copies the backup back, overwriting saves with the same name and leaving the others alone |
+| Clean Saves of Removed Games › | Lists the save folders of games that are no longer in any menu (all marked; **A** unmarks) and moves the marked ones to `/media/data/deleted_games_saves`. Menu folders (`CLV-S-*`) are never touched |
+| Restore Saves of Removed Games › | Lists what was moved aside; mark the ones you want back with **A** and press **Start**. A save already on the console is never overwritten |
 
 ### Advanced Options
 
@@ -231,7 +233,7 @@ Packaging and versioning come from [hmod-build](https://github.com/DefKorns/hmod
 ## Credits
 
 - **[CompCom](https://github.com/CompCom)** — the original Options Menu
-- **[DefKorns](https://github.com/DefKorns)** — version 2: the new interface, TTF text, theme colors and icons, translations, Network (with Advokaten), Wi-Fi backups, Saved Games, Controller and Diagnostics menus, build tooling
+- **[DefKorns](https://github.com/DefKorns)** — version 2: the new interface, TTF text, theme colors and icons, translations, Network (with Advokaten), Wi-Fi backups, Save Manager, Controller and Diagnostics menus, build tooling
 - **Swingflip** — Hibernate Mod and Hakchi-Option-Pack scripts
 - **[BsLeNuL](https://github.com/bslenul)** — RetroArch configuration scripts
 - **Advokaten** — Network commands

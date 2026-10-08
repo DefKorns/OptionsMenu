@@ -11,7 +11,7 @@ VARIANT  := plain
 endif
 MOD_CREATOR  := CompCom, DefKorns
 MOD_CATEGORY := Options Menu
-BINARIES     := mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo
+BINARIES     := mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/etc/options_menu/save_manager/save_manager mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo
 
 CXX = g++
 STRIP = strip
@@ -38,7 +38,7 @@ CXXFLAGS = -std=c++11 -Os $(SDL_CFLAGS) -DMOD_VERSION=\"v$(MOD_VER)\"
 LDLIBS = $(SDL_LIBS)
 SOURCES = src/main.cpp src/command.cpp src/localization.cpp src/framework/badge.cpp src/framework/dialog.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/controller.cpp src/framework/powerwatch.cpp src/framework/draw_helpers.cpp src/framework/utf8.cpp src/framework/font8x8_lookup.cpp src/framework/uitheme.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
-ALL_OBJECTS = $(OBJECTS) src/daemon.o src/mod_uninstall.o src/standby_watchdog.o src/gen_splash.o src/change_combo.o
+ALL_OBJECTS = $(OBJECTS) src/daemon.o src/mod_uninstall.o src/save_manager.o src/standby_watchdog.o src/gen_splash.o src/change_combo.o
 
 MOD_DEPS := $(BINARIES) $(VENDORED_LIBS)
 ifndef FIX_LIBSTDCXX
@@ -84,6 +84,11 @@ mod/etc/options_menu/optiond: src/daemon.o src/framework/controller.o
 	$(CROSS_PREFIX)$(STRIP) $@
 
 mod/etc/options_menu/mod_uninstall/mod_uninstall: src/mod_uninstall.o src/localization.o $(filter src/framework/%,$(OBJECTS))
+	$(CROSS_PREFIX)$(CXX) $^ $(LDLIBS) $(LDFLAGS) -Wl,-rpath,/etc/options_menu/lib -o $@
+	$(CROSS_PREFIX)$(STRIP) $@
+	upx --lzma $@
+
+mod/etc/options_menu/save_manager/save_manager: src/save_manager.o src/localization.o $(filter src/framework/%,$(OBJECTS))
 	$(CROSS_PREFIX)$(CXX) $^ $(LDLIBS) $(LDFLAGS) -Wl,-rpath,/etc/options_menu/lib -o $@
 	$(CROSS_PREFIX)$(STRIP) $@
 	upx --lzma $@

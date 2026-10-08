@@ -9,7 +9,7 @@ The Options Menu is a custom, easily extendable menu for your console, letting o
 - **Power:** Hibernate/Standby, Shutdown, Restart
 - **RetroArch:** back up/restore settings (NAND or USB), restore defaults, transfer BIOS files, clean up overrides/remaps/BIOS, toggle load screens
 - **Network:** show IP, reconnect, search for SSIDs, back up/restore your wifi config (NAND or USB)
-- **Saved Games:** back up/restore saves to USB
+- **Save Manager:** back up/restore saves to USB, and move aside (or bring back) saves of games no longer on the console
 - **Language:** English, Français, Deutsch, Español, Italiano, Nederlands, Português, Русский, 日本語
 - **Advanced:**
   - Controller: change the menu button combo, autofire (speed, X/Y as turbo A/B), Home menu combo, Start on the 2nd controller
