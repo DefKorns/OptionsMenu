@@ -93,7 +93,7 @@ mod/bin/standby_watchdog: src/standby_watchdog.o src/framework/controller.o src/
 	$(CROSS_PREFIX)$(STRIP) $@
 	upx --lzma $@
 
-mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o src/framework/utf8.o src/framework/font8x8_lookup.o
+mod/etc/options_menu/scripts/gen_splash: src/gen_splash.o src/localization.o src/framework/utf8.o src/framework/font8x8_lookup.o src/framework/uitheme.o
 	$(CROSS_PREFIX)$(CXX) $^ $(PNG_LIBS) $(LDFLAGS) $(STDCXX_RPATH) -o $@
 	$(CROSS_PREFIX)$(STRIP) $@
 

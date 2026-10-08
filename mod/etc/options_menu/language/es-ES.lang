@@ -43,6 +43,7 @@ RA_TOGGLE_LOAD_SCREENS=Alternar pantallas de carga de RA y Canoe
 RESTORE_WIFI_CONFIG=Restaurar configuración Wifi
 OPTIONS_TITLE=Opciones
 PRESS_B_EXIT=Pulsa B para salir.
+LOADING=Cargando...
 WIFI_BACKUP_SPLASH_LINE1=Copiando archivo de configuración Wifi
 WIFI_BACKUP_SPLASH_LINE2=Espere por favor . . .
 DELETE_BACKUP_CONFIRM=¿Borrar esta copia de seguridad?

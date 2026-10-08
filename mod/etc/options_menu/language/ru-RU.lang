@@ -43,6 +43,7 @@ RA_TOGGLE_LOAD_SCREENS=Переключить экраны загрузки RA �
 RESTORE_WIFI_CONFIG=Восстановить настройки Wifi
 OPTIONS_TITLE=Настройки
 PRESS_B_EXIT=Нажмите B для выхода.
+LOADING=Загрузка...
 WIFI_BACKUP_SPLASH_LINE1=Резервное копирование Wifi
 WIFI_BACKUP_SPLASH_LINE2=Пожалуйста, подождите . . .
 DELETE_BACKUP_CONFIRM=Удалить эту резервную копию?

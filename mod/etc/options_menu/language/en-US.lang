@@ -44,6 +44,7 @@ RA_TOGGLE_LOAD_SCREENS=Toggle RA and Canoe load screens
 RESTORE_WIFI_CONFIG=Restore WIFI Config
 OPTIONS_TITLE=Options
 PRESS_B_EXIT=Press B to exit.
+LOADING=Loading...
 WIFI_BACKUP_SPLASH_LINE1=Backup Wifi Config File
 WIFI_BACKUP_SPLASH_LINE2=Please Wait . . .
 DELETE_BACKUP_CONFIRM=Delete this backup?
