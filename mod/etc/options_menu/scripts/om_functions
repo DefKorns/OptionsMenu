@@ -1,5 +1,5 @@
 #!/bin/sh
-# shellcheck disable=SC2154,SC1091,SC2034,SC2068,SC2039,SC3051,SC3046
+# shellcheck disable=SC2154,SC1091,SC2034,SC2068,SC2039,SC3051,SC3046,SC3043
 #  Copyright (c) 2026 DefKorns (https://defkorns.github.io/LICENSE)
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ string_path="resources/strings"
 root_bin="$rootfs/bin"
 usb_path="$mountpoint/media/$modname"
 font_dir="$usb_path/fonts"
-state_path="$mountpoint$profilepath/$modname"
+mod_state_path="$mountpoint$profilepath/$modname"
 [ ! -d "$font_dir" ] && font_dir="$nand_path/fonts"
 
 
@@ -59,36 +59,38 @@ snes)
 esac
 
 # OM PATHS
-optionsMenu="$mountpoint/etc/options_menu"
-omCommands="$optionsMenu/commands"
-omScripts="$optionsMenu/scripts"
-omImages="$optionsMenu/images"
+options_menu="$mountpoint/etc/options_menu"
+om_commands="$options_menu/commands"
+om_scripts="$options_menu/scripts"
+om_images="$options_menu/images"
 
 # FUNCTIONS
-gStorage="$(findGameStorage)"
+game_storage="$(findGameStorage)"
 
 rename() {
   [ -f "$1" ] && mv "$1" "$2"
 }
 
 translate() {
-  key="$1"
-  langCode="en-US"
-  [ -f "$optionsMenu/language.cfg" ] && langCode="$(cat "$optionsMenu/language.cfg")"
-  [ -z "$langCode" ] && langCode="en-US"
+  local key="$1"
+  local lang_code="en-US"
+  local lang_dir
+  local value=""
+  [ -f "$options_menu/language.cfg" ] && lang_code="$(cat "$options_menu/language.cfg")"
+  [ -z "$lang_code" ] && lang_code="en-US"
 
-  value=""
-  for langDir in "$optionsMenu/lang" "$optionsMenu"/*/lang; do
-    [ -z "$value" ] && [ -f "$langDir/$langCode.lang" ] && value="$(grep "^${key}=" "$langDir/$langCode.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
-    [ -z "$value" ] && [ -f "$langDir/en-US.lang" ] && value="$(grep "^${key}=" "$langDir/en-US.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
+  for lang_dir in "$options_menu/language" "$options_menu"/*/lang; do
+    [ -z "$value" ] && [ -f "$lang_dir/$lang_code.lang" ] && value="$(grep "^${key}=" "$lang_dir/$lang_code.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
+    [ -z "$value" ] && [ -f "$lang_dir/en-US.lang" ] && value="$(grep "^${key}=" "$lang_dir/en-US.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"
   done
   [ -z "$value" ] && value="$key"
   echo "$value"
 }
 
 remove() {
-  for f in "$@"; do
-    [ -f "$f" ] || [ -d "$f" ] && rm -rf "$f"
+  local target
+  for target in "$@"; do
+    [ -f "$target" ] || [ -d "$target" ] && rm -rf "$target"
   done
 }
 
@@ -104,26 +106,32 @@ create() {
   [ ! -f "$1" ] && touch "$1"
 }
 
-enable_cmds() {
-  for arg in "$@"; do
-    in="disable$arg"
-    out="enable$arg"
-    # shellcheck disable=SC2086
-    eval "rename "\$$in" "\$$out""
+enableCmds() {
+  local cmd_name
+  for cmd_name in "$@"; do
+    eval "rename \"\$disable_$cmd_name\" \"\$enable_$cmd_name\""
   done
 }
 
-disable_cmds() {
-  for arg in "$@"; do
-    in="enable$arg"
-    out="disable$arg"
-    # shellcheck disable=SC2086
-    eval "rename "\$$in" "\$$out""
+disableCmds() {
+  local cmd_name
+  for cmd_name in "$@"; do
+    eval "rename \"\$enable_$cmd_name\" \"\$disable_$cmd_name\""
   done
+}
+
+# two providers, so one being down or blocked isn't read as offline
+hasInternet() {
+  local host
+  ip route 2>/dev/null | grep -q '^default' || return 1
+  for host in connectivitycheck.gstatic.com cloudflare.com; do
+    nc -z -w 3 "$host" 443 >/dev/null 2>&1 && return 0
+  done
+  return 1
 }
 
 netChecker() {
-  if ! nc -z 8.8.8.8 53 >/dev/null 2>&1; then
+  if hasInternet; then
     translate NO_PKG_ERR
   else
     translate NO_NET_ERR
@@ -131,33 +139,11 @@ netChecker() {
 }
 
 toggleDownloads() {
-  nc -z 8.8.8.8 53 >/dev/null 2>&1
-  # shellcheck disable=SC2181
-  if [ $? -eq 0 ]; then
-    enable_cmds "Downloads"
+  if hasInternet; then
+    enableCmds "downloads"
   else
-    disable_cmds "Downloads"
+    disableCmds "downloads"
   fi
-}
-
-is_classic_ui() {
-  # [X]-in-title markers only apply in classic UI; modern UI has a real switch
-  [ "$(cat /etc/options_menu/ui_style.cfg 2>/dev/null)" = "classic" ]
-}
-
-switchOff() {
-  is_classic_ui || return 0
-  for item in "$@"; do
-    [ -f "$item" ] && sed -r -i 's/ \[X\]//g' "$item"
-  done
-
-}
-
-switchOn() {
-  is_classic_ui || return 0
-  for item in "$@"; do
-    [ -f "$item" ] && sed -r -i "1 s|$| [X]|" "$item"
-  done
 }
 
 overlayFS() {

@@ -1,6 +1,0 @@
-COMMAND_NAME=TOGGLE_MODERN_UI
-COMMAND_TYPE=EXTERNAL
-RESTART_UI=FALSE
-COMMAND_STR=[ "$(cat /etc/options_menu/ui_style.cfg 2>/dev/null)" = "classic" ] && echo modern > /etc/options_menu/ui_style.cfg || echo classic > /etc/options_menu/ui_style.cfg; usleep 50000 && %options_path%/options --commandPath %options_path%/advanced_commands/ --title "ADVANCED_OPTIONS" &
-STATE_STR=[ "$(cat /etc/options_menu/ui_style.cfg 2>/dev/null)" = "classic" ] && echo off || echo on
-PREVIEW_IMAGE=/etc/options_menu/images/preview_placeholder.png

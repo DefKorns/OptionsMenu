@@ -28,7 +28,7 @@ ssid_lower="$(echo "$ssid" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')"
 [ "$1" = "nand" ] && backup_path="$rootfs/etc/wifi_backup"
 network="$backup_path/$ssid_lower"
 
-Backup_Wifi() {
+backupWifi() {
   if [ -d "$backup_path" ]; then
     [ -d "$network" ] && rm -rf "$network"
   fi
@@ -38,7 +38,7 @@ Backup_Wifi() {
 
 }
 
-Restore_Wifi() {
+restoreWifi() {
   if [ -n "$1" ]; then
     backup_conf="$backup_path/$1/wpa_supplicant.conf"
     rm -f "$wpa_supplicant_conf"
@@ -55,14 +55,14 @@ Restore_Wifi() {
 
 case "$2" in
 backup)
-  "$omScripts/gen_splash" /tmp/wifi_backup_splash.png WIFI_BACKUP_SPLASH_LINE1 WIFI_BACKUP_SPLASH_LINE2 && decodepng /tmp/wifi_backup_splash.png >/dev/fb0
-  Backup_Wifi
+  "$om_scripts/gen_splash" /tmp/wifi_backup_splash.png WIFI_BACKUP_SPLASH_LINE1 WIFI_BACKUP_SPLASH_LINE2 && decodepng /tmp/wifi_backup_splash.png >/dev/fb0
+  backupWifi
   echo "WIFI config backed up to $network"
   sleep 1
-  sh "$omScripts/om_network"
+  sh "$om_scripts/om_network"
   ;;
 restore)
-  Restore_Wifi $3
-  sh "$omNetworkScripts/reconnect.sh"
+  restoreWifi $3
+  sh "$om_network_scripts/reconnect.sh"
   ;;
 esac

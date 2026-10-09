@@ -1,0 +1,4 @@
+COMMAND_NAME=SYSTEM_INFO
+COMMAND_TYPE=INTERNAL
+COMMAND_STR=sh %script_dir%/system_info.sh
+PREVIEW_IMAGE=/etc/options_menu/images/preview_system_info.png

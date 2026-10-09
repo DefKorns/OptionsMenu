@@ -7,17 +7,24 @@
   * of the License, or (at your option) any later version.
   */
 
+#include "framework/badge.h"
+#include "framework/dialog.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
+#include "framework/draw_helpers.h"
+#include "framework/utf8.h"
 #include "command.h"
 #include "localization.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <list>
+#include <map>
+#include <cmath>
 #include <dirent.h>
 
 #ifndef MOD_VERSION
@@ -33,19 +40,13 @@ void sReplace(std::string & command, std::string oldString, std::string newStrin
     }
 }
 
-// truncates by UTF-8 codepoint, not byte, so multi-byte glyphs (e.g. Japanese) aren't split
-std::string TruncateUtf8(const std::string & text, int maxCodepoints)
+std::string CollapseSlashes(const std::string & path)
 {
-    size_t i = 0;
-    int count = 0;
-    while(i < text.size() && count < maxCodepoints)
-    {
-        unsigned char c = static_cast<unsigned char>(text[i]);
-        size_t len = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : (c >= 0xC0) ? 2 : 1;
-        i += len;
-        ++count;
-    }
-    return text.substr(0, i);
+    std::string result;
+    for(char ch : path)
+        if(ch != '/' || result.empty() || result.back() != '/')
+            result += ch;
+    return result;
 }
 
 static struct ExitManager
@@ -62,32 +63,20 @@ static struct ExitManager
 int main(int argc, char * argv[])
 {
     std::string optionsLocation(argv[0]);
-    optionsLocation = optionsLocation.substr(0, optionsLocation.find_last_of('/')+1);
+    optionsLocation = CollapseSlashes(optionsLocation.substr(0, optionsLocation.find_last_of('/')+1));
     _exitManager.exitCommand = "/bin/sh " + optionsLocation + "/scripts/ResumeUI.sh";
     std::string commandLocation(optionsLocation + "commands/");
     std::string scriptLocation(optionsLocation + "scripts/");
-    std::string spriteSheetLocation;
-    std::ifstream in("/tmp/spritesheet");
-    std::getline(in, spriteSheetLocation);
-    in.close();
 
-    std::string langCode("en-US");
-    in.open("/etc/options_menu/language.cfg");
-    std::getline(in, langCode);
-    in.close();
-    if(langCode.empty())
-        langCode = "en-US";
-    LoadLanguage(optionsLocation, langCode);
-
-    std::string uiStyle;
-    in.open("/etc/options_menu/ui_style.cfg");
-    std::getline(in, uiStyle);
-    in.close();
-    bool modernUI = (uiStyle != "classic");
+    LoadLanguageFromConfig(optionsLocation);
+    SetTTFFontPath(optionsLocation);
+    UiTheme::LoadThemeConfig(optionsLocation);
 
     std::string titleString(Translate("OPTIONS_TITLE"));
+    std::string titleKey = "OPTIONS_TITLE";
+    const char * backStackEnv = getenv("OM_BACK_STACK");
+    std::string backStack = backStackEnv ? backStackEnv : "";
 
-    //Check for external drive
     bool usbReady = false;
     if(auto dir = opendir("/media/hakchi/"))
     {
@@ -95,7 +84,6 @@ int main(int argc, char * argv[])
         usbReady = true;
     }
 
-    //Parse args
     for(int i = 1; i < argc; ++i)
     {
         if(strcmp(argv[i], "--commandPath") == 0)
@@ -110,16 +98,31 @@ int main(int argc, char * argv[])
         }
         else if(strcmp(argv[i], "--title") == 0)
         {
+            titleKey = argv[i+1];
             titleString = Translate(argv[i+1]);
             ++i;
         }
     }
+    commandLocation = CollapseSlashes(commandLocation);
+    scriptLocation = CollapseSlashes(scriptLocation);
 
-    //Read commands from command folder
+    std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey;
+    size_t lastSep = backStack.find_last_of(';');
+    std::string lastEntry = backStack.empty() ? "" : (lastSep == std::string::npos ? backStack : backStack.substr(lastSep + 1));
+    if(lastEntry == myEntry)
+        backStack = (lastSep == std::string::npos) ? "" : backStack.substr(0, lastSep);
+    setenv("OM_BACK_STACK", (backStack.empty() ? myEntry : backStack + ";" + myEntry).c_str(), 1);
+
+    auto ExpandTemplates = [&](std::string & cmd)
+    {
+        sReplace(cmd, "%options_path%", optionsLocation);
+        sReplace(cmd, "%script_dir%", scriptLocation);
+    };
+
     std::vector<Command> commands;
+    std::ifstream in;
     if(auto dir = opendir(commandLocation.c_str()))
     {
-        //Find all commands in folder
         std::list<std::string> fileList;
         while(auto entry = readdir(dir))
         {
@@ -139,14 +142,17 @@ int main(int argc, char * argv[])
                 {
                     if(!c.usbOnly || (c.usbOnly && usbReady))
                     {
-                        sReplace(c.command, "%options_path%", optionsLocation);
-                        sReplace(c.command, "%script_dir%", scriptLocation);
-                        sReplace(c.deleteCommand, "%options_path%", optionsLocation);
-                        sReplace(c.deleteCommand, "%script_dir%", scriptLocation);
+                        if(!c.enableIfCommand.empty())
+                        {
+                            ExpandTemplates(c.enableIfCommand);
+                            if(system(("source /etc/preinit; script_init; " + c.enableIfCommand).c_str()) != 0)
+                                continue;
+                        }
+                        ExpandTemplates(c.command);
+                        ExpandTemplates(c.deleteCommand);
                         if(c.isToggle)
                         {
-                            sReplace(c.stateCommand, "%options_path%", optionsLocation);
-                            sReplace(c.stateCommand, "%script_dir%", scriptLocation);
+                            ExpandTemplates(c.stateCommand);
                             c.UpdateState();
                         }
                         commands.push_back(c);
@@ -161,122 +167,130 @@ int main(int argc, char * argv[])
         exit(1);
     }
 
-    // commands[0] below would be UB on an empty vector
     if(commands.empty())
     {
         std::cerr << "No usable commands in " << commandLocation << "\n";
         exit(1);
     }
 
-    int currentCommandId = 0;
-    const int DisplayItemCount = UiTheme::DisplayItemCount;
+    std::string backCommand;
+    if(!backStack.empty())
+    {
+        std::vector<std::string> entries;
+        for(size_t start = 0; start < backStack.size();)
+        {
+            size_t sep = backStack.find(';', start);
+            if(sep == std::string::npos) sep = backStack.size();
+            entries.push_back(backStack.substr(start, sep-start));
+            start = sep+1;
+        }
+        std::string lastEntry = entries.back();
+        entries.pop_back();
+        std::string remainingStack;
+        for(size_t i = 0; i < entries.size(); ++i)
+        {
+            if(i) remainingStack += ";";
+            remainingStack += entries[i];
+        }
 
-    //Create SDL Window/Renderer and Controller Handler
+        size_t c1 = lastEntry.find(','), c2 = lastEntry.find(',', c1+1);
+        std::string backPath = lastEntry.substr(0, c1);
+        std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
+        std::string backTitleKey = lastEntry.substr(c2+1);
+
+        backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
+            + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
+            + " --title \"" + backTitleKey + "\" &";
+    }
+
+    int currentCommandId = 0;
+
     SDL_Context sdl_context(std::chrono::milliseconds(33), false);
     auto renderer = sdl_context.renderer;
     Controller controller(1);
 
-    //Create Options Flag to prevent multiple menu launches
     system("touch /tmp/options.flag");
 
-    //Create Background
-    auto spriteSheet = std::shared_ptr<SDL_Texture>(LoadTexturePNG(renderer, spriteSheetLocation), SDL_DestroyTexture);
-    Texture banner(optionsLocation + "/images/banner.png", renderer, 640, 185, true);
-    Sprite menuU = { spriteSheet, {1,43,432,40}, {-8,-24,1296,120} };
-    Sprite menuL = { spriteSheet, {1,1,432,40}, {-8,630,1296,120} };
-    const Uint8 bgR = modernUI ? UiTheme::BgR : 0x6e;
-    const Uint8 bgG = modernUI ? UiTheme::BgG : 0x6e;
-    const Uint8 bgB = modernUI ? UiTheme::BgB : 0x6e;
-    SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
+    const Color bg = UiTheme::Bg;
+    SetDrawColor(renderer, bg);
 
-    //Create dialog frame + selection highlight (own art, not console theme sprites)
-    NineSlice frame(optionsLocation + UiTheme::AssetFrame, renderer, UiTheme::FrameInset, UiTheme::FrameInset, UiTheme::FrameInset, UiTheme::FrameInset);
-    NineSlice highlight(optionsLocation + UiTheme::AssetHighlight, renderer, UiTheme::HighlightInsetLR, UiTheme::HighlightInsetLR, 0, 0);
     Texture gearIcon(optionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
     Texture switchOn(optionsLocation + UiTheme::AssetSwitchOn, renderer);
     Texture switchOff(optionsLocation + UiTheme::AssetSwitchOff, renderer);
-    Texture badgeOuter(optionsLocation + UiTheme::AssetBadgeOuter, renderer);
-    Texture badgeInner(optionsLocation + UiTheme::AssetBadgeInner, renderer);
 
-    //Create Textures for Strings
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, 0xFFFFFFFF);
-    appTitleText.rect.y -= appTitleText.rect.h / 2; // vertically center on the gear (Texture only supports centering both axes together)
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, 0xFFFFFFFF);
+    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
+    appTitleText.rect.y -= appTitleText.rect.h / 2;
+    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
     appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText = modernUI
-        ? Texture(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleCenterX, UiTheme::SectionTitleY, true)
-        : Texture(titleString, 36, renderer, 640, 185, true);
-    SDL_Rect highlightRect{ UiTheme::HighlightX, UiTheme::RowFirstY - 2, UiTheme::HighlightW, UiTheme::HighlightH };
-    Texture pointerText("->", 16, renderer, 20, UiTheme::RowFirstY, false, 0xFF00FF00);
-    SDL_Rect & pointerRect = pointerText.rect;
-    Texture CompComText = modernUI
-        ? Texture("created by CompCom", 16, renderer)
-        : Texture("created by CompCom", 16, renderer, 1100, 620, true);
-    if(modernUI)
-    {
-        CompComText.rect.x = UiTheme::CreditRightX - CompComText.rect.w;
-        CompComText.rect.y = UiTheme::CreditY;
-    }
-    Texture deleteHint(Translate("WIFI_DELETE_HINT_FOOTER"), 16, renderer, 30, 612);
-    Texture scrollUp = modernUI ? Texture("^", 16, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY) : Texture("^", 16, renderer, 30, 248);
+    Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
+    SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
+    Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
+    Texture scrollUp(optionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
+    SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
+    scrollUp.rect.x -= scrollUp.rect.w / 2;
     Texture scrollDown = scrollUp;
-    scrollDown.rect.y = modernUI ? UiTheme::ScrollDownY : (252+DisplayItemCount*18);
+    scrollDown.rect.y = UiTheme::ScrollDownY;
 
-    //Badge cluster (top-right hints): A/B always shown, X only if the row has a delete action
-    struct Badge { Texture letter; Texture label; UiTheme::BadgeColor rim; UiTheme::BadgeColor fill; };
-    Badge badgeA{ Texture("A", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_SELECT"), 16, renderer), UiTheme::BadgeADark, UiTheme::BadgeA };
-    Badge badgeB{ Texture("B", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_BACK"), 16, renderer), UiTheme::BadgeBDark, UiTheme::BadgeB };
-    Badge badgeX{ Texture("X", 16, renderer, 0, 0, false, UiTheme::BadgeLetterColor), Texture(Translate("HINT_DELETE"), 16, renderer), UiTheme::BadgeXDark, UiTheme::BadgeX };
+    BadgePainter badges(optionsLocation, renderer);
+    auto MakeBadge = [&](const char * letter, const char * hintKey, Color rim, Color fill) -> Badge
+    {
+        return badges.Make(letter, Translate(hintKey), rim, fill);
+    };
+    Badge badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
+    Badge badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
+    Badge badgeBExit = MakeBadge("B", "EXIT", UiTheme::BadgeBDark, UiTheme::BadgeB);
+    Badge badgeHold = MakeBadge("B", "HINT_DELETE", UiTheme::BadgeXDark, UiTheme::BadgeX);
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
-        int groupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + badge.label.rect.w;
-        int x = rightEdgeX - groupW;
-        int y = UiTheme::BadgeBandY;
-        badgeOuter.rect = { x, y, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
-        SDL_SetTextureColorMod(badgeOuter.texture.get(), badge.rim.r, badge.rim.g, badge.rim.b);
-        badgeOuter.Draw(renderer);
-        int innerOffset = (UiTheme::BadgeOuterSize - UiTheme::BadgeInnerSize) / 2;
-        badgeInner.rect = { x+innerOffset, y+innerOffset, UiTheme::BadgeInnerSize, UiTheme::BadgeInnerSize };
-        SDL_SetTextureColorMod(badgeInner.texture.get(), badge.fill.r, badge.fill.g, badge.fill.b);
-        badgeInner.Draw(renderer);
-        badge.letter.rect.x = x + (UiTheme::BadgeOuterSize - badge.letter.rect.w)/2;
-        badge.letter.rect.y = y + (UiTheme::BadgeOuterSize - badge.letter.rect.h)/2;
-        badge.letter.Draw(renderer);
-        badge.label.rect.x = x + UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap;
-        badge.label.rect.y = y + (UiTheme::BadgeOuterSize - badge.label.rect.h)/2;
-        badge.label.Draw(renderer);
-        return x - UiTheme::BadgeGroupGap;
+        return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
     };
 
-    //Create Command Texture
     const int ChildIndent = 4*16;
-    const int rowTextBaseX = modernUI ? UiTheme::RowTextX : 50;
     const int RowGlyphSize = 16;
-    const int RowTextGapPx = 16; // gap kept between truncated text and preview image/switch
+    const int RowTextGapPx = 16;
+    Texture chevronIcon(optionsLocation + UiTheme::AssetChevronRight, renderer);
+    SetColorMod(chevronIcon.texture.get(), UiTheme::Accent);
     for(Command & c : commands)
     {
-        int textX = rowTextBaseX + (c.child ? ChildIndent : 0);
-        std::string label = Translate(c.name);
-
-        // rows with a preview image, or (modern UI) a toggle switch, have less width for text
-        int maxRight = -1;
-        if(c.previewImage.size())
-            maxRight = c.previewImageX - RowTextGapPx;
-        if(modernUI && c.isToggle)
+        if(c.hasSubmenu)
         {
-            int switchBound = UiTheme::ControlColumnRightX - RowTextGapPx;
-            maxRight = (maxRight < 0) ? switchBound : std::min(maxRight, switchBound);
+            size_t pos = c.command.find("--commandPath");
+            size_t pathStart = c.command.find_first_not_of(' ', pos + std::string("--commandPath").size());
+            size_t pathEnd = c.command.find(' ', pathStart);
+            std::string targetPath = CollapseSlashes(c.command.substr(pathStart, pathEnd - pathStart));
+            if(targetPath == commandLocation)
+                c.hasSubmenu = false;
         }
 
-        if(maxRight >= 0)
+        int textX = UiTheme::RowTextX + (c.child ? ChildIndent : 0);
+        std::string label = Translate(c.name);
+
+        int maxRight = UiTheme::RowControlRightX - RowTextGapPx;
+        bool rowUsesTTF = CanRenderWithTTF(label, RowGlyphSize);
+        int available = std::max(0, maxRight - textX);
+        if(rowUsesTTF)
         {
-            int maxChars = std::max(0, (maxRight - textX) / RowGlyphSize);
+            if(MeasureTTFWidth(label, RowGlyphSize) > available)
+            {
+                int n = Utf8Length(label);
+                while(n > 0 && MeasureTTFWidth(TruncateUtf8(label, n) + "...", RowGlyphSize) > available)
+                    --n;
+                label = TruncateUtf8(label, n) + "...";
+            }
+        }
+        else
+        {
+            int maxChars = available / RowGlyphSize;
             if(TruncateUtf8(label, maxChars).size() != label.size())
                 label = TruncateUtf8(label, std::max(0, maxChars - 3)) + "...";
         }
 
-        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0);
+        c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, ToAbgr(UiTheme::Text), true);
     }
+
+    const int modernRowPitch = std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize));
+    const int commandCount = static_cast<int>(commands.size());
+    const int DisplayItemCount = std::max(1, (UiTheme::FooterDividerY - UiTheme::ListBottomMargin - UiTheme::RowFirstY) / modernRowPitch);
 
     int topListItemNumber = 1;
     std::shared_ptr<Texture> PreviewImage;
@@ -299,42 +313,29 @@ int main(int argc, char * argv[])
         if(updateCommandYPos)
         {
             int y = UiTheme::RowFirstY;
-            for(int i = 0, count = std::min(DisplayItemCount,static_cast<int>(commands.size())); i < count; ++i)
+            for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
             {
-                commands[i+topListItemNumber].texture.rect.y = y;
-                y += 18;
+                Texture & rowTexture = commands[i+topListItemNumber].texture;
+                rowTexture.rect.y = y + (modernRowPitch - rowTexture.rect.h) / 2 + UiTheme::RowTextYNudge;
+                y += modernRowPitch;
             }
         }
 
-        highlightRect.y = currentCommand.texture.rect.y - 2;
-        highlightRect.w = UiTheme::HighlightW;
-        pointerRect.y = currentCommand.texture.rect.y;
+        selectedRowRect.y = currentCommand.texture.rect.y - 2;
+        selectedRowRect.h = currentCommand.texture.rect.h + 4;
+
         if(currentCommand.previewImage.size())
         {
-            // fixed width so the bar doesn't run under the image or resize per-row
-            highlightRect.w = UiTheme::HighlightWWithPreview;
-            PreviewImage = std::make_shared<Texture>(currentCommand.previewImage, renderer, currentCommand.previewImageX, currentCommand.previewImageY);
-            // guards against div-by-zero if the PNG failed to load
+            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+            PreviewImage = std::make_shared<Texture>(currentCommand.previewImage, renderer, 0, 0);
+            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
             if(PreviewImage->rect.w > 0 && PreviewImage->rect.h > 0)
             {
-                double wAspectRatio = (double)currentCommand.previewImageHeight / (double)PreviewImage->rect.h * (double)PreviewImage->rect.w;
-                double hAspectRatio = (double)currentCommand.previewImageWidth / (double)PreviewImage->rect.w * (double)PreviewImage->rect.h;
-                if (currentCommand.previewImageWidth > 0)
-                {
-                    PreviewImage->rect.w = currentCommand.previewImageWidth;
-                    if (currentCommand.previewImageHeight <= 0)
-                    {
-                        PreviewImage->rect.h = hAspectRatio;
-                    }
-                }
-                if (currentCommand.previewImageHeight > 0)
-                {
-                    PreviewImage->rect.h = currentCommand.previewImageHeight;
-                    if (currentCommand.previewImageWidth <= 0)
-                    {
-                        PreviewImage->rect.w = wAspectRatio;
-                    }
-                }
+                const int maxW = UiTheme::DetailW - 2*UiTheme::ContentPadding;
+                const int maxH = UiTheme::PreviewBoxH - 2*UiTheme::ContentPadding;
+                double scale = std::min((double)maxW / PreviewImage->rect.w, (double)maxH / PreviewImage->rect.h);
+                PreviewImage->rect.w = static_cast<int>(PreviewImage->rect.w * scale);
+                PreviewImage->rect.h = static_cast<int>(PreviewImage->rect.h * scale);
             }
         }
         else
@@ -342,14 +343,127 @@ int main(int argc, char * argv[])
     };
     SetCurrentCommand(0);
 
+    auto MoveSelection = [&](int step)
+    {
+        int newCommandId = currentCommandId;
+        for(size_t tries = 0; tries < commands.size(); ++tries)
+        {
+            newCommandId = (newCommandId + step + commands.size()) % commands.size();
+            if(commands[newCommandId].command.size() != 0)
+                break;
+        }
+        SetCurrentCommand(newCommandId);
+    };
+
+    auto DrawRow = [&](Command & rowCommand, bool isLastOverall)
+    {
+        bool selected = &rowCommand == &commands[currentCommandId];
+        rowCommand.texture.Draw(renderer);
+        if(rowCommand.isToggle)
+        {
+            Texture & rowSwitch = rowCommand.stateOn ? switchOn : switchOff;
+            rowSwitch.rect.x = UiTheme::SwitchRightX - UiTheme::SwitchW;
+            rowSwitch.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - UiTheme::SwitchH) / 2;
+            rowSwitch.Draw(renderer);
+        }
+        else if(rowCommand.hasSubmenu)
+        {
+            chevronIcon.rect.x = UiTheme::RowControlRightX - chevronIcon.rect.w;
+            chevronIcon.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - chevronIcon.rect.h) / 2;
+            chevronIcon.Draw(renderer);
+        }
+        if(!selected && !rowCommand.command.empty() && !isLastOverall)
+            DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::Border);
+    };
+
+    auto DrawChrome = [&]()
+    {
+        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
+        gearIcon.Draw(renderer);
+        appTitleText.Draw(renderer);
+        appVersionText.Draw(renderer);
+        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
+        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
+        int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
+        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
+
+        DrawRoundedFillRect(renderer, selectedRowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
+        DrawStrokeRect(renderer, selectedRowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
+
+        if(PreviewImage.get())
+        {
+            SDL_Rect previewBox{ UiTheme::DetailX, UiTheme::PreviewBoxY, UiTheme::DetailW, UiTheme::PreviewBoxH };
+            DrawStrokeRect(renderer, previewBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
+            PreviewImage->rect.x = previewBox.x + (previewBox.w - PreviewImage->rect.w) / 2;
+            PreviewImage->rect.y = previewBox.y + (previewBox.h - PreviewImage->rect.h) / 2;
+            PreviewImage->Draw(renderer);
+        }
+
+        int rightEdge = UiTheme::BadgeClusterRightX;
+        rightEdge = DrawBadge(badgeA, rightEdge);
+        rightEdge = DrawBadge(backStack.empty() ? badgeBExit : badgeB, rightEdge);
+        if(!commands[currentCommandId].deleteCommand.empty())
+            rightEdge = DrawBadge(badgeHold, rightEdge);
+        int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
+        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
+    };
+
+    auto DrawScreen = [&]()
+    {
+        DrawChrome();
+        titleText.Draw(renderer);
+
+        for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
+            DrawRow(commands[i+topListItemNumber], (i+topListItemNumber) == commandCount-1);
+
+        CompComText.Draw(renderer);
+
+        if(topListItemNumber != 0)
+            scrollUp.Draw(renderer);
+        if((topListItemNumber + DisplayItemCount) < commandCount)
+            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
+    };
+
+    auto ConfirmDelete = [&]() -> bool
+    {
+        const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
+        ConfirmDialog dialog(renderer, badges, Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey),
+                             MakeBadge("A", "HINT_CONFIRM", UiTheme::BadgeADark, UiTheme::BadgeA),
+                             MakeBadge("B", "HINT_CANCEL", UiTheme::BadgeBDark, UiTheme::BadgeB));
+        controller.GetButtonStatus(B);
+        bool confirmed = false;
+        for(;;)
+        {
+            controller.Update();
+            if(controller.GetButtonStatus(B))
+                break;
+            if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
+            {
+                confirmed = true;
+                break;
+            }
+            sdl_context.StartFrame();
+            DrawScreen();
+            dialog.Draw();
+            SetDrawColor(renderer, bg);
+            sdl_context.EndFrame();
+        }
+        if(!confirmed)
+            return false;
+        system(commands[currentCommandId].deleteCommand.c_str());
+        _exitManager.runExitCommand = false;
+        return true;
+    };
+
+    const unsigned int bHoldThresholdMs = 1000;
+    bool bWasHeld = false, bHoldFired = false;
+
     for(;;)
     {
-        //Clear Buffer and Update Input State
         sdl_context.StartFrame();
         controller.Update();
 
         SDL_Event e;
-        //Poll for quit event (CTRL+C)/Close
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 return 0;
@@ -364,9 +478,11 @@ int main(int argc, char * argv[])
         {
             if(commands[currentCommandId].runInternal)
             {
-                commands[currentCommandId].RunCommand(sdl_context, &controller, menuL, menuU, modernUI, frame, bgR, bgG, bgB);
+                commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bg);
                 if(commands[currentCommandId].isToggle)
-                    commands[currentCommandId].UpdateState();
+                    for(Command & c : commands)
+                        if(c.isToggle)
+                            c.UpdateState();
             }
             else
             {
@@ -375,128 +491,36 @@ int main(int argc, char * argv[])
                 break;
             }
         }
-        else if(controller.GetButtonStatus(UP))
+        else if(controller.HeldRepeat(UP))
+            MoveSelection(-1);
+        else if(controller.HeldRepeat(DOWN))
+            MoveSelection(1);
+
+        bool bHeldNow = controller.PeekButtonStatus(B);
+        if(bHeldNow)
         {
-            // bounded so an all-headers list can't spin forever
-            int newCommandId = currentCommandId;
-            for(size_t tries = 0; tries < commands.size(); ++tries)
+            if(!bHoldFired && controller.HeldMillis(B) >= bHoldThresholdMs)
             {
-                newCommandId = (newCommandId-1+commands.size())%commands.size();
-                if(commands[newCommandId].command.size() != 0)
+                bHoldFired = true;
+                if(!commands[currentCommandId].deleteCommand.empty() && ConfirmDelete())
                     break;
             }
-            SetCurrentCommand(newCommandId);
         }
-        else if(controller.GetButtonStatus(DOWN))
+        else
         {
-            int newCommandId = currentCommandId;
-            for(size_t tries = 0; tries < commands.size(); ++tries)
+            if(bWasHeld && !bHoldFired)
             {
-                newCommandId = (newCommandId+1)%commands.size();
-                if(commands[newCommandId].command.size() != 0)
-                    break;
-            }
-            SetCurrentCommand(newCommandId);
-        }
-        else if(controller.GetButtonStatus(B))
-            SetCurrentCommand(commands.size()-1);
-        else if(controller.GetButtonStatus(X) && !commands[currentCommandId].deleteCommand.empty())
-        {
-            const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
-            Texture confirmTitle(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey), 24, renderer, 640, 320, true);
-            Texture confirmHint(Translate("DELETE_CONFIRM_HINT"), 16, renderer, 640, 360, true);
-            bool confirmed = false;
-            for(;;)
-            {
-                controller.Update();
-                if(controller.GetButtonStatus(B))
-                    break;
-                if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
-                {
-                    confirmed = true;
-                    break;
-                }
-                sdl_context.StartFrame();
-                if(modernUI)
-                    frame.Draw(renderer, UiTheme::FrameRect);
-                else
-                {
-                    banner.Draw(renderer);
-                    menuU.Draw(renderer);
-                    menuL.Draw(renderer);
-                }
-                confirmTitle.Draw(renderer);
-                confirmHint.Draw(renderer);
-                sdl_context.EndFrame();
-            }
-            if(confirmed)
-            {
-                system(commands[currentCommandId].deleteCommand.c_str());
-                _exitManager.runExitCommand = false;
+                if(!backCommand.empty())
+                    system(backCommand.c_str());
+                _exitManager.runExitCommand = backCommand.empty();
                 break;
             }
+            bHoldFired = false;
         }
+        bWasHeld = bHeldNow;
 
-        //Draw all textures
-        if(modernUI)
-        {
-            frame.Draw(renderer, UiTheme::FrameRect);
-            gearIcon.Draw(renderer);
-            appTitleText.Draw(renderer);
-            appVersionText.Draw(renderer);
-            SDL_Rect dividerRect{ UiTheme::HeaderDividerX, UiTheme::HeaderDividerY, UiTheme::HeaderDividerW, UiTheme::HeaderDividerH };
-            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-            SDL_RenderFillRect(renderer, &dividerRect);
-            SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
-        }
-        else
-        {
-            banner.Draw(renderer);
-            menuU.Draw(renderer);
-            menuL.Draw(renderer);
-        }
-        titleText.Draw(renderer);
-        if(modernUI)
-            highlight.Draw(renderer, highlightRect, UiTheme::HighlightR, UiTheme::HighlightG, UiTheme::HighlightB);
-        for(int i = 0, count = std::min(DisplayItemCount,static_cast<int>(commands.size())); i < count; ++i)
-        {
-            Command & rowCommand = commands[i+topListItemNumber];
-            rowCommand.texture.Draw(renderer);
-            if(modernUI && rowCommand.isToggle)
-            {
-                Texture & rowSwitch = rowCommand.stateOn ? switchOn : switchOff;
-                rowSwitch.rect.x = UiTheme::SwitchRightX - UiTheme::SwitchW;
-                rowSwitch.rect.y = rowCommand.texture.rect.y;
-                rowSwitch.Draw(renderer);
-            }
-        }
-        if(PreviewImage.get())
-            PreviewImage->Draw(renderer);
-        CompComText.Draw(renderer);
-
-        if(modernUI)
-        {
-            // A rightmost, B left of it, X further left so A/B don't jitter
-            int rightEdge = UiTheme::BadgeClusterRightX;
-            rightEdge = DrawBadge(badgeA, rightEdge);
-            rightEdge = DrawBadge(badgeB, rightEdge);
-            if(!commands[currentCommandId].deleteCommand.empty())
-                DrawBadge(badgeX, rightEdge);
-        }
-        else
-        {
-            pointerText.Draw(renderer);
-            if(commands[currentCommandId].deleteCommand.size())
-                deleteHint.Draw(renderer);
-        }
-
-        // Display Scroll Arrows when needed
-        if(topListItemNumber != 0)
-            scrollUp.Draw(renderer);
-        if((topListItemNumber + DisplayItemCount) < commands.size())
-            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
-
-        //Render Framebuffer and Wait for Next Frame
+        DrawScreen();
+        SetDrawColor(renderer, bg);
         sdl_context.EndFrame();
     }
 

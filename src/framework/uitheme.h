@@ -18,69 +18,64 @@
 #ifndef UITHEME_H_
 #define UITHEME_H_
 
-#include <SDL.h>
+#include "color.h"
 
-// Geometry and palette for the "settings dialog" look. Screen is a fixed
-// 1280x720 (sdl_context.cpp), so these are plain constants.
+#include <SDL.h>
+#include <string>
+
 namespace UiTheme
 {
-    const Uint8 BgR = 0x0A, BgG = 0x0A, BgB = 0x0C;
+    void LoadThemeConfig(const std::string & optionsLocation);
 
-    // TV overscan safe area
-    const int SafeMarginX = 48;
+    extern Color Bg;
+    extern Color Border;
+    extern Color Accent;
+    extern Color SelectedRowBg;
+    extern Color Text;
+    extern Color TextDim;
+    extern Color ScrollArrow;
+    extern Color BadgeLetter;
+    extern Color BadgeA;
+    extern Color BadgeADark;
+    extern Color BadgeB;
+    extern Color BadgeBDark;
+    extern Color BadgeX;
+    extern Color BadgeXDark;
+    extern Color BadgeY;
+    extern Color BadgeYDark;
+    extern Color BadgeStart;
+    extern Color BadgeStartDark;
+    extern Color CheckboxOn;
+    extern Color CheckboxOff;
+
+    const int SafeMarginX = 64;
     const int SafeMarginY = 36;
+    const int BorderWidth = 3;
+    const int BorderRadius = 14;
+    const int BoxRadius = 8;
+    const int ContentPadding = 16;
+    const int FrameInset = 24;
 
     const SDL_Rect FrameRect{ SafeMarginX, SafeMarginY, 1280 - 2*SafeMarginX, 720 - 2*SafeMarginY };
-    const int FrameInset = 24; // frame.png's 9-slice corner size
+    const int FrameX = FrameRect.x + ContentPadding;
+    const int FrameY = FrameRect.y + ContentPadding;
+    const int FrameW = FrameRect.w - 2*ContentPadding;
 
-    // selection highlight bar
-    const int HighlightInsetLR = 8;
-    const int HighlightX = FrameRect.x + 16;
-    const int HighlightW = (FrameRect.x + FrameRect.w - FrameInset) - HighlightX;
-    const int HighlightH = 20;
-    const Uint8 HighlightR = 0x3F, HighlightG = 0x59, HighlightB = 0x7F;
+    const int HeaderH = 64;
+    const int FooterGap = 16;
+    const int FooterH = 50;
+    const int BodyH = FrameRect.h - 2*ContentPadding - FooterGap - FooterH;
+    const int FooterY = FrameY + BodyH + FooterGap;
+    const int FooterDividerY = FooterY - FooterGap/2;
+    const SDL_Rect OuterRect{ FrameRect.x, FrameRect.y, FrameRect.w, (FooterY+FooterH+ContentPadding) - FrameRect.y };
 
-    // right edge for switches/highlight on rows with a PREVIEW_IMAGE - fixed,
-    // not derived from PREVIEW_IMAGE_X, so it doesn't move as that's tuned
-    const int ControlColumnRightX = 760;
-    const int HighlightWWithPreview = ControlColumnRightX - HighlightX;
+    const int HeaderDividerY = FrameY + HeaderH;
+    const int HeaderDividerX = FrameX;
+    const int HeaderDividerW = FrameW;
 
-    // row layout
-    const int RowFirstY = FrameRect.y + 236;
-    const int RowPitch = 22;
-    const int RowTextX = FrameRect.x + 40;
-    const int DisplayItemCount = 16; // rows visible at once, both UI styles
-
-    // badge cluster (A/B always shown, X shown per-row when it has a delete action)
-    const int BadgeOuterSize = 28;
-    const int BadgeInnerSize = 22;
-    const int BadgeBandY = FrameRect.y + 22;
-    const int BadgeClusterRightX = FrameRect.x + FrameRect.w - 24;
-    const int BadgeGroupGap = 24;
-    const int BadgeLabelGap = 6;
-    const Uint32 BadgeLetterColor = 0xFF16161C; // AABBGGRR
-
-    struct BadgeColor { Uint8 r, g, b; };
-    const BadgeColor BadgeA{ 0xE0, 0xA4, 0x58 }; // amber
-    const BadgeColor BadgeADark{ 0xA0, 0x6D, 0x2E };
-    const BadgeColor BadgeB{ 0x4F, 0xB0, 0xA5 }; // teal
-    const BadgeColor BadgeBDark{ 0x2C, 0x72, 0x68 };
-    const BadgeColor BadgeX{ 0x6C, 0x8E, 0xBF }; // slate-blue
-    const BadgeColor BadgeXDark{ 0x3F, 0x59, 0x7F };
-    const BadgeColor BadgeY{ 0xC9, 0x7B, 0x84 }; // dusty rose, unused
-    const BadgeColor BadgeYDark{ 0x8F, 0x47, 0x50 };
-
-    // header/body divider
-    const int HeaderDividerY = FrameRect.y + 76;
-    const int HeaderDividerH = 2;
-    const int HeaderDividerX = FrameRect.x + FrameInset;
-    const int HeaderDividerW = FrameRect.w - 2 * FrameInset;
-
-    // gear icon
-    const int GearX = FrameRect.x + 32, GearY = FrameRect.y + 22;
+    const int GearX = FrameX, GearY = FrameY + 4;
     const int GearSize = 32;
 
-    // "OptionsMenu" + smaller "vX.Y.Z", right of the gear
     const int TitleFontSize = 24;
     const int VersionFontSize = 14;
     const int TitleGap = 12;
@@ -88,32 +83,54 @@ namespace UiTheme
     const int TitleX = GearX + GearSize + TitleGap;
     const int TitleY = GearY + GearSize / 2;
 
-    // current screen's title, centered below the divider
     const int SectionTitleFontSize = 28;
-    const int SectionTitleY = FrameRect.y + 116;
-    const int SectionTitleCenterX = FrameRect.x + FrameRect.w / 2;
+    const int SectionAccentBarW = 3;
+    const int SectionAccentBarH = 26;
+    const int SectionTitleY = HeaderDividerY + 22;
+    const int SectionTitleX = FrameX + 32 + 14 + SectionAccentBarW;
 
-    // toggle switch, right-aligned to the control column
-    const int SwitchRightX = ControlColumnRightX;
+    const int ListX = FrameX + 32;
+    const int ListW = 800;
+    const int ListContentRightX = ListX + ListW - 40;
+    const int RowControlRightX = ListContentRightX - 16;
+    const int RowFirstY = SectionTitleY + 46;
+    const int RowPitch = 36;
+    const int RowTextYNudge = -4;
+    const int RowTextX = ListX + 16;
+    const int ListBottomMargin = 10;
+
+    const int DetailX = ListX + ListW + 16;
+    const int DetailW = (FrameX + FrameW - 16) - DetailX;
+    const int PreviewBoxH = 200;
+    const int PreviewBoxY = HeaderDividerY + ((FooterDividerY - HeaderDividerY) - PreviewBoxH) / 2;
+
+    const int SwitchRightX = RowControlRightX;
     const int SwitchW = 40, SwitchH = 16;
 
-    // "created by CompCom" footer credit, right-aligned inside the frame
-    const int CreditRightX = (FrameRect.x + FrameRect.w - FrameInset) - 24;
-    const int CreditY = FrameRect.y + FrameRect.h - 28;
+    const int BadgeOuterSize = 28;
+    const int BadgeInnerSize = 22;
+    const int BadgeBandY = FooterY + (FooterH - BadgeOuterSize) / 2;
+    const int BadgeClusterRightX = FrameX + FrameW - 8;
+    const int BadgeGroupGap = 24;
+    const int BadgeLabelGap = 6;
+    const int BadgeDividerGapFromCluster = 16;
 
-    // scroll chevrons
-    const int ScrollX = SectionTitleCenterX - 8;
-    const int ScrollUpY = FrameRect.y + 216;
-    const int ScrollDownY = RowFirstY + DisplayItemCount * RowPitch + 8;
+    const int CreditX = FrameX;
+    const int CreditY = FooterY + FooterH/2 - 8;
 
-    // asset paths, relative to optionsLocation
-    const char * const AssetFrame = "/images/ui/frame.png";
-    const char * const AssetHighlight = "/images/ui/highlight.png";
+    const int ScrollX = FrameX + (ListX - FrameX) / 2 - 7;
+    const int ScrollUpY = HeaderDividerY + 90;
+    const int ScrollDownY = FooterDividerY - 104;
+
     const char * const AssetBadgeOuter = "/images/ui/badge_outer.png";
     const char * const AssetBadgeInner = "/images/ui/badge_inner.png";
     const char * const AssetSwitchOn = "/images/ui/switch_on.png";
     const char * const AssetSwitchOff = "/images/ui/switch_off.png";
     const char * const AssetGear = "/images/ui/gear.png";
+    const char * const AssetChevronRight = "/images/ui/chevron_right.png";
+    const char * const AssetChevronUp = "/images/ui/chevron_up.png";
+    const char * const AssetCheckboxOn = "/images/ui/checkbox_on.png";
+    const char * const AssetCheckboxOff = "/images/ui/checkbox_off.png";
 }
 
 #endif
