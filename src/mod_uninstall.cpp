@@ -128,17 +128,16 @@ int main(int argc, char * argv[])
         auto pipe = popen("hakchi pack_list", "r");
         if(pipe)
         {
-            while(!feof(pipe))
-                if(fgets(buf, sizeof(buf), pipe))
+            while(fgets(buf, sizeof(buf), pipe))
+            {
+                std::string name = TrimTrailingNewline(buf);
+                if(!name.empty() && name.compare(0, HiddenModPrefix.size(), HiddenModPrefix) != 0)
                 {
-                    std::string name = TrimTrailingNewline(buf);
-                    if(!name.empty() && name.compare(0, HiddenModPrefix.size(), HiddenModPrefix) != 0)
-                    {
-                        Mod mod;
-                        mod.name = name;
-                        mods.push_back(mod);
-                    }
+                    Mod mod;
+                    mod.name = name;
+                    mods.push_back(mod);
                 }
+            }
             pclose(pipe);
         }
     }

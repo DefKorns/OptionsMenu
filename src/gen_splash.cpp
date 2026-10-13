@@ -235,6 +235,8 @@ namespace
     int RunLoading()
     {
         const pid_t caller = getppid();
+        if(caller <= 1)
+            return 0;
         const TextBlock block = RenderText({ "LOADING" }, true);
         UiTheme::LoadThemeConfig(OptionsRoot);
         const int barY = block.bottomY + BarGap;

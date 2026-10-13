@@ -17,6 +17,7 @@
 
 #include "draw_helpers.h"
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <tuple>
@@ -81,6 +82,7 @@ void SetColorMod(SDL_Texture * texture, Color color)
 
 void DrawStrokeRect(SDL_Renderer * renderer, SDL_Rect rect, Color color, int width, int radius)
 {
+    radius = std::min(radius, std::min(rect.w, rect.h) / 2);
     SetDrawColor(renderer, color);
     const int x0 = rect.x, y0 = rect.y, x1 = rect.x + rect.w - 1, y1 = rect.y + rect.h - 1;
     for(int i = 0; i < width; ++i)

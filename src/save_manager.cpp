@@ -24,6 +24,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <sys/wait.h>
 
 namespace
 {
@@ -371,7 +372,7 @@ int main(int, char **)
     };
 
     // Shows a "working" panel for one frame, then runs the blocking command.
-    auto RunBusy = [&](const std::function<void()> & drawUnder, const std::string & command)
+    auto RunBusy = [&](const std::function<void()> & drawUnder, const std::string & command) -> bool
     {
         const SDL_Rect box = Dialog::PanelRect(420, 110);
         Texture working(Translate("SAVE_MANAGER_WORKING"), Dialog::TitleFontSize, renderer, 640, box.y + box.h/2 - 12, true, ToAbgr(UiTheme::Text), true);
@@ -382,10 +383,11 @@ int main(int, char **)
         working.Draw(renderer);
         SetDrawColor(renderer, bg);
         sdl_context.EndFrame();
-        system(command.c_str());
+        const int status = system(command.c_str());
         controller.Update();
         controller.GetButtonStatus(A);
         controller.GetButtonStatus(B);
+        return status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 0;
     };
 
     // Marked-list screen shared by "clean" (orphans, all pre-marked) and "restore deleted" (none marked).
@@ -710,9 +712,9 @@ int main(int, char **)
         case Action::Backup:
             if(RunDialog(DrawActions, "SAVE_MANAGER_BACKUP_CONFIRM", {}, "SAVE_MANAGER_BACKUP_DESC", true))
             {
-                RunBusy(DrawActions, "sh " + ScriptLocation + "BackupSavesUsb.sh >/dev/null 2>&1");
+                const bool ok = RunBusy(DrawActions, "sh " + ScriptLocation + "BackupSavesUsb.sh >/dev/null 2>&1");
                 RefreshStats();
-                ShowMessage("BACKUP_SAVES_USB_DONE", "");
+                ShowMessage(ok ? "BACKUP_SAVES_USB_DONE" : "BACKUP_SAVES_USB_FAILED", "");
             }
             return -1;
         case Action::RestoreUsb:
@@ -723,9 +725,9 @@ int main(int, char **)
             }
             if(RunDialog(DrawActions, "SAVE_MANAGER_RESTORE_CONFIRM", { Translate("SAVE_MANAGER_STAT_BACKUP") + ": " + std::to_string(stats.backupSaves) }, "SAVE_MANAGER_RESTORE_DESC", true))
             {
-                RunBusy(DrawActions, "sh " + ScriptLocation + "RestoreSavesUsb.sh >/dev/null 2>&1");
+                const bool ok = RunBusy(DrawActions, "sh " + ScriptLocation + "RestoreSavesUsb.sh >/dev/null 2>&1");
                 RefreshStats();
-                ShowMessage("RESTORE_SAVES_USB_DONE", "");
+                ShowMessage(ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED", "");
             }
             return -1;
         case Action::Clean:

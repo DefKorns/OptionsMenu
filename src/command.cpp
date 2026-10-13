@@ -51,14 +51,25 @@ static CommandProcess StartCommand(const std::string & command)
     }
     setpgid(pid, pid);
     close(fds[1]);
-    return { fdopen(fds[0], "r"), pid };
+    FILE * out = fdopen(fds[0], "r");
+    if(!out)
+    {
+        close(fds[0]);
+        kill(-pid, SIGKILL);
+        waitpid(pid, nullptr, 0);
+        return { nullptr, -1 };
+    }
+    return { out, pid };
 }
 
 static void FinishCommand(const CommandProcess & process, bool abort)
 {
+    if(process.pid <= 0)
+        return;
     if(abort)
         kill(-process.pid, SIGTERM);
-    fclose(process.out);
+    if(process.out)
+        fclose(process.out);
     waitpid(process.pid, nullptr, 0);
 }
 

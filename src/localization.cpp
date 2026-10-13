@@ -63,7 +63,7 @@ void LoadLanguage(const std::string & optionsRoot, const std::string & langCode)
         return;
     while(const dirent * entry = readdir(dir.get()))
     {
-        if(entry->d_type != DT_DIR || entry->d_name[0] == '.')
+        if(entry->d_name[0] == '.' || (entry->d_type != DT_DIR && entry->d_type != DT_UNKNOWN))
             continue;
         const std::string pluginLangDir = optionsRoot + entry->d_name + "/lang/";
         if(FileExists(pluginLangDir + DefaultLangCode + ".lang"))

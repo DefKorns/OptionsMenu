@@ -86,17 +86,17 @@ int main(int argc, char * argv[])
 
     for(int i = 1; i < argc; ++i)
     {
-        if(strcmp(argv[i], "--commandPath") == 0)
+        if(strcmp(argv[i], "--commandPath") == 0 && i + 1 < argc)
         {
             commandLocation = argv[i+1];
             ++i;
         }
-        else if(strcmp(argv[i], "--scriptPath") == 0)
+        else if(strcmp(argv[i], "--scriptPath") == 0 && i + 1 < argc)
         {
             scriptLocation = argv[i+1];
             ++i;
         }
-        else if(strcmp(argv[i], "--title") == 0)
+        else if(strcmp(argv[i], "--title") == 0 && i + 1 < argc)
         {
             titleKey = argv[i+1];
             titleString = Translate(argv[i+1]);
@@ -193,14 +193,18 @@ int main(int argc, char * argv[])
             remainingStack += entries[i];
         }
 
-        size_t c1 = lastEntry.find(','), c2 = lastEntry.find(',', c1+1);
-        std::string backPath = lastEntry.substr(0, c1);
-        std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
-        std::string backTitleKey = lastEntry.substr(c2+1);
+        const size_t c1 = lastEntry.find(',');
+        const size_t c2 = c1 == std::string::npos ? c1 : lastEntry.find(',', c1+1);
+        if(c2 != std::string::npos)
+        {
+            std::string backPath = lastEntry.substr(0, c1);
+            std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
+            std::string backTitleKey = lastEntry.substr(c2+1);
 
-        backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
-            + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
-            + " --title \"" + backTitleKey + "\" &";
+            backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
+                + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
+                + " --title \"" + backTitleKey + "\" &";
+        }
     }
 
     int currentCommandId = 0;
@@ -254,12 +258,16 @@ int main(int argc, char * argv[])
     {
         if(c.hasSubmenu)
         {
-            size_t pos = c.command.find("--commandPath");
-            size_t pathStart = c.command.find_first_not_of(' ', pos + std::string("--commandPath").size());
-            size_t pathEnd = c.command.find(' ', pathStart);
-            std::string targetPath = CollapseSlashes(c.command.substr(pathStart, pathEnd - pathStart));
-            if(targetPath == commandLocation)
-                c.hasSubmenu = false;
+            const std::string flag = "--commandPath";
+            const size_t pos = c.command.find(flag);
+            const size_t pathStart = pos == std::string::npos ? pos : c.command.find_first_not_of(' ', pos + flag.size());
+            if(pathStart != std::string::npos)
+            {
+                const size_t pathEnd = c.command.find(' ', pathStart);
+                const std::string targetPath = CollapseSlashes(c.command.substr(pathStart, pathEnd == std::string::npos ? pathEnd : pathEnd - pathStart));
+                if(targetPath == commandLocation)
+                    c.hasSubmenu = false;
+            }
         }
 
         int textX = UiTheme::RowTextX + (c.child ? ChildIndent : 0);

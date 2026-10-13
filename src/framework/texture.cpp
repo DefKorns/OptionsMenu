@@ -130,7 +130,8 @@ SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* re
         }
     }
     auto texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    if(texture)
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     SDL_FreeSurface(surface);
     return texture;
 }
@@ -184,7 +185,8 @@ SDL_Texture * WriteTextTTF(const std::string & text, int fontSize, SDL_Renderer*
     textureWidth = surface->w;
     textureHeight = surface->h;
     auto texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    if(texture)
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     SDL_FreeSurface(surface);
     return texture;
 }

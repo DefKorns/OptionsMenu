@@ -7,5 +7,5 @@ if [ ! -d /media/data/saves_backup ]; then
   exit 1
 fi
 
-rsync -a /media/data/saves_backup/ /media/hakchi/saves/
+rsync -a /media/data/saves_backup/ /media/hakchi/saves/ || exit 1
 translate RESTORE_SAVES_USB_DONE

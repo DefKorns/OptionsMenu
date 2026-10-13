@@ -9,5 +9,5 @@ mkdir -pm 777 /media/data/saves_backup
 rsync -a --delete \
   --exclude=FOLDER --exclude=hakchi --exclude=home-menu \
   --exclude=dimming.txt --exclude=lang.txt --exclude=mcp-state \
-  /media/hakchi/saves/ /media/data/saves_backup/
+  /media/hakchi/saves/ /media/data/saves_backup/ || exit 1
 translate BACKUP_SAVES_USB_DONE
