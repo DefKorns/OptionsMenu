@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 #include <sys/wait.h>
@@ -31,9 +32,10 @@ namespace
     const std::string OptionsLocation = "/etc/options_menu/";
     const std::string ScriptLocation = OptionsLocation + "scripts/";
     const std::string SelectionFile = "/tmp/save_manager_selection";
+    const std::string HakchiRootsFile = "/tmp/save_manager_hakchi";
     const std::string RetroArchPrefix = "retroarch/";
 
-    // narrower list than the shared theme: entries are short codes, the detail panels need the room
+    // narrower list than the shared theme: the detail panels need the room, long names are truncated
     const int ListW = 600;
     const int ListRightX = UiTheme::ListX + ListW - 40;
     const int ControlRightX = ListRightX - 16;
@@ -66,9 +68,13 @@ namespace
         { Action::RestoreDeleted, "SAVE_MANAGER_RESTORE_DELETED", "SAVE_MANAGER_RESTORE_DELETED_DESC" },
     };
 
+    using GameNames = std::map<std::string, std::string>;
+
     struct SaveEntry
     {
         std::string code;
+        std::string label;
+        bool named = false;
         Texture text;
         bool marked = false;
     };
@@ -86,7 +92,7 @@ namespace
         FILE * pipe = popen(command.c_str(), "r");
         if(!pipe)
             return lines;
-        char buf[256];
+        char buf[1024];
         while(fgets(buf, sizeof(buf), pipe))
         {
             std::string line = TrimTrailingNewline(buf);
@@ -162,11 +168,27 @@ namespace
         return textures;
     }
 
-    std::string EntryLabel(const std::string & entry)
+    // entry<TAB>name lines cached from the last Hakchi scan; malformed lines are skipped
+    GameNames LoadGameNames()
     {
-        if(entry.compare(0, RetroArchPrefix.size(), RetroArchPrefix) == 0)
-            return "RetroArch: " + entry.substr(RetroArchPrefix.size());
-        return entry;
+        GameNames names;
+        for(const std::string & line : ReadLines(OrphanSavesCommand("cached-names")))
+        {
+            const size_t tab = line.find('\t');
+            if(tab == std::string::npos || tab == 0 || tab + 1 == line.size())
+                continue;
+            names.emplace(line.substr(0, tab), line.substr(tab + 1));
+        }
+        return names;
+    }
+
+    // the entry stays the identifier, a known name only changes what is shown
+    std::string EntryLabel(const std::string & entry, const GameNames & names)
+    {
+        const auto found = names.find(entry);
+        const bool retroArch = entry.compare(0, RetroArchPrefix.size(), RetroArchPrefix) == 0;
+        const std::string shown = found != names.end() ? found->second : retroArch ? entry.substr(RetroArchPrefix.size()) : entry;
+        return retroArch ? "RetroArch: " + shown : shown;
     }
 
     void DrawDot(SDL_Renderer * renderer, int x, int centerY)
@@ -350,7 +372,12 @@ int main(int, char **)
             if(sdl_context.powerwatch->buttonPress() || controller.GetButtonStatus(B))
                 return false;
             if(confirm && controller.PeekButtonStatus(START) && controller.PeekButtonStatus(SELECT))
+            {
+                // still held on return; Select alone is the Hakchi names shortcut
+                controller.GetButtonStatus(START);
+                controller.GetButtonStatus(SELECT);
                 return true;
+            }
             if(!confirm && controller.GetButtonStatus(A))
                 return true;
 
@@ -378,11 +405,12 @@ int main(int, char **)
         }
     };
 
-    // Shows a "working" panel for one frame, then runs the blocking command.
-    auto RunBusy = [&](const std::function<void()> & drawUnder, const std::string & command) -> bool
+    // Shows a progress panel for one frame; the caller then runs the blocking work.
+    auto ShowBusy = [&](const std::function<void()> & drawUnder, const std::string & messageKey)
     {
-        const SDL_Rect box = Dialog::PanelRect(420, 110);
-        Texture working(Translate("SAVE_MANAGER_WORKING"), Dialog::TitleFontSize, renderer, 640, box.y + box.h/2 - 12, true, ToAbgr(UiTheme::Text), true);
+        const std::string message = Translate(messageKey);
+        const SDL_Rect box = Dialog::PanelRect(std::max(420, TextWidth(message, Dialog::TitleFontSize) + 96), 110);
+        Texture working(message, Dialog::TitleFontSize, renderer, 640, box.y + box.h/2 - 12, true, ToAbgr(UiTheme::Text), true);
         sdl_context.StartFrame();
         drawUnder();
         Dialog::DrawBackdrop(renderer);
@@ -390,10 +418,20 @@ int main(int, char **)
         working.Draw(renderer);
         SetDrawColor(renderer, bg);
         sdl_context.EndFrame();
-        const int status = system(command.c_str());
+    };
+
+    auto DropPendingInput = [&]()
+    {
         controller.Update();
         controller.GetButtonStatus(A);
         controller.GetButtonStatus(B);
+    };
+
+    auto RunBusy = [&](const std::function<void()> & drawUnder, const std::string & command) -> bool
+    {
+        ShowBusy(drawUnder, "SAVE_MANAGER_WORKING");
+        const int status = system(command.c_str());
+        DropPendingInput();
         return status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 0;
     };
 
@@ -406,6 +444,8 @@ int main(int, char **)
         std::vector<Texture> noneHintLines = MakeLines(WrapToWidth(Translate("SAVE_MANAGER_NONE_HINT"), PanelFontSize, PanelInnerW), PanelFontSize, renderer, UiTheme::TextDim);
         std::vector<Texture> noteLines = NoteLines(cleaning ? "SAVE_MANAGER_CLEAN_NOTE" : "SAVE_MANAGER_RESTORE_NOTE");
         Badge actionPill = badges.MakePill("Start", "");
+        Badge namesPill = badges.MakePill("Select", Translate("HINT_GAME_NAMES"));
+        GameNames gameNames = LoadGameNames();
 
         std::vector<SaveEntry> entries;
         int listOffset = 0;
@@ -439,10 +479,28 @@ int main(int, char **)
             int shown = (count > SummaryMaxRows) ? SummaryMaxRows - 1 : count;
             summaryNames.clear();
             for(int i = 0; i < shown; ++i)
-                summaryNames.emplace_back(TruncateToWidth(EntryLabel(marked[i]->code), PanelFontSize, PanelInnerW - BulletTextGap), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::Text), true);
+                summaryNames.emplace_back(TruncateToWidth(marked[i]->label, PanelFontSize, PanelInnerW - BulletTextGap), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::Text), true);
             moreText = (shown < count)
                 ? Texture("+" + std::to_string(count - shown), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::TextDim), true)
                 : Texture();
+        };
+
+        // named entries first, alphabetically; the rest keep their code order
+        auto ApplyNames = [&]()
+        {
+            for(SaveEntry & entry : entries)
+            {
+                entry.named = gameNames.count(entry.code) != 0;
+                entry.label = EntryLabel(entry.code, gameNames);
+                entry.text = Texture(TruncateToWidth(entry.label, ListFontSize, RowTextMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
+            }
+            std::stable_sort(entries.begin(), entries.end(), [](const SaveEntry & a, const SaveEntry & b)
+            {
+                if(a.named != b.named)
+                    return a.named;
+                return a.named && a.label < b.label;
+            });
+            RefreshSummary();
         };
 
         auto Load = [&]()
@@ -452,13 +510,12 @@ int main(int, char **)
             {
                 SaveEntry entry;
                 entry.code = code;
-                entry.text = Texture(TruncateToWidth(EntryLabel(code), ListFontSize, RowTextMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
                 entry.marked = cleaning;
                 entries.push_back(entry);
             }
             listOffset = 0;
             currentId = 0;
-            RefreshSummary();
+            ApplyNames();
         };
 
         auto DrawScreen = [&]()
@@ -529,7 +586,45 @@ int main(int, char **)
             rightEdge = DrawBadge(badgeBack, rightEdge);
             if(markedCount > 0)
                 rightEdge = DrawBadge(actionPill, rightEdge);
+            rightEdge = DrawBadge(namesPill, rightEdge);
             DrawFooterDivider(rightEdge);
+        };
+
+        // Read-only: names come from a portable Hakchi CE folder on the USB drive, saves are left as they are.
+        auto RefreshNamesFromHakchi = [&]()
+        {
+            ShowBusy(DrawScreen, "SAVE_MANAGER_HAKCHI_SEARCHING");
+            const std::vector<std::string> roots = ReadLines(OrphanSavesCommand("hakchi"));
+            if(roots.empty())
+            {
+                DropPendingInput();
+                RunDialog(DrawScreen, "SAVE_MANAGER_HAKCHI_NOT_FOUND", {}, "SAVE_MANAGER_HAKCHI_NOT_FOUND_NOTE", false);
+                return;
+            }
+
+            ShowBusy(DrawScreen, "SAVE_MANAGER_HAKCHI_SCANNING");
+            {
+                std::ofstream rootsFile(HakchiRootsFile);
+                for(const std::string & root : roots)
+                    rootsFile << root << "\n";
+            }
+            const std::vector<std::string> output = ReadLines(OrphanSavesCommand("names " + HakchiRootsFile));
+            std::remove(HakchiRootsFile.c_str());
+            DropPendingInput();
+            if(output.empty())
+            {
+                RunDialog(DrawScreen, "SAVE_MANAGER_HAKCHI_FAILED", {}, "", false);
+                return;
+            }
+
+            gameNames = LoadGameNames();
+            ApplyNames();
+            const int total = static_cast<int>(entries.size());
+            const int named = static_cast<int>(std::count_if(entries.begin(), entries.end(), [](const SaveEntry & entry) { return entry.named; }));
+            RunDialog(DrawScreen, "SAVE_MANAGER_HAKCHI_DONE",
+                      { Translate("SAVE_MANAGER_HAKCHI_GAMES") + ": " + output.back(),
+                        Translate("SAVE_MANAGER_HAKCHI_NAMED") + ": " + std::to_string(named) + " / " + std::to_string(total) },
+                      named < total ? "SAVE_MANAGER_HAKCHI_PARTIAL_NOTE" : "", false);
         };
 
         Load();
@@ -575,13 +670,15 @@ int main(int, char **)
             }
             else if(controller.GetButtonStatus(B))
                 return ExitBack;
+            else if((controller.GetButtonStatus(SELECT) || controller.GetButtonStatus(Y)) && !controller.PeekButtonStatus(START))
+                RefreshNamesFromHakchi();
             else if(controller.GetButtonStatus(START) && markedCount > 0)
             {
                 auto marked = Marked();
                 std::vector<std::string> lines;
                 const int maxNames = 6;
                 for(int i = 0; i < std::min(maxNames, static_cast<int>(marked.size())); ++i)
-                    lines.push_back(EntryLabel(marked[i]->code));
+                    lines.push_back(marked[i]->label);
                 if(static_cast<int>(marked.size()) > maxNames)
                     lines.push_back("+" + std::to_string(marked.size() - maxNames));
                 if(RunDialog(DrawScreen, cleaning ? "SAVE_MANAGER_CLEAN_CONFIRM" : "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", lines,
