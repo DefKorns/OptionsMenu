@@ -27,22 +27,28 @@ cleanRetroarchDefaults() {
   rm -rf "$mountpoint/etc/options_menu/retroarch/default_files"
 }
 
-clean() {
+# the console restarts after every Hakchi sync, so each new game is seen before it can be removed
+rememberGameNames() {
+  sh /etc/options_menu/scripts/OrphanSaves.sh sync-names
+}
+
+tasks() {
   source /etc/preinit
   script_init
 
   cleanExtraCovers
   cleanRetroarchDefaults
+  rememberGameNames
 }
 
 case "$1" in
 start)
-	clean &
+	tasks &
 ;;
 stop|restart)
 ;;
 *)
-	echo "OptionsMenuCleanup: Please use start."
+	echo "OptionsMenuTasks: Please use start."
 	exit 1
 ;;
 esac

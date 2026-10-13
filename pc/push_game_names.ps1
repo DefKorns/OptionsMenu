@@ -8,7 +8,7 @@
 
   Sends the game names of a Hakchi CE library to the console, so the Save Manager
   shows names instead of codes for saves of removed games. Read-only on both sides
-  except for USB:/data/hakchi_game_names; saves are never touched.
+  except for game_names.txt in the saves folder; saves are never touched.
 
   push_game_names.ps1 [--ip CONSOLE_IP] [--hakchi-path DIR]
   --ip defaults to 169.254.13.37, the console over USB.
@@ -122,7 +122,6 @@ if ($gameNames.Count -eq 0) {
 $tmp = [IO.Path]::GetTempFileName()
 try {
     [IO.File]::WriteAllText($tmp, ($lines -join "`n") + "`n", $utf8)
-    # merged on the console, so names of games no longer in this library are kept
     $remote = "`"cat > $PushPath && sh $MergeScript merge-names $PushPath; status=`$?; rm -f $PushPath; exit `$status`""
     Write-Host "Sending $($gameNames.Count) game names from $HakchiPath to $Ip..."
     $ssh = Start-Process -FilePath ssh -NoNewWindow -Wait -PassThru -RedirectStandardInput $tmp `

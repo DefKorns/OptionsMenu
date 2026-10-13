@@ -66,7 +66,6 @@ namespace
         bool preMarked;
     };
 
-    // Clean starts with every orphan marked, the restores with none
     const ListInfo CleanList{ "SAVE_MANAGER_CLEAN", "SAVE_MANAGER_TO_MOVE", "SAVE_MANAGER_CLEAN_NOTE", "SAVE_MANAGER_CLEAN_CONFIRM", "HINT_MOVE", "orphans", "move ", true };
     const ListInfo RestoreDeletedList{ "SAVE_MANAGER_RESTORE_DELETED", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_NOTE", "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", "HINT_RESTORE", "deleted", "restore ", false };
     const ListInfo RestoreBackupList{ "RESTORE_SAVES_USB", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_USB_NOTE", "SAVE_MANAGER_RESTORE_CONFIRM", "HINT_RESTORE", "backup", "restore-backup ", false };
@@ -701,7 +700,7 @@ int main(int, char **)
                 {
                     const bool fromBackup = &list == &RestoreBackupList;
                     bool ok;
-                    // everything marked is the full restore, which also brings back what the list doesn't show
+                    // all marked: full restore, which also covers what the list hides
                     if(fromBackup && markedCount == entryCount)
                         ok = RunBusy(DrawScreen, "sh " + ScriptLocation + "RestoreSavesUsb.sh >/dev/null 2>&1");
                     else
@@ -865,8 +864,6 @@ int main(int, char **)
         return -1;
     };
 
-    // remembers the names of the installed games, so their saves stay named once a game is removed
-    system(OrphanSavesCommand("sync-names").c_str());
     SetTitle("SAVE_MANAGER");
     RefreshStats();
     RefreshDetail();

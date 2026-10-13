@@ -33,5 +33,6 @@ chmod +x "$rootfs/etc/options_menu/retroarch/scripts/RASettingsBackup"
 chmod +x "$rootfs/bin/standby"
 chmod +x "$rootfs/bin/standby_watchdog"
 rm -f "$rootfs/etc/init.d/S83standby_watchdog"
+rm -f "$rootfs/etc/init.d/S8104OptionsMenuCleanup"
 rm -f "$rootfs/etc/options_menu/retroarch/commands/c0025_ToggleLoadScreens"
 return 1

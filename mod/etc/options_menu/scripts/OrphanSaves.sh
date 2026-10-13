@@ -27,6 +27,7 @@
 #   OrphanSaves.sh hakchi             portable Hakchi CE folders found on the USB drive
 #   OrphanSaves.sh names FILE         add the games of the Hakchi folders listed in FILE to the entry<TAB>name cache
 #   OrphanSaves.sh merge-names FILE   add the entry<TAB>name lines in FILE to the cache
+#   OrphanSaves.sh merge-backup-names add the names in the USB backup, keeping newer ones
 #   OrphanSaves.sh sync-names         add the games installed on the console to the cache
 #   OrphanSaves.sh cached-names       print the name cache
 # Name lookups only read Hakchi's .desktop files, saves are never touched.
@@ -37,7 +38,8 @@ script_init
 saves_root=/media/hakchi/saves
 backup_root=/media/data/saves_backup
 deleted_root=/media/data/deleted_games_saves
-names_cache=/media/data/hakchi_game_names
+names_cache="$profilepath/game_names.txt"
+old_names_cache=/media/data/hakchi_game_names
 ra_save_suffix='\.(srm|rtc|state([0-9]+)?(\.auto)?)(\.png)?$'
 
 raContent() {
@@ -114,7 +116,6 @@ moveListed() {
   sync
 }
 
-# like the full restore: files with the same name are replaced, the others are left alone
 copyFromBackup() {
   local entry="$1" content file
   case "$entry" in
@@ -139,7 +140,12 @@ restoreFromBackup() {
     isEntry "$entry" || continue
     copyFromBackup "$entry" || return 1
   done < "$1"
-  sync
+  mergeBackupNames
+}
+
+mergeBackupNames() {
+  [ -f "$backup_root/game_names.txt" ] || { sync; return 0; }
+  mergeNames "$backup_root/game_names.txt" older
 }
 
 # game folders are pruned so the walk stays shallow on big libraries
@@ -192,7 +198,6 @@ gameNames() {
     }' | awk -F '\t' '!seen[$1]++'
 }
 
-# games, games_snes, games_md, games_originals, games_cache of each Hakchi folder listed in $1
 hakchiNames() {
   local root
   while IFS= read -r root; do
@@ -200,28 +205,30 @@ hakchiNames() {
   done < "$1" | gameNames
 }
 
-# menu folders, linked storage and the stock games
 installedNames() {
   local games_root
   games_root="$(dirname "$(findGameStorage)")"
   printf '%s\n' "$games_root"/*/* "$games_root"/*/.storage "$squashfs/usr/share/games" | gameNames
 }
 
-# New names win and names of games that are gone are kept, so a save stays named after its
-# game is removed. The cache is only rewritten when something changed.
+# names are never dropped; FILE wins unless $2 = older. Folds in the alpha10 cache once.
 mergeNames() {
   local tmp="$names_cache.tmp"
-  mkdir -pm 777 "$(dirname "$names_cache")" || return 1
-  { cat "$1"; cat "$names_cache" 2>/dev/null; } | awk -F '\t' 'NF == 2 && $2 != "" && !seen[$1]++' | sort > "$tmp" || { rm -f "$tmp"; return 1; }
+  {
+    [ "$2" = older ] || cat "$1"
+    cat "$names_cache" 2>/dev/null
+    [ "$2" = older ] && cat "$1"
+    cat "$old_names_cache" 2>/dev/null
+  } | awk -F '\t' 'NF == 2 && $2 != "" && !seen[$1]++' | sort > "$tmp" || { rm -f "$tmp"; return 1; }
   if cmp -s "$tmp" "$names_cache"; then
     rm -f "$tmp"
-    return 0
+  else
+    mv -f "$tmp" "$names_cache" || return 1
   fi
-  mv -f "$tmp" "$names_cache" || return 1
+  [ -f "$old_names_cache" ] && rm -f "$old_names_cache"
   sync
 }
 
-# runs a lookup ($@) and merges what it found; for Hakchi folders also prints how many games had a name
 addNames() {
   local found status
   found="$(mktemp)"
@@ -267,6 +274,9 @@ case "$1" in
   merge-names)
     [ -f "$2" ] && mergeNames "$2"
     ;;
+  merge-backup-names)
+    mergeBackupNames
+    ;;
   sync-names)
     addNames installedNames
     ;;
@@ -274,7 +284,7 @@ case "$1" in
     cat "$names_cache" 2>/dev/null
     ;;
   *)
-    echo "usage: $0 stats|orphans|deleted|move FILE|restore FILE|backup|restore-backup FILE|hakchi|names FILE|merge-names FILE|sync-names|cached-names" >&2
+    echo "usage: $0 stats|orphans|deleted|move FILE|restore FILE|backup|restore-backup FILE|hakchi|names FILE|merge-names FILE|merge-backup-names|sync-names|cached-names" >&2
     exit 2
     ;;
 esac

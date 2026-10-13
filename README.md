@@ -105,9 +105,9 @@ Needs a USB/SD drive with your saves on it. One screen lists the actions on the 
 
 #### Game names
 
-The two "Removed Games" lists show the names of the removed games instead of their codes (`CLV-H-ABCDE`). Every time Save Manager opens, it remembers the names of the games installed at that moment in `/media/data/hakchi_game_names`, and a name stays there after its game is removed. Saves without a known name keep showing their code. Getting the names never changes or moves a save.
+The two "Removed Games" lists show the names of the removed games instead of their codes (`CLV-H-ABCDE`). Every time the console starts, it remembers the names of the games installed at that moment in `game_names.txt` in your saves folder, and a name stays there after its game is removed. The backup keeps the file with your saves, and a restore adds its names without replacing newer ones. Saves without a known name keep showing their code. Getting the names never changes or moves a save.
 
-Games removed before you first opened this version of Save Manager were never seen on the console, so their names can only come from your Hakchi CE library. The console can't read your PC, so the PC sends them. With the console on and reachable by Hakchi CE (USB or Wi-Fi), run [`pc/push_game_names.ps1`](pc/push_game_names.ps1) from a PowerShell window:
+Games removed before this version was installed were never seen on the console, so their names can only come from your Hakchi CE library. The console can't read your PC, so the PC sends them. With the console on and reachable by Hakchi CE (USB or Wi-Fi), run [`pc/push_game_names.ps1`](pc/push_game_names.ps1) from a PowerShell window:
 
 ```powershell
 .\push_game_names.ps1 --ip 192.168.1.50
