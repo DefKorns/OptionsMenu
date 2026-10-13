@@ -328,9 +328,15 @@ int main(int, char **)
             body.emplace_back(TruncateToWidth(line, PanelFontSize, boxW - 80), PanelFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
         std::vector<Texture> noteLines = noteKey.empty() ? std::vector<Texture>()
             : MakeLines(WrapToWidth(Translate(noteKey), NoteFontSize, boxW - 48), NoteFontSize, renderer, UiTheme::TextDim);
-        const int boxH = 110 + static_cast<int>(body.size())*bodyPitch + static_cast<int>(noteLines.size())*20 + badgeRowH;
+        const int titlePitch = 32;
+        std::vector<Texture> titleLines;
+        for(const std::string & line : WrapToWidth(Translate(titleKey), Dialog::TitleFontSize, boxW - 48))
+            titleLines.emplace_back(line, Dialog::TitleFontSize, renderer, 640, 0, true, ToAbgr(UiTheme::Text), true);
+        const int titleExtraH = std::max(0, static_cast<int>(titleLines.size()) - 1) * titlePitch;
+        const int boxH = 110 + titleExtraH + static_cast<int>(body.size())*bodyPitch + static_cast<int>(noteLines.size())*20 + badgeRowH;
         const SDL_Rect box = Dialog::PanelRect(boxW, boxH);
-        Texture title(Translate(titleKey), Dialog::TitleFontSize, renderer, 640, box.y + 36, true, ToAbgr(UiTheme::Text), true);
+        for(size_t i = 0; i < titleLines.size(); ++i)
+            titleLines[i].rect.y = box.y + 36 + static_cast<int>(i)*titlePitch - titleLines[i].rect.h/2;
 
         controller.GetButtonStatus(A);
         controller.GetButtonStatus(B);
@@ -352,8 +358,9 @@ int main(int, char **)
             drawUnder();
             Dialog::DrawBackdrop(renderer);
             Dialog::DrawPanel(renderer, box);
-            title.Draw(renderer);
-            int y = box.y + 72;
+            for(Texture & line : titleLines)
+                line.Draw(renderer);
+            int y = box.y + 72 + titleExtraH;
             for(Texture & line : body)
             {
                 line.rect.x = 640 - line.rect.w/2;
