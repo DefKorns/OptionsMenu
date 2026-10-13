@@ -54,6 +54,23 @@ namespace
 
     enum class Action { Backup, RestoreUsb, Clean, RestoreDeleted };
 
+    struct ListInfo
+    {
+        std::string titleKey;
+        std::string headerKey;
+        std::string noteKey;
+        std::string confirmKey;
+        std::string actionHintKey;
+        std::string listArgs;
+        std::string actionArgs;
+        bool preMarked;
+    };
+
+    // Clean starts with every orphan marked, the restores with none
+    const ListInfo CleanList{ "SAVE_MANAGER_CLEAN", "SAVE_MANAGER_TO_MOVE", "SAVE_MANAGER_CLEAN_NOTE", "SAVE_MANAGER_CLEAN_CONFIRM", "HINT_MOVE", "orphans", "move ", true };
+    const ListInfo RestoreDeletedList{ "SAVE_MANAGER_RESTORE_DELETED", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_NOTE", "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", "HINT_RESTORE", "deleted", "restore ", false };
+    const ListInfo RestoreBackupList{ "RESTORE_SAVES_USB", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_USB_NOTE", "SAVE_MANAGER_RESTORE_CONFIRM", "HINT_RESTORE", "backup", "restore-backup ", false };
+
     struct ActionInfo
     {
         Action action;
@@ -435,14 +452,13 @@ int main(int, char **)
         return status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 0;
     };
 
-    // Marked-list screen shared by "clean" (orphans, all pre-marked) and "restore deleted" (none marked).
-    auto RunSaveList = [&](bool cleaning) -> int
+    auto RunSaveList = [&](const ListInfo & list) -> int
     {
-        SetTitle(cleaning ? "SAVE_MANAGER_CLEAN" : "SAVE_MANAGER_RESTORE_DELETED");
-        Texture summaryHeader(Translate(cleaning ? "SAVE_MANAGER_TO_MOVE" : "SAVE_MANAGER_TO_RESTORE"), PanelHeaderFontSize, renderer, PanelInnerX, summaryBox.y + 14, false, ToAbgr(UiTheme::TextDim), true);
+        SetTitle(list.titleKey);
+        Texture summaryHeader(Translate(list.headerKey), PanelHeaderFontSize, renderer, PanelInnerX, summaryBox.y + 14, false, ToAbgr(UiTheme::TextDim), true);
         Texture noneMarkedText(Translate("SAVE_MANAGER_NONE_MARKED"), PanelFontSize, renderer, PanelInnerX, SummaryListY, false, ToAbgr(UiTheme::Text), true);
         std::vector<Texture> noneHintLines = MakeLines(WrapToWidth(Translate("SAVE_MANAGER_NONE_HINT"), PanelFontSize, PanelInnerW), PanelFontSize, renderer, UiTheme::TextDim);
-        std::vector<Texture> noteLines = NoteLines(cleaning ? "SAVE_MANAGER_CLEAN_NOTE" : "SAVE_MANAGER_RESTORE_NOTE");
+        std::vector<Texture> noteLines = NoteLines(list.noteKey);
         Badge actionPill = badges.MakePill("Start", "");
         Badge namesPill = badges.MakePill("Select", Translate("HINT_GAME_NAMES"));
         GameNames gameNames = LoadGameNames();
@@ -474,7 +490,7 @@ int main(int, char **)
             markedCount = count;
             summaryCount = Texture(std::to_string(count), PanelHeaderFontSize, renderer, 0, summaryBox.y + 14, false, ToAbgr(count ? UiTheme::Accent : UiTheme::TextDim), true);
             summaryCount.rect.x = summaryBox.x + summaryBox.w - PanelPad - summaryCount.rect.w;
-            actionPill.label = Texture(Translate(cleaning ? "HINT_MOVE" : "HINT_RESTORE") + " (" + std::to_string(count) + ")", 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
+            actionPill.label = Texture(Translate(list.actionHintKey) + " (" + std::to_string(count) + ")", 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
 
             int shown = (count > SummaryMaxRows) ? SummaryMaxRows - 1 : count;
             summaryNames.clear();
@@ -506,11 +522,11 @@ int main(int, char **)
         auto Load = [&]()
         {
             entries.clear();
-            for(const std::string & code : ReadLines(OrphanSavesCommand(cleaning ? "orphans" : "deleted")))
+            for(const std::string & code : ReadLines(OrphanSavesCommand(list.listArgs)))
             {
                 SaveEntry entry;
                 entry.code = code;
-                entry.marked = cleaning;
+                entry.marked = list.preMarked;
                 entries.push_back(entry);
             }
             listOffset = 0;
@@ -681,16 +697,25 @@ int main(int, char **)
                     lines.push_back(marked[i]->label);
                 if(static_cast<int>(marked.size()) > maxNames)
                     lines.push_back("+" + std::to_string(marked.size() - maxNames));
-                if(RunDialog(DrawScreen, cleaning ? "SAVE_MANAGER_CLEAN_CONFIRM" : "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", lines,
-                             cleaning ? "SAVE_MANAGER_CLEAN_NOTE" : "SAVE_MANAGER_RESTORE_NOTE", true))
+                if(RunDialog(DrawScreen, list.confirmKey, lines, list.noteKey, true))
                 {
-                    std::ofstream selection(SelectionFile);
-                    for(const SaveEntry * entry : marked)
-                        selection << entry->code << "\n";
-                    selection.close();
-                    RunBusy(DrawScreen, OrphanSavesCommand((cleaning ? "move " : "restore ") + SelectionFile));
-                    std::remove(SelectionFile.c_str());
+                    const bool fromBackup = &list == &RestoreBackupList;
+                    bool ok;
+                    // everything marked is the full restore, which also brings back what the list doesn't show
+                    if(fromBackup && markedCount == entryCount)
+                        ok = RunBusy(DrawScreen, "sh " + ScriptLocation + "RestoreSavesUsb.sh >/dev/null 2>&1");
+                    else
+                    {
+                        std::ofstream selection(SelectionFile);
+                        for(const SaveEntry * entry : marked)
+                            selection << entry->code << "\n";
+                        selection.close();
+                        ok = RunBusy(DrawScreen, OrphanSavesCommand(list.actionArgs + SelectionFile));
+                        std::remove(SelectionFile.c_str());
+                    }
                     Load();
+                    if(fromBackup)
+                        RunDialog(DrawScreen, ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED", {}, "", false);
                 }
             }
 
@@ -822,28 +847,16 @@ int main(int, char **)
             }
             return -1;
         case Action::RestoreUsb:
-            if(stats.backupSaves < 0)
-            {
-                ShowMessage("RESTORE_SAVES_USB_NOT_FOUND", "");
-                return -1;
-            }
-            if(RunDialog(DrawActions, "SAVE_MANAGER_RESTORE_CONFIRM", { Translate("SAVE_MANAGER_STAT_BACKUP") + ": " + std::to_string(stats.backupSaves) }, "SAVE_MANAGER_RESTORE_DESC", true))
-            {
-                const bool ok = RunBusy(DrawActions, "sh " + ScriptLocation + "RestoreSavesUsb.sh >/dev/null 2>&1");
-                RefreshStats();
-                ShowMessage(ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED", "");
-            }
-            return -1;
         case Action::Clean:
         case Action::RestoreDeleted:
         {
-            const bool cleaning = action == Action::Clean;
-            if((cleaning ? stats.orphans : stats.deleted) == 0)
+            const int available = action == Action::RestoreUsb ? stats.backupSaves : action == Action::Clean ? stats.orphans : stats.deleted;
+            if(available <= 0)
             {
-                ShowMessage(cleaning ? "SAVE_MANAGER_NO_ORPHANS" : "SAVE_MANAGER_NO_DELETED", "");
+                ShowMessage(action == Action::RestoreUsb ? "RESTORE_SAVES_USB_NOT_FOUND" : action == Action::Clean ? "SAVE_MANAGER_NO_ORPHANS" : "SAVE_MANAGER_NO_DELETED", "");
                 return -1;
             }
-            const int result = RunSaveList(cleaning);
+            const int result = RunSaveList(action == Action::RestoreUsb ? RestoreBackupList : action == Action::Clean ? CleanList : RestoreDeletedList);
             SetTitle("SAVE_MANAGER");
             RefreshStats();
             return result == ExitLeaveMenu ? ExitLeaveMenu : -1;
@@ -852,6 +865,8 @@ int main(int, char **)
         return -1;
     };
 
+    // remembers the names of the installed games, so their saves stay named once a game is removed
+    system(OrphanSavesCommand("sync-names").c_str());
     SetTitle("SAVE_MANAGER");
     RefreshStats();
     RefreshDetail();

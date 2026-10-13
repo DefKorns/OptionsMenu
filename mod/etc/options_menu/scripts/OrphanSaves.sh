@@ -22,8 +22,12 @@
 #   OrphanSaves.sh deleted            entries already moved aside
 #   OrphanSaves.sh move FILE          move the entries listed in FILE aside
 #   OrphanSaves.sh restore FILE       move them back (never over an existing save)
+#   OrphanSaves.sh backup             entries in the USB backup
+#   OrphanSaves.sh restore-backup FILE  copy the entries listed in FILE back from the USB backup (replaces same names)
 #   OrphanSaves.sh hakchi             portable Hakchi CE folders found on the USB drive
-#   OrphanSaves.sh names FILE         rebuild the entry<TAB>name cache from the Hakchi folders listed in FILE
+#   OrphanSaves.sh names FILE         add the games of the Hakchi folders listed in FILE to the entry<TAB>name cache
+#   OrphanSaves.sh merge-names FILE   add the entry<TAB>name lines in FILE to the cache
+#   OrphanSaves.sh sync-names         add the games installed on the console to the cache
 #   OrphanSaves.sh cached-names       print the name cache
 # Name lookups only read Hakchi's .desktop files, saves are never touched.
 
@@ -110,39 +114,69 @@ moveListed() {
   sync
 }
 
+# like the full restore: files with the same name are replaced, the others are left alone
+copyFromBackup() {
+  local entry="$1" content file
+  case "$entry" in
+    retroarch/*)
+      content="${entry#retroarch/}"
+      mkdir -p "$saves_root/retroarch" || return 1
+      ls "$backup_root/retroarch" 2>/dev/null | while IFS= read -r file; do
+        [ "$(echo "$file" | raContent)" = "$content" ] || continue
+        cp -a "$backup_root/retroarch/$file" "$saves_root/retroarch/$file" || exit 1
+      done
+      ;;
+    *)
+      [ -d "$backup_root/$entry" ] || return 0
+      cp -a "$backup_root/$entry" "$saves_root/"
+      ;;
+  esac
+}
+
+restoreFromBackup() {
+  local entry
+  while IFS= read -r entry; do
+    isEntry "$entry" || continue
+    copyFromBackup "$entry" || return 1
+  done < "$1"
+  sync
+}
+
 # game folders are pruned so the walk stays shallow on big libraries
 hakchiRoots() {
   find /media -maxdepth 4 -type d \( -name 'games*' -o -name saves -o -name '.*' \) -prune     -o -type f -name '[Hh][Aa][Kk][Cc][Hh][Ii].[Ee][Xx][Ee]' -print 2>/dev/null | sed 's#/[^/]*$##' | sort -u
 }
 
-# entry<TAB>name for every game in games, games_snes, games_md, games_originals, games_cache.
+# entry<TAB>name for every game folder inside the folders read from stdin.
 # RetroArch content names come from the files in each game folder (exact, spaces included)
 # and from Exec= paths (ROMs kept elsewhere).
-hakchiNames() {
-  local root dir
-  while IFS= read -r root; do
-    for dir in "$root"/games*; do
-      [ -d "$dir" ] || continue
-      find "$dir" -mindepth 2 -maxdepth 2 -type f -name '*.desktop' -exec awk '
-        function flush(  n, i, token) {
-          if(code ~ /^CLV-/ && name != "") {
-            print "N\t" code "\t" name
-            n = split(exec, token, " ")
-            for(i = 1; i <= n; i++)
-              if(token[i] ~ /\//) { sub(/.*\//, "", token[i]); print "R\t" code "\t" token[i] }
-          }
-          code = name = exec = ""
+gameNames() {
+  local dir
+  set --
+  while IFS= read -r dir; do
+    [ -d "$dir" ] && set -- "$@" "$dir"
+  done
+  [ $# -gt 0 ] || return 0
+  {
+    find "$@" -mindepth 2 -maxdepth 2 -type f -name '*.desktop' -exec awk '
+      function flush(  n, i, token) {
+        if(code ~ /^CLV-/ && name != "") {
+          print "N\t" code "\t" name
+          n = split(exec, token, " ")
+          for(i = 1; i <= n; i++)
+            if(token[i] ~ /\//) { sub(/.*\//, "", token[i]); print "R\t" code "\t" token[i] }
         }
-        FNR == 1 { flush() }
-        { sub(/\r$/, ""); gsub(/\t/, " ") }
-        /^Code=/ { code = substr($0, 6) }
-        /^Name=/ && name == "" { name = substr($0, 6) }
-        /^Exec=/ { exec = substr($0, 6) }
-        END { flush() }' {} + 2>/dev/null
-      find "$dir" -mindepth 2 -maxdepth 2 -type f ! -name '*.desktop' ! -name '*.png' 2>/dev/null \
-        | awk -F / '{ print "R\t" $(NF-1) "\t" $NF }'
-    done
-  done < "$1" | awk -F '\t' '
+        code = name = exec = ""
+      }
+      FNR == 1 { flush() }
+      { sub(/\r$/, ""); gsub(/\t/, " ") }
+      /^Code=/ { code = substr($0, 6) }
+      /^Name=/ && name == "" { name = substr($0, 6) }
+      /^Exec=/ { exec = substr($0, 6) }
+      END { flush() }' {} + 2>/dev/null
+    find "$@" -mindepth 2 -maxdepth 2 -type f ! -name '*.desktop' ! -name '*.png' 2>/dev/null \
+      | awk -F / '{ print "R\t" $(NF-1) "\t" $NF }'
+  } | awk -F '\t' '
     NF != 3 || $3 == "" { next }
     $1 == "N" { if(!($2 in name)) { name[$2] = $3; print $2 "\t" $3 } next }
     { rom[++n] = $2 "\t" $3 }
@@ -158,13 +192,45 @@ hakchiNames() {
     }' | awk -F '\t' '!seen[$1]++'
 }
 
-refreshNames() {
+# games, games_snes, games_md, games_originals, games_cache of each Hakchi folder listed in $1
+hakchiNames() {
+  local root
+  while IFS= read -r root; do
+    printf '%s\n' "$root"/games*
+  done < "$1" | gameNames
+}
+
+# menu folders, linked storage and the stock games
+installedNames() {
+  local games_root
+  games_root="$(dirname "$(findGameStorage)")"
+  printf '%s\n' "$games_root"/*/* "$games_root"/*/.storage "$squashfs/usr/share/games" | gameNames
+}
+
+# New names win and names of games that are gone are kept, so a save stays named after its
+# game is removed. The cache is only rewritten when something changed.
+mergeNames() {
   local tmp="$names_cache.tmp"
   mkdir -pm 777 "$(dirname "$names_cache")" || return 1
-  hakchiNames "$1" > "$tmp" || { rm -f "$tmp"; return 1; }
+  { cat "$1"; cat "$names_cache" 2>/dev/null; } | awk -F '\t' 'NF == 2 && $2 != "" && !seen[$1]++' | sort > "$tmp" || { rm -f "$tmp"; return 1; }
+  if cmp -s "$tmp" "$names_cache"; then
+    rm -f "$tmp"
+    return 0
+  fi
   mv -f "$tmp" "$names_cache" || return 1
   sync
-  grep -c "^CLV-" "$names_cache" || true
+}
+
+# runs a lookup ($@) and merges what it found; for Hakchi folders also prints how many games had a name
+addNames() {
+  local found status
+  found="$(mktemp)"
+  "$@" > "$found"
+  mergeNames "$found"
+  status=$?
+  [ $status -eq 0 ] && [ "$1" = hakchiNames ] && { grep -c "^CLV-" "$found" || true; }
+  rm -f "$found"
+  return $status
 }
 
 case "$1" in
@@ -186,17 +252,29 @@ case "$1" in
   restore)
     [ -f "$2" ] && moveListed "$deleted_root" "$saves_root" "$2"
     ;;
+  backup)
+    saveEntries "$backup_root" | sort -u
+    ;;
+  restore-backup)
+    [ -f "$2" ] && restoreFromBackup "$2"
+    ;;
   hakchi)
     hakchiRoots
     ;;
   names)
-    [ -s "$2" ] && refreshNames "$2"
+    [ -s "$2" ] && addNames hakchiNames "$2"
+    ;;
+  merge-names)
+    [ -f "$2" ] && mergeNames "$2"
+    ;;
+  sync-names)
+    addNames installedNames
     ;;
   cached-names)
     cat "$names_cache" 2>/dev/null
     ;;
   *)
-    echo "usage: $0 stats|orphans|deleted|move FILE|restore FILE|hakchi|names FILE|cached-names" >&2
+    echo "usage: $0 stats|orphans|deleted|move FILE|restore FILE|backup|restore-backup FILE|hakchi|names FILE|merge-names FILE|sync-names|cached-names" >&2
     exit 2
     ;;
 esac

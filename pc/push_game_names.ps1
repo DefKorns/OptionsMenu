@@ -23,7 +23,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$CachePath = '/media/data/hakchi_game_names'
+$PushPath = '/tmp/hakchi_game_names.push'
+$MergeScript = '/etc/options_menu/scripts/OrphanSaves.sh'
 
 function Stop-WithError([string]$message) {
     Write-Host $message -ForegroundColor Red
@@ -121,7 +122,8 @@ if ($gameNames.Count -eq 0) {
 $tmp = [IO.Path]::GetTempFileName()
 try {
     [IO.File]::WriteAllText($tmp, ($lines -join "`n") + "`n", $utf8)
-    $remote = "`"mkdir -p /media/data && cat > $CachePath.tmp && mv -f $CachePath.tmp $CachePath && sync`""
+    # merged on the console, so names of games no longer in this library are kept
+    $remote = "`"cat > $PushPath && sh $MergeScript merge-names $PushPath; status=`$?; rm -f $PushPath; exit `$status`""
     Write-Host "Sending $($gameNames.Count) game names from $HakchiPath to $Ip..."
     $ssh = Start-Process -FilePath ssh -NoNewWindow -Wait -PassThru -RedirectStandardInput $tmp `
         -ArgumentList @('-o', 'ConnectTimeout=10', '-o', 'StrictHostKeyChecking=accept-new', "root@$Ip", $remote)
