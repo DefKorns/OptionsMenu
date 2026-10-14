@@ -35,7 +35,7 @@ namespace
     const std::string HakchiRootsFile = "/tmp/save_manager_hakchi";
     const std::string RetroArchPrefix = "retroarch/";
 
-    // narrower list than the shared theme: the detail panels need the room, long names are truncated
+    // narrower than the shared theme to fit the detail panels
     const int ListW = 600;
     const int ListRightX = UiTheme::ListX + ListW - 40;
     const int ControlRightX = ListRightX - 16;
@@ -184,7 +184,7 @@ namespace
         return textures;
     }
 
-    // entry<TAB>name lines cached from the last Hakchi scan; malformed lines are skipped
+    // entry<TAB>name lines from the last Hakchi scan
     GameNames LoadGameNames()
     {
         GameNames names;
@@ -354,7 +354,7 @@ int main(int, char **)
         return MakeLines(WrapToWidth(Translate(key), NoteFontSize, noteBox.x + noteBox.w - PanelPad - NoteTextX), NoteFontSize, renderer, UiTheme::TextDim);
     };
 
-    // Modal panel over the current screen: confirm (Start + Select) or acknowledge (A); B always cancels.
+    // confirm (Start + Select) or acknowledge (A); B cancels
     auto RunDialog = [&](const std::function<void()> & drawUnder, const std::string & titleKey, const std::vector<std::string> & bodyLines,
                          const std::string & noteKey, bool confirm) -> bool
     {
@@ -605,7 +605,7 @@ int main(int, char **)
             DrawFooterDivider(rightEdge);
         };
 
-        // Read-only: names come from a portable Hakchi CE folder on the USB drive, saves are left as they are.
+        // read-only: names from a portable Hakchi CE folder on USB
         auto RefreshNamesFromHakchi = [&]()
         {
             ShowBusy(DrawScreen, "SAVE_MANAGER_HAKCHI_SEARCHING");

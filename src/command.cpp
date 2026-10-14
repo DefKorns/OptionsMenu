@@ -194,7 +194,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                 t.Draw(renderer);
                 y+=10;
             }
-            SetDrawColor(renderer, UiTheme::Bg); // must be the last color call, or it leaks into the next frame's clear
+            SetDrawColor(renderer, UiTheme::Bg); // last color call, or it leaks into the next clear
             sdl_context.EndFrame();
         };
 

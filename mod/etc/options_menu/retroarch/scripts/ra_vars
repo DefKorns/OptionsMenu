@@ -19,8 +19,7 @@
 source $mountpoint/etc/options_menu/scripts/om_functions
 script_init
 
-# per-core config/overrides moved from .config/retroarch/config (Neo, discontinued)
-# to a plain config/ folder (_km Ozone builds) - detect which is actually installed
+# per-core configs: .config/retroarch/config (Neo) or config/ (_km Ozone)
 if [ -d "$rootfs/etc/libretro/.config/retroarch/config" ]; then
   ra_config="$rootfs/etc/libretro/.config/retroarch/config"
 else

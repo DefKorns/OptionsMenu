@@ -14,18 +14,16 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Saves of games that are no longer on the console. An entry is either a game
-# code (CLV-..., the folder of its SRAM and suspend points) or retroarch/<content>
-# (every RetroArch save/state file of that content).
+# Saves of removed games. Entry: CLV-... (SRAM + suspend points) or retroarch/<content>.
 #   OrphanSaves.sh stats              saves, USB backup (-1 = none), orphans, moved aside
 #   OrphanSaves.sh orphans            entries with saves but no game
 #   OrphanSaves.sh deleted            entries already moved aside
 #   OrphanSaves.sh move FILE          move the entries listed in FILE aside
 #   OrphanSaves.sh restore FILE       move them back (never over an existing save)
 #   OrphanSaves.sh backup             entries in the USB backup
-#   OrphanSaves.sh restore-backup FILE  copy the entries listed in FILE back from the USB backup (replaces same names)
+#   OrphanSaves.sh restore-backup FILE  copy FILE's entries back from the USB backup
 #   OrphanSaves.sh hakchi             portable Hakchi CE folders found on the USB drive
-#   OrphanSaves.sh names FILE         add the games of the Hakchi folders listed in FILE to the entry<TAB>name cache
+#   OrphanSaves.sh names FILE         cache the games of the Hakchi folders in FILE
 #   OrphanSaves.sh merge-names FILE   add the entry<TAB>name lines in FILE to the cache
 #   OrphanSaves.sh merge-backup-names add the names in the USB backup, keeping newer ones
 #   OrphanSaves.sh sync-names         add the games installed on the console to the cache
@@ -153,9 +151,7 @@ hakchiRoots() {
   find /media -maxdepth 4 -type d \( -name 'games*' -o -name saves -o -name '.*' \) -prune     -o -type f -name '[Hh][Aa][Kk][Cc][Hh][Ii].[Ee][Xx][Ee]' -print 2>/dev/null | sed 's#/[^/]*$##' | sort -u
 }
 
-# entry<TAB>name for every game folder inside the folders read from stdin.
-# RetroArch content names come from the files in each game folder (exact, spaces included)
-# and from Exec= paths (ROMs kept elsewhere).
+# entry<TAB>name per game folder under the folders on stdin; RetroArch names from files and Exec=
 gameNames() {
   local dir
   set --

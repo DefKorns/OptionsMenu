@@ -2,9 +2,7 @@
 
 source /etc/options_menu/scripts/om_functions
 
-# /media/hakchi/saves also holds a few non-save housekeeping entries
-# (hakchi's own state, home-menu, dimming/lang/mcp-state) - excluded so a
-# later restore can't clobber live system state with a stale backup of it
+# system state, not saves: a restore must not overwrite it
 mkdir -pm 777 /media/data/saves_backup
 rsync -a --delete \
   --exclude=FOLDER --exclude=hakchi --exclude=home-menu \

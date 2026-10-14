@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# save_manager exit: 0 = back to the menu that opened it (top of OM_BACK_STACK), else leave the menu
+# save_manager exit: 0 = back to the opening menu, else leave
 options_path="${1%/}"
 
 "$options_path/save_manager/save_manager"

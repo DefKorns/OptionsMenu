@@ -4,7 +4,7 @@ om_root="$rootfs/etc/options_menu"
 om_settings="button.cfg language.cfg controller/home_combination.prev"
 om_backup="$temppath/om_settings"
 
-# Uninstall any previous or legacy install first to ensure a clean installation
+# remove previous and legacy installs first
 rm -rf "$om_backup"
 mkdir -p "$om_backup"
 for om_file in $om_settings; do
