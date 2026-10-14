@@ -165,12 +165,9 @@ omDownload() {
 }
 
 # omDownloadAll <list_file> <handler> [keep]
-# list lines: out_path<TAB>url[<TAB>fallback_url...]; runs "<handler> <rc> <out_path>"
-# per item. With keep > 0 the handler must delete each file or the batch stalls.
-# A handler returning 3 (no space) stops the batch.
+# runs "<handler> <rc> <out_path>" per item; with keep > 0 it must delete the file; 3 stops the batch
 omDownloadAll() {
   local fifo="/tmp/om_download.$$" dl_pid dl_rc rc=0 item_rc item stale
-  # a cancelled batch exits before its own cleanup
   for stale in /tmp/om_download.*; do
     [ -p "$stale" ] && [ ! -d "/proc/${stale##*.}" ] && rm -f "$stale"
   done

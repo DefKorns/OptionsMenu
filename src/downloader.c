@@ -15,14 +15,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/* Shared HTTPS downloader for the Options Menu and its addons: BusyBox wget
- * can't do the TLS GitHub requires, so this uses static curl+OpenSSL with an
- * embedded CA bundle. Each URL is tried in order until one succeeds.
- *
- * Batch list lines are tab-separated: <out_path>\t<url>[\t<fallback_url>...]
- * Batch results go to stdout as "<rc> <out_path>"; progress always goes to
- * stderr as "\r<label> <pct>% (<done>/<total> MB)" lines, followed by
- * " | <USB|NAND> <size> <free_label>" when --free-label is given. */
+/* HTTPS downloader: BusyBox wget can't do GitHub's TLS.
+ * Batch line: <out_path>\t<url>[\t<fallback_url>...]; result on stdout: "<rc> <out_path>".
+ * Progress on stderr: "\r<label> <pct>% (<done>/<total> MB)". */
 
 #include <curl/curl.h>
 #include <signal.h>
@@ -69,7 +64,7 @@ static void install_signal_handlers(void) {
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGHUP, &sa, NULL);
-    /* a closed reader must not kill us mid-transfer and orphan the .part */
+    /* survive a closed reader so the .part still gets removed */
     signal(SIGPIPE, SIG_IGN);
 }
 
@@ -79,7 +74,6 @@ static long monotonic_ms(void) {
     return (long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-/* Extract the embedded CA bundle into /tmp once per boot. */
 static void ensure_ca_bundle(void) {
     FILE *f = fopen(CA_PATH, "rb");
     if (f) {
@@ -92,7 +86,7 @@ static void ensure_ca_bundle(void) {
     fclose(f);
 }
 
-/* Basename of out_path, cut on a UTF-8 boundary so the screen never gets half a glyph. */
+/* cut on a UTF-8 boundary */
 static void make_label(char *dst, const char *out_path) {
     const char *base = strrchr(out_path, '/');
     base = base ? base + 1 : out_path;
@@ -105,7 +99,6 @@ static void make_label(char *dst, const char *out_path) {
     dst[len] = '\0';
 }
 
-/* Directory part of out_path, "." when it has none. */
 static void make_dir(char *dst, size_t dst_size, const char *out_path) {
     const char *slash = strrchr(out_path, '/');
     if (!slash) {
@@ -116,7 +109,6 @@ static void make_dir(char *dst, size_t dst_size, const char *out_path) {
     snprintf(dst, dst_size, "%.*s", len, out_path);
 }
 
-/* hakchi mounts the USB/SD drive on /media; anything else lives on NAND. */
 static const char *storage_name(const char *dir) {
     struct stat media, root, target;
     if (stat("/media", &media) != 0 || stat("/", &root) != 0 || stat(dir, &target) != 0) return "NAND";
@@ -169,15 +161,14 @@ static CURL *make_handle(struct progress *p) {
     curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, (long)CONNECT_TIMEOUT_S);
     curl_easy_setopt(c, CURLOPT_LOW_SPEED_LIMIT, 1L);
     curl_easy_setopt(c, CURLOPT_LOW_SPEED_TIME, (long)STALL_TIMEOUT_S);
-    /* the callback also polls the cancel flag, so it stays on without --progress */
+    /* also polls the cancel flag, so it stays on without --progress */
     curl_easy_setopt(c, CURLOPT_NOPROGRESS, 0L);
     curl_easy_setopt(c, CURLOPT_XFERINFOFUNCTION, on_transfer);
     curl_easy_setopt(c, CURLOPT_XFERINFODATA, p);
     return c;
 }
 
-/* Percent-encode bytes that are never legal in a URL; reserved characters
- * (%, #, ?, &) pass through, so callers escape those in names themselves. */
+/* %, #, ? and & pass through: callers escape them in names */
 static int normalize_url(char *dst, size_t dst_size, const char *src) {
     static const char hex[] = "0123456789ABCDEF";
     size_t o = 0;
@@ -201,7 +192,6 @@ static size_t write_to_file(void *ptr, size_t size, size_t nmemb, void *userdata
     return fwrite(ptr, size, nmemb, (FILE *)userdata);
 }
 
-/* A partial file never replaces out_path. */
 static enum fetch_result download_to(CURL *c, struct progress *p, const char *url, const char *out_path) {
     char part_path[PATH_BYTES];
     char safe_url[URL_BYTES];
@@ -246,7 +236,6 @@ static enum exit_code result_code(enum fetch_result r) {
     }
 }
 
-/* Splits a batch line in place; returns the field count. */
 static int split_tabs(char *line, char **fields, int max_fields) {
     int n = 0;
     char *save = NULL;
@@ -254,7 +243,7 @@ static int split_tabs(char *line, char **fields, int max_fields) {
     return n;
 }
 
-/* Blocks while the consumer still holds an earlier file; gives up if it died. */
+/* gives up if the consumer died */
 static int wait_until_removed(const char *path, pid_t consumer) {
     while (path[0] && access(path, F_OK) == 0) {
         if (cancelled || getppid() != consumer) return 0;
