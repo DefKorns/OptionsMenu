@@ -54,6 +54,7 @@ HINT_DELETE=Suppr. (Maintenir)
 NO_NET_ERR=Erreur de connexion au serveur, vérifiez votre connexion internet et réessayez.
 NO_PKG_ERR=Le paquet demandé n'est pas disponible pour le moment, veuillez réessayer plus tard.
 NOT_ENOUGH_SPACE=Espace libre insuffisant, libérez de l'espace et réessayez.
+FREE_SPACE=libres
 CHANGE_COMBO_INTRO_1=Nous allons maintenant définir la combinaison de boutons du menu d'options.
 CHANGE_COMBO_INTRO_2=Tu devras appuyer sur les 3 boutons à utiliser pour le menu d'options.
 CHANGE_COMBO_INTRO_3=Pour une combinaison à 2 boutons, répète simplement le 2e bouton.

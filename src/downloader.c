@@ -21,13 +21,16 @@
  *
  * Batch list lines are tab-separated: <out_path>\t<url>[\t<fallback_url>...]
  * Batch results go to stdout as "<rc> <out_path>"; progress always goes to
- * stderr as "\r<label> <pct>% (<done>/<total> MB)" lines. */
+ * stderr as "\r<label> <pct>% (<done>/<total> MB)" lines, followed by
+ * " | <USB|NAND> <size> <free_label>" when --free-label is given. */
 
 #include <curl/curl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -49,6 +52,9 @@ struct progress {
     int enabled;
     char label[LABEL_MAX_BYTES + 1];
     long last_ms;
+    const char *free_label;
+    char dir[PATH_BYTES];
+    const char *storage;
 };
 
 static void on_cancel(int sig) {
@@ -99,12 +105,43 @@ static void make_label(char *dst, const char *out_path) {
     dst[len] = '\0';
 }
 
+/* Directory part of out_path, "." when it has none. */
+static void make_dir(char *dst, size_t dst_size, const char *out_path) {
+    const char *slash = strrchr(out_path, '/');
+    if (!slash) {
+        snprintf(dst, dst_size, ".");
+        return;
+    }
+    const int len = slash == out_path ? 1 : (int)(slash - out_path);
+    snprintf(dst, dst_size, "%.*s", len, out_path);
+}
+
+/* hakchi mounts the USB/SD drive on /media; anything else lives on NAND. */
+static const char *storage_name(const char *dir) {
+    struct stat media, root, target;
+    if (stat("/media", &media) != 0 || stat("/", &root) != 0 || stat(dir, &target) != 0) return "NAND";
+    return media.st_dev != root.st_dev && target.st_dev == media.st_dev ? "USB" : "NAND";
+}
+
+static void format_free_space(char *dst, size_t dst_size, const struct progress *p) {
+    struct statvfs vfs;
+    dst[0] = '\0';
+    if (!p->free_label || statvfs(p->dir, &vfs) != 0) return;
+    const double mb = (double)vfs.f_bavail * vfs.f_frsize / (1024.0 * 1024.0);
+    if (mb >= 1024.0)
+        snprintf(dst, dst_size, " | %s %.1f GB %s", p->storage, mb / 1024.0, p->free_label);
+    else
+        snprintf(dst, dst_size, " | %s %.1f MB %s", p->storage, mb, p->free_label);
+}
+
 static void print_progress(const struct progress *p, curl_off_t now, curl_off_t total) {
     const double mb = 1024.0 * 1024.0;
+    char space[64];
+    format_free_space(space, sizeof(space), p);
     if (total > 0)
-        fprintf(stderr, "\r%s %3d%% (%.1f/%.1f MB)\n", p->label, (int)(now * 100 / total), now / mb, total / mb);
+        fprintf(stderr, "\r%s %3d%% (%.1f/%.1f MB)%s\n", p->label, (int)(now * 100 / total), now / mb, total / mb, space);
     else
-        fprintf(stderr, "\r%s %.1f MB\n", p->label, now / mb);
+        fprintf(stderr, "\r%s %.1f MB%s\n", p->label, now / mb, space);
 }
 
 static int on_transfer(void *userdata, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
@@ -193,6 +230,8 @@ static enum fetch_result download_to(CURL *c, struct progress *p, const char *ur
 
 static enum fetch_result fetch(CURL *c, struct progress *p, const char *out_path, char *const *urls, int url_count) {
     make_label(p->label, out_path);
+    make_dir(p->dir, sizeof(p->dir), out_path);
+    p->storage = storage_name(p->dir);
     enum fetch_result r = FETCH_FAILED;
     for (int i = 0; i < url_count && r == FETCH_FAILED; i++) r = download_to(c, p, urls[i], out_path);
     return r;
@@ -264,8 +303,8 @@ static enum exit_code fetch_batch(CURL *c, struct progress *p, const char *list_
 static void usage(const char *prog) {
     fprintf(stderr,
             "usage:\n"
-            "  %s [--progress] <out_path> <url> [fallback_url...]\n"
-            "  %s [--progress] [--keep N] --batch <list_file>\n",
+            "  %s [--progress [--free-label <text>]] <out_path> <url> [fallback_url...]\n"
+            "  %s [--progress [--free-label <text>]] [--keep N] --batch <list_file>\n",
             prog, prog);
 }
 
@@ -278,6 +317,8 @@ int main(int argc, char **argv) {
     for (; i < argc && strncmp(argv[i], "--", 2) == 0; i++) {
         if (strcmp(argv[i], "--progress") == 0) {
             p.enabled = 1;
+        } else if (strcmp(argv[i], "--free-label") == 0 && i + 1 < argc) {
+            p.free_label = argv[++i];
         } else if (strcmp(argv[i], "--batch") == 0 && i + 1 < argc) {
             batch = argv[++i];
         } else if (strcmp(argv[i], "--keep") == 0 && i + 1 < argc) {

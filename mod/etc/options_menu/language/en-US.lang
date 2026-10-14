@@ -55,6 +55,7 @@ HINT_DELETE=Delete (Hold)
 NO_NET_ERR=Error while connecting to server, please check your internet connection and try again.
 NO_PKG_ERR=The package you requested isn't available at the moment, please try again later.
 NOT_ENOUGH_SPACE=Not enough free space, free some space and try again.
+FREE_SPACE=free
 CHANGE_COMBO_INTRO_1=We will now set your options menu combo buttons.
 CHANGE_COMBO_INTRO_2=You will need to press the 3 buttons you want the options menu set to.
 CHANGE_COMBO_INTRO_3=For a two button combo just repeat the 2nd button.

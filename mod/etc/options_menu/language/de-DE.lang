@@ -54,6 +54,7 @@ HINT_DELETE=Löschen (Halten)
 NO_NET_ERR=Verbindung zum Server fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.
 NO_PKG_ERR=Das angeforderte Paket ist derzeit nicht verfügbar. Bitte später erneut versuchen.
 NOT_ENOUGH_SPACE=Nicht genügend freier Speicher, gib Speicher frei und versuche es erneut.
+FREE_SPACE=frei
 CHANGE_COMBO_INTRO_1=Wir legen jetzt die Tastenkombination für das Optionsmenü fest.
 CHANGE_COMBO_INTRO_2=Du musst die 3 Tasten drücken, die für das Optionsmenü verwendet werden sollen.
 CHANGE_COMBO_INTRO_3=Für eine Zwei-Tasten-Kombination einfach die 2. Taste wiederholen.
