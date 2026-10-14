@@ -146,6 +146,48 @@ toggleDownloads() {
   fi
 }
 
+# downloader exit codes: 0 ok, 1 network/server, 2 usage, 3 no space, 143 cancelled
+downloadError() {
+  case "$1" in
+    0 | 143) ;;
+    3) translate NOT_ENOUGH_SPACE ;;
+    *) netChecker ;;
+  esac
+}
+
+# omDownload <out_path> <url> [fallback_url...]
+omDownload() {
+  local rc
+  "$om_scripts/downloader" --progress "$@" 2>&1
+  rc=$?
+  downloadError "$rc"
+  return "$rc"
+}
+
+# omDownloadAll <list_file> <handler> [keep]
+# list lines: out_path<TAB>url[<TAB>fallback_url...]; runs "<handler> <rc> <out_path>"
+# per item. With keep > 0 the handler must delete each file or the batch stalls.
+# A handler returning 3 (no space) stops the batch.
+omDownloadAll() {
+  local fifo="/tmp/om_download.$$" dl_pid dl_rc rc=0 item_rc item
+  rm -f "$fifo"
+  mkfifo "$fifo" || return 1
+  # progress (stderr) to the screen, results (stdout) to the fifo
+  # shellcheck disable=SC2069
+  "$om_scripts/downloader" --progress --keep "${3:-0}" --batch "$1" 2>&1 > "$fifo" &
+  dl_pid=$!
+  while read -r item_rc item; do
+    "$2" "$item_rc" "$item"
+    [ "$?" = 3 ] && rc=3 && break
+  done < "$fifo"
+  kill "$dl_pid" 2> /dev/null
+  wait "$dl_pid"
+  dl_rc=$?
+  [ "$dl_rc" = 3 ] && rc=3
+  rm -f "$fifo"
+  return "$rc"
+}
+
 overlayFS() {
   [ -d "$1" ] && mount -t overlayfs -o lowerdir="$2",upperdir="$1" overlayfs "$2"
 }

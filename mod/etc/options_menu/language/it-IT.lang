@@ -53,6 +53,7 @@ HINT_BACK=Indietro
 HINT_DELETE=Elimina (tieni premuto)
 NO_NET_ERR=Errore di connessione al server, controlla la tua connessione internet e riprova.
 NO_PKG_ERR=Il pacchetto richiesto non è disponibile al momento, riprova più tardi.
+NOT_ENOUGH_SPACE=Spazio libero insufficiente, libera spazio e riprova.
 CHANGE_COMBO_INTRO_1=Ora imposteremo la combinazione di tasti del menu opzioni.
 CHANGE_COMBO_INTRO_2=Dovrai premere i 3 tasti che vuoi impostare per il menu opzioni.
 CHANGE_COMBO_INTRO_3=Per una combinazione a 2 tasti, ripeti semplicemente il 2° tasto.

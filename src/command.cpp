@@ -202,6 +202,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
         fcntl(fd, F_SETFL, O_NONBLOCK);
         const int PollTimeoutMs = 20;
         bool aborted = false;
+        bool lastWasProgress = false;
         while(!feof(out))
         {
             // stdio can hold lines poll() never sees, so fgets drains every pass
@@ -213,6 +214,13 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
                 int pos = sBuffer.find('\n');
                 if(pos > 0)
                     sBuffer[pos] = '\0';
+                // a leading \r rewrites the previous progress line in place
+                const bool isProgress = !sBuffer.empty() && sBuffer[0] == '\r';
+                if(isProgress)
+                    sBuffer.erase(0, 1);
+                if(isProgress && lastWasProgress && !textList.empty())
+                    textList.pop_back();
+                lastWasProgress = isProgress;
                 textList.push_back(Texture(sBuffer, 8, renderer, textX));
 
                 if(textList.size() > 40)

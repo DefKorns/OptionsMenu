@@ -53,6 +53,7 @@ HINT_BACK=もどる
 HINT_DELETE=けす (ながおし)
 NO_NET_ERR=Serverへのせつぞくにしっぱいしました. Internetせつぞくをかくにんして, もういちどおためしください.
 NO_PKG_ERR=ようきゅうされたPackageは, いま, りようできません. しばらくしてから, もういちどおためしください.
+NOT_ENOUGH_SPACE=あきようりょうがたりません. ようりょうをあけて, もういちどおためしください.
 CHANGE_COMBO_INTRO_1=これから Optionsmenuの Buttonくみあわせを せっていします
 CHANGE_COMBO_INTRO_2=Optionsmenuにつかう3つのButtonをおしてください
 CHANGE_COMBO_INTRO_3=2つのButtonくみあわせにするときは, 2ばんめのButtonをもういちどおしてください

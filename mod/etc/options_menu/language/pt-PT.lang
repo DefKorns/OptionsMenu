@@ -53,6 +53,7 @@ HINT_BACK=Voltar
 HINT_DELETE=Apagar (manter premido)
 NO_NET_ERR=Erro ao ligar ao servidor, verifica a tua ligação à internet e tenta novamente.
 NO_PKG_ERR=O pacote pedido não está disponível de momento, tenta novamente mais tarde.
+NOT_ENOUGH_SPACE=Não há espaço livre suficiente, liberta algum espaço e tenta novamente.
 CHANGE_COMBO_INTRO_1=Vamos agora definir a combinação de botões do menu de opções.
 CHANGE_COMBO_INTRO_2=Vais precisar de premir os 3 botões que queres definir para o menu de opções.
 CHANGE_COMBO_INTRO_3=Para uma combinação de 2 botões, repete o 2º botão.

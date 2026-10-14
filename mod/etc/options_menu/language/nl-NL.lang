@@ -53,6 +53,7 @@ HINT_BACK=Terug
 HINT_DELETE=Wissen (vasthouden)
 NO_NET_ERR=Verbinding met de server mislukt, controleer je internetverbinding en probeer het opnieuw.
 NO_PKG_ERR=Het gevraagde pakket is momenteel niet beschikbaar, probeer het later opnieuw.
+NOT_ENOUGH_SPACE=Onvoldoende vrije ruimte, maak ruimte vrij en probeer het opnieuw.
 CHANGE_COMBO_INTRO_1=We gaan nu de knoppencombinatie voor het optiemenu instellen.
 CHANGE_COMBO_INTRO_2=Je moet de 3 knoppen indrukken die je voor het optiemenu wilt instellen.
 CHANGE_COMBO_INTRO_3=Voor een combinatie van 2 knoppen herhaal je gewoon de 2e knop.

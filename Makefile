@@ -11,7 +11,7 @@ VARIANT  := plain
 endif
 MOD_CREATOR  := CompCom, DefKorns
 MOD_CATEGORY := Options Menu
-BINARIES     := mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/etc/options_menu/save_manager/save_manager mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo
+BINARIES     := mod/etc/options_menu/options mod/etc/options_menu/optiond mod/etc/options_menu/mod_uninstall/mod_uninstall mod/etc/options_menu/save_manager/save_manager mod/bin/standby_watchdog mod/etc/options_menu/scripts/gen_splash mod/etc/options_menu/scripts/ChangeCombo mod/etc/options_menu/scripts/downloader
 
 CXX = g++
 STRIP = strip
@@ -106,6 +106,27 @@ mod/etc/options_menu/scripts/ChangeCombo: src/change_combo.o src/framework/contr
 	$(CROSS_PREFIX)$(CXX) $^ $(LDFLAGS) $(STDCXX_RPATH) -o $@
 	$(CROSS_PREFIX)$(STRIP) $@
 	upx --lzma $@
+
+# plain C against the toolchain's static curl+OpenSSL: no libstdc++, same in both variants
+CC = gcc
+CURL_PREFIX = /opt/curl-static
+CFLAGS = -std=gnu99 -O2 -Wall -I$(CURL_PREFIX)/include
+CURL_LDLIBS = -L$(CURL_PREFIX)/lib -L/usr/lib/arm-linux-gnueabihf -lcurl -lssl -lcrypto -lz -ldl -lpthread
+
+src/cacert.pem:
+	curl -fL -o $@ https://curl.se/ca/cacert.pem
+
+# built from inside src/ so the symbols are _binary_cacert_pem_*
+src/ca_bundle.o: src/cacert.pem
+	cd src && $(CROSS_PREFIX)ld -r -b binary -o ca_bundle.o cacert.pem
+
+mod/etc/options_menu/scripts/downloader: src/downloader.o src/ca_bundle.o
+	$(CROSS_PREFIX)$(CC) $^ $(CURL_LDLIBS) -o $@
+	$(CROSS_PREFIX)$(STRIP) $@
+	upx --lzma $@
+
+%.o: %.c
+	$(CROSS_PREFIX)$(CC) $(CFLAGS) -c $< -o $@
 
 %.o: %.cpp
 	$(CROSS_PREFIX)$(CXX) $(CXXFLAGS) -c $< -o $@
