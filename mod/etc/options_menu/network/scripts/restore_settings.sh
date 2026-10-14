@@ -24,6 +24,7 @@ if [ "$1" = "nand" ]; then
   backup_dest="$1"
 fi
 
+mkdir -p "$om_wifi_restore_cmds"
 find "$om_wifi_restore_cmds" -type f -name 'c0001_*' -exec rm {} \;
 
 find "$backup_path/." -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -n 1 basename | while IFS= read -r wifi_network; do
@@ -39,5 +40,11 @@ COMMAND_STR=sh $om_network_scripts/backup-wifi.sh $backup_dest restore $ssid_low
 DELETE_STR=rm -rf \"$backup_path/$wifi_network\" && sh $om_network_scripts/restore_settings.sh $1
 DELETE_CONFIRM_KEY=DELETE_BACKUP_CONFIRM" >"$om_wifi_restore_cmds/c0001_$ssid_lower"
 done
+
+if ! ls "$om_wifi_restore_cmds"/c0001_* >/dev/null 2>&1; then
+  rmdir "$backup_path" 2>/dev/null
+  OM_BACK_STACK="${OM_BACK_STACK%;*}" sh "$options_menu/scripts/om_network"
+  exit 0
+fi
 
 $options_menu/options --commandPath $om_wifi_restore_cmds/ --scriptPath $om_wifi_restore_scripts --title "RESTORE_WIFI_CONFIG" &
