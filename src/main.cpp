@@ -505,9 +505,11 @@ int main(int argc, char * argv[])
             MoveSelection(1);
 
         bool bHeldNow = controller.PeekButtonStatus(B);
+        // must run every frame: it only resets its timer when sampled while released
+        const unsigned int bHeldMs = controller.HeldMillis(B);
         if(bHeldNow)
         {
-            if(!bHoldFired && controller.HeldMillis(B) >= bHoldThresholdMs)
+            if(!bHoldFired && bHeldMs >= bHoldThresholdMs)
             {
                 bHoldFired = true;
                 if(!commands[currentCommandId].deleteCommand.empty() && ConfirmDelete())
