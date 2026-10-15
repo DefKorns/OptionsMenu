@@ -47,6 +47,7 @@ Extra thanks to **DNA64 (viral_dna)** and **Swingflip** for always testing featu
 Also thanks to the following people for testing the options menu:
 
 - **Aranthys**
+- **AxelStone**
 - **BsLeNuL**
 - **DefKorns**
 - **DR1001**

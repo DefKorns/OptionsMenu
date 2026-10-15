@@ -265,7 +265,7 @@ Packaging and versioning come from [hmod-build](https://github.com/DefKorns/hmod
 
 ### Testing
 
-Thanks to DNA64 (viral_dna) and Swingflip for always testing, and to Aranthys, BsLeNuL, DR1001, Patton Plays and ThanosRD.
+Thanks to DNA64 (viral_dna) and Swingflip for always testing, and to Aranthys, AxelStone, BsLeNuL, DR1001, Patton Plays and ThanosRD.
 
 ## License
 
