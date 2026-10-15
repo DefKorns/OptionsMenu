@@ -21,7 +21,7 @@ SDL_CFLAGS = -I/usr/include/arm-linux-gnueabihf $(shell PKG_CONFIG_LIBDIR=$(PKG_
 SDL_LIBS = $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --libs sdl2 SDL2_ttf libpng)
 PNG_LIBS = $(shell PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) pkg-config --libs libpng)
 LDFLAGS = -Wl,--allow-shlib-undefined
-VENDORED_LIBS = mod/etc/options_menu/lib/libSDL2_ttf-2.0.so.0 mod/etc/options_menu/lib/libfreetype.so.2.8
+VENDORED_LIBS = mod/etc/options_menu/lib/libSDL2_ttf-2.0.so.0 mod/etc/options_menu/lib/libfreetype.so.6
 ifdef FIX_LIBSTDCXX
 VENDORED_LIBS += mod/etc/options_menu/lib/libstdc++.so.6
 STDCXX_RPATH = -Wl,-rpath,/etc/options_menu/lib
@@ -68,12 +68,12 @@ mod/etc/options_menu/options: $(OBJECTS)
 mod/etc/options_menu/lib:
 	mkdir -p $@
 
-# not ours to redistribute, pulled from the toolchain image each build
+# built from source in the toolchain image, copied in each build
 mod/etc/options_menu/lib/libSDL2_ttf-2.0.so.0: | mod/etc/options_menu/lib
-	cp /usr/lib/arm-linux-gnueabihf/libSDL2_ttf.so $@
+	cp /usr/lib/arm-linux-gnueabihf/libSDL2_ttf-2.0.so.0 $@
 
-mod/etc/options_menu/lib/libfreetype.so.2.8: | mod/etc/options_menu/lib
-	cp /usr/lib/arm-linux-gnueabihf/libfreetype.so.2.8.1 $@
+mod/etc/options_menu/lib/libfreetype.so.6: | mod/etc/options_menu/lib
+	cp /usr/lib/arm-linux-gnueabihf/libfreetype.so.6 $@
 
 mod/etc/options_menu/lib/libstdc++.so.6: | mod/etc/options_menu/lib
 	cp $$($(CROSS_PREFIX)$(CXX) -print-file-name=libstdc++.so.6) $@
