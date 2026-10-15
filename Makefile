@@ -132,10 +132,10 @@ mod/etc/options_menu/scripts/downloader: src/downloader.o src/ca_bundle.o
 	$(CROSS_PREFIX)$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	find . -name "*.o" -type f -not -path "./toolchain/*" -delete
+	find . -name "*.o" -type f -not -path "./vendor/*" -delete
 	rm -f $(BINARIES) .build-flags
 	rm -rf mod/etc/options_menu/lib out/
 
-include hmod-build/hmod.mk
+include vendor/hmod-build/hmod.mk
 
 .PHONY: all compile clean no-private-libstdcxx
