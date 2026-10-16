@@ -107,11 +107,11 @@ mod/etc/options_menu/scripts/ChangeCombo: src/change_combo.o src/framework/contr
 	$(CROSS_PREFIX)$(STRIP) $@
 	upx --lzma $@
 
-# plain C against the toolchain's static curl+OpenSSL: no libstdc++, same in both variants
+# plain C against the toolchain's static curl: no libstdc++, same in both variants
 CC = gcc
 CURL_PREFIX = /opt/curl-static
 CFLAGS = -std=gnu99 -O2 -Wall -I$(CURL_PREFIX)/include
-CURL_LDLIBS = -L$(CURL_PREFIX)/lib -L/usr/lib/arm-linux-gnueabihf -lcurl -lssl -lcrypto -lz -ldl -lpthread
+CURL_LDLIBS = $(shell $(CURL_PREFIX)/bin/curl-config --static-libs)
 
 src/cacert.pem:
 	curl -fL -o $@ https://curl.se/ca/cacert.pem
