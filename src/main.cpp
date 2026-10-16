@@ -74,6 +74,7 @@ int main(int argc, char * argv[])
 
     std::string titleString(Translate("OPTIONS_TITLE"));
     std::string titleKey = "OPTIONS_TITLE";
+    std::string selectedMarker;
     const char * backStackEnv = getenv("OM_BACK_STACK");
     std::string backStack = backStackEnv ? backStackEnv : "";
 
@@ -102,11 +103,16 @@ int main(int argc, char * argv[])
             titleString = Translate(argv[i+1]);
             ++i;
         }
+        else if(strcmp(argv[i], "--selectedMarker") == 0 && i + 1 < argc)
+        {
+            selectedMarker = argv[i+1];
+            ++i;
+        }
     }
     commandLocation = CollapseSlashes(commandLocation);
     scriptLocation = CollapseSlashes(scriptLocation);
 
-    std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey;
+    std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey + (selectedMarker.empty() ? "" : "," + selectedMarker);
     size_t lastSep = backStack.find_last_of(';');
     std::string lastEntry = backStack.empty() ? "" : (lastSep == std::string::npos ? backStack : backStack.substr(lastSep + 1));
     if(lastEntry == myEntry)
@@ -199,11 +205,14 @@ int main(int argc, char * argv[])
         {
             std::string backPath = lastEntry.substr(0, c1);
             std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
-            std::string backTitleKey = lastEntry.substr(c2+1);
+            const size_t c3 = lastEntry.find(',', c2+1);
+            std::string backTitleKey = lastEntry.substr(c2+1, c3 == std::string::npos ? std::string::npos : c3-c2-1);
+            std::string backMarker = c3 == std::string::npos ? "" : lastEntry.substr(c3+1);
 
             backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
                 + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
-                + " --title \"" + backTitleKey + "\" &";
+                + " --title \"" + backTitleKey + "\""
+                + (backMarker.empty() ? "" : " --selectedMarker \"" + backMarker + "\"") + " &";
         }
     }
 
@@ -349,7 +358,44 @@ int main(int argc, char * argv[])
         else
             PreviewImage.reset();
     };
+    // with --selectedMarker, the row whose command ends in the marker's word (or <word>.sh) is the active one
+    std::vector<bool> isActive(commands.size(), false);
+    auto RefreshActive = [&]() -> int
+    {
+        std::fill(isActive.begin(), isActive.end(), false);
+        std::string marker;
+        if(!selectedMarker.empty())
+        {
+            std::ifstream markerIn(selectedMarker);
+            std::getline(markerIn, marker);
+        }
+        while(!marker.empty() && (marker.back() == '\r' || marker.back() == ' '))
+            marker.pop_back();
+        if(marker.empty())
+            return -1;
+        int first = -1;
+        for(size_t i = 0; i < commands.size(); ++i)
+        {
+            const std::string & cmd = commands[i].command;
+            const size_t end = cmd.find_last_not_of(" \t&");
+            if(end == std::string::npos)
+                continue;
+            const size_t sep = cmd.find_last_of(" \t/", end);
+            const std::string word = cmd.substr(sep == std::string::npos ? 0 : sep + 1, end - (sep == std::string::npos ? 0 : sep + 1) + 1);
+            if(word == marker || word == marker + ".sh")
+            {
+                isActive[i] = true;
+                if(first < 0)
+                    first = static_cast<int>(i);
+            }
+        }
+        return first;
+    };
+    // the first call lays the rows out
     SetCurrentCommand(0);
+    const int activeCommandId = RefreshActive();
+    if(activeCommandId > 0)
+        SetCurrentCommand(activeCommandId);
 
     auto MoveSelection = [&](int step)
     {
@@ -366,6 +412,10 @@ int main(int argc, char * argv[])
     auto DrawRow = [&](Command & rowCommand, bool isLastOverall)
     {
         bool selected = &rowCommand == &commands[currentCommandId];
+        const bool active = isActive[static_cast<size_t>(&rowCommand - commands.data())];
+        if(active && !selected)
+            DrawStrokeRect(renderer, { UiTheme::ListX, rowCommand.texture.rect.y - 2, UiTheme::ListContentRightX - UiTheme::ListX, rowCommand.texture.rect.h + 4 },
+                           UiTheme::ActiveBorder, 2, UiTheme::BoxRadius);
         rowCommand.texture.Draw(renderer);
         if(rowCommand.isToggle)
         {
@@ -380,7 +430,7 @@ int main(int argc, char * argv[])
             chevronIcon.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - chevronIcon.rect.h) / 2;
             chevronIcon.Draw(renderer);
         }
-        if(!selected && !rowCommand.command.empty() && !isLastOverall)
+        if(!selected && !active && !rowCommand.command.empty() && !isLastOverall)
             DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::Border);
     };
 
@@ -432,10 +482,9 @@ int main(int argc, char * argv[])
             scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
     };
 
-    auto ConfirmDelete = [&]() -> bool
+    auto Confirm = [&](const std::string & title) -> bool
     {
-        const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
-        ConfirmDialog dialog(renderer, badges, Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey),
+        ConfirmDialog dialog(renderer, badges, title,
                              MakeBadge("A", "HINT_CONFIRM", UiTheme::BadgeADark, UiTheme::BadgeA),
                              MakeBadge("B", "HINT_CANCEL", UiTheme::BadgeBDark, UiTheme::BadgeB));
         controller.GetButtonStatus(B);
@@ -456,7 +505,13 @@ int main(int argc, char * argv[])
             SetDrawColor(renderer, bg);
             sdl_context.EndFrame();
         }
-        if(!confirmed)
+        return confirmed;
+    };
+
+    auto ConfirmDelete = [&]() -> bool
+    {
+        const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
+        if(!Confirm(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey)))
             return false;
         system(commands[currentCommandId].deleteCommand.c_str());
         _exitManager.runExitCommand = false;
@@ -484,15 +539,18 @@ int main(int argc, char * argv[])
         }
         if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
         {
-            if(commands[currentCommandId].runInternal)
+            const std::string & confirmKey = commands[currentCommandId].confirmKey;
+            const bool confirmed = confirmKey.empty() || Confirm(Translate(confirmKey));
+            if(confirmed && commands[currentCommandId].runInternal)
             {
                 commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bg);
                 if(commands[currentCommandId].isToggle)
                     for(Command & c : commands)
                         if(c.isToggle)
                             c.UpdateState();
+                RefreshActive();
             }
-            else
+            else if(confirmed)
             {
                 system(commands[currentCommandId].command.c_str());
                 _exitManager.runExitCommand = commands[currentCommandId].restartUI;

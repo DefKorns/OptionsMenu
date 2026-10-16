@@ -33,6 +33,7 @@ struct Command
     std::string command;
     std::string deleteCommand;
     std::string deleteConfirmKey;
+    std::string confirmKey;
     std::string stateCommand;
     std::string enableIfCommand;
     bool runInternal = true;

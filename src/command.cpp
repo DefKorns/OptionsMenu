@@ -113,6 +113,8 @@ Command::Command(std::ifstream & in)
             deleteCommand = value;
         else if(param.compare("DELETE_CONFIRM_KEY")==0)
             deleteConfirmKey = value;
+        else if(param.compare("CONFIRM_KEY")==0)
+            confirmKey = value;
         else if(param.compare("ENABLE_IF")==0)
             enableIfCommand = value;
         else if(param.compare("STATE_STR")==0)

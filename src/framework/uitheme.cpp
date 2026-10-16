@@ -28,6 +28,7 @@ namespace UiTheme
     Color Border{ 0x2A, 0x2C, 0x33 };
     Color Accent{ 0xF0, 0xC4, 0x3D };
     Color SelectedRowBg{ 0x14, 0x16, 0x1A };
+    Color ActiveBorder{ 0x4C, 0xAF, 0x6E };
     Color Text{ 0xFF, 0xFF, 0xFF };
     Color TextDim{ 0x8D, 0x8D, 0x93 };
     Color ScrollArrow{ 0xFF, 0xFF, 0xFF };
@@ -71,7 +72,7 @@ namespace UiTheme
         {
             static const std::map<std::string, Color *> keys{
                 { "Bg", &Bg }, { "Border", &Border }, { "Accent", &Accent },
-                { "SelectedRowBg", &SelectedRowBg }, { "Text", &Text }, { "TextDim", &TextDim },
+                { "SelectedRowBg", &SelectedRowBg }, { "ActiveThemeBorder", &ActiveBorder }, { "Text", &Text }, { "TextDim", &TextDim },
                 { "ScrollArrow", &ScrollArrow }, { "BadgeLetter", &BadgeLetter },
                 { "BadgeA", &BadgeA }, { "BadgeADark", &BadgeADark },
                 { "BadgeB", &BadgeB }, { "BadgeBDark", &BadgeBDark },

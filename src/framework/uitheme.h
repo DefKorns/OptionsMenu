@@ -31,6 +31,7 @@ namespace UiTheme
     extern Color Border;
     extern Color Accent;
     extern Color SelectedRowBg;
+    extern Color ActiveBorder;
     extern Color Text;
     extern Color TextDim;
     extern Color ScrollArrow;
