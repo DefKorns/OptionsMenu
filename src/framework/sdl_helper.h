@@ -12,7 +12,6 @@
 
 #include "sdl_context.h"
 #include "texture.h"
-#include "nineslice.h"
 #include "uitheme.h"
 
 #endif

@@ -1,0 +1,6 @@
+COMMAND_NAME=AUTOFIRE_SPEED_FAST
+COMMAND_TYPE=INTERNAL
+CHILD=TRUE
+COMMAND_STR=sh %script_dir%/clovercon.sh set autofire_interval 4
+STATE_STR=sh %script_dir%/clovercon.sh is autofire_interval 4
+PREVIEW_IMAGE=/etc/options_menu/images/preview_autofire_speed.png

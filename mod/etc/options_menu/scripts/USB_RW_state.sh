@@ -14,8 +14,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Reports current USB write-access state ("on"/"off") for the toggle switch
-# in the menu - read-only counterpart to USB_RW.sh, which flips it.
+# "on"/"off" for the USB write toggle; USB_RW.sh flips it
 source /etc/preinit
 script_init
 

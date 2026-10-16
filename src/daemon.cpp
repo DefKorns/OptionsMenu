@@ -12,27 +12,42 @@
 #include <thread>
 #include <chrono>
 #include <fstream>
+#include <string>
 
 int main()
 {
     Controller c(1);
     GameButton button1 = L, button2 = R, button3 = R;
-    
+    bool haveCustomCombo = false;
+
     std::ifstream in("/etc/options_menu/button.cfg");
     if(in.is_open())
     {
-        int temp;
-        in >> temp;
-        button1 = (GameButton)temp;
-        in >> temp;
-        button2 = (GameButton)temp;
-        in >> temp;
-        button3 = (GameButton)temp;
+        int b1, b2, b3;
+        if(in >> b1 >> b2 >> b3)
+        {
+            button1 = (GameButton)b1;
+            button2 = (GameButton)b2;
+            button3 = (GameButton)b3;
+            haveCustomCombo = true;
+        }
         in.close();
     }
-    
-    system("sh /etc/options_menu/scripts/GetSpriteSheet.sh > /tmp/spritesheet");
-    
+
+    if(!haveCustomCombo)
+    {
+        // NES/Famicom pads have no L/R, so fall back to B+Down
+        std::ifstream boardtypeFile("/var/squashfs/etc/clover/boardtype");
+        std::string boardtype;
+        std::getline(boardtypeFile, boardtype);
+        if(boardtype != "dp-shvc")
+        {
+            button1 = B;
+            button2 = DOWN;
+            button3 = DOWN;
+        }
+    }
+
     const auto waitTime = std::chrono::milliseconds(100);
     const short holdThreshold = 10;
     short holdCount = 0;
