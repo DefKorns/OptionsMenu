@@ -1,0 +1,68 @@
+#!/bin/sh
+# shellcheck disable=SC2154,SC1091,SC1090
+#  Copyright (c) 2026 DefKorns (https://defkorns.github.io/LICENSE)
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# shellcheck disable=SC2086,SC3046
+source $mountpoint/etc/options_menu/network/scripts/om_vars
+script_init
+
+wpa_supplicant_conf="$wpa_supplicant/wpa_supplicant.conf"
+ssid="$(grep -o 'ssid=".*"' "$wpa_supplicant_conf" | sed 's/^ssid="\(.*\)".*/\1/')"
+# sanitize: SSID is attacker-controlled and becomes a folder/command-line token
+ssid_lower="$(echo "$ssid" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_.-')"
+[ -z "$ssid_lower" ] && ssid_lower="network"
+
+[ "$1" = "nand" ] && backup_path="$rootfs/etc/wifi_backup"
+network="$backup_path/$ssid_lower"
+
+backupWifi() {
+  if [ -d "$backup_path" ]; then
+    [ -d "$network" ] && rm -rf "$network"
+  fi
+  mkdir -p "$network"
+  chmod 777 "$network"
+  cp -r "$wpa_supplicant_conf" "$network"
+
+}
+
+restoreWifi() {
+  if [ -n "$1" ]; then
+    backup_conf="$backup_path/$1/wpa_supplicant.conf"
+    rm -f "$wpa_supplicant_conf"
+    cp -r "$backup_conf" "$wpa_supplicant"
+    ifconfig wlan0 down
+    echo "WIFI config restored."
+    echo ""
+    sleep 2
+    ifconfig wlan0 up
+  else
+    echo "WIFI config does not exist."
+  fi
+}
+
+case "$2" in
+backup)
+  "$om_scripts/gen_splash" /tmp/wifi_backup_splash.png WIFI_BACKUP_SPLASH_LINE1 WIFI_BACKUP_SPLASH_LINE2 && decodepng /tmp/wifi_backup_splash.png >/dev/fb0
+  backupWifi
+  echo "WIFI config backed up to $network"
+  sleep 1
+  sh "$om_scripts/om_network"
+  ;;
+restore)
+  restoreWifi $3
+  sh "$om_network_scripts/reconnect.sh"
+  ;;
+esac

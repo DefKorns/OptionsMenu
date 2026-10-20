@@ -1,4 +1,5 @@
-COMMAND_NAME=Shutdown Device
+COMMAND_NAME=SHUTDOWN_DEVICE
 COMMAND_TYPE=EXTERNAL
 RESTART_UI=FALSE
 COMMAND_STR=sh %script_dir%/ResumeUI.sh && sh %script_dir%/shutdown.sh &
+PREVIEW_IMAGE=/etc/options_menu/images/preview_shutdown.png

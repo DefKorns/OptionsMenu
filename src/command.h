@@ -14,24 +14,49 @@
 
 class Controller;
 
+struct ModernChrome
+{
+    Texture & gearIcon;
+    Texture & appTitleText;
+    Texture & appVersionText;
+    Texture & creditText;
+};
+
 struct Command
 {
     Command();
     Command(std::ifstream & in);
-    void RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU) const;
+    void RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Color bg = UiTheme::Bg) const;
+    void UpdateState();
 
     std::string name;
     std::string command;
+    std::string deleteCommand;
+    std::string deleteConfirmKey;
+    std::string confirmKey;
+    std::string stateCommand;
+    std::string enableIfCommand;
     bool runInternal = true;
     bool restartUI = false;
     bool ignoreInterrupt = false;
     bool usbOnly = false;
+    bool child = false;
+    bool isToggle = false;
+    bool stateOn = false;
+    bool hasSubmenu = false;
     Texture texture;
     std::string previewImage;
-    int previewImageX = 0;
-    int previewImageY = 0;
+    std::string rowIcon;
+    Texture rowIconTexture;
+    int previewImageX = 920;
+    int previewImageY = 300;
     int previewImageWidth = -1;
     int previewImageHeight = -1;
+    bool previewNearest = false;
+    bool previewSquare = false;
+    int previewGridCols = -1;
+    bool previewFitContain = false;
+    bool previewHideLabel = false;
 };
 
 #endif

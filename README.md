@@ -1,197 +1,274 @@
-# Options Menu Documentation
-## What is the options menu?
-The Options Menu is a custom menu that can be launched via a controller button combo at any point during the console’s operation. It features a variety of commands to enhance the user experience of the console.
+# Options Menu
 
-The options menu is easily extendible, allowing for other developers to add their own custom commands to the menu via hmods.
+[![Build](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml/badge.svg)](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-## Options Explained
-Below is a detailed guide on what specific options actually do and what their purpose is.
-## Default Options
+A menu you can open at any moment on your NES, SNES, Famicom or Super Famicom Classic — on the Home screen or in the middle of a game — to power off, back up your saves and settings, manage Wi-Fi and RetroArch, tweak the controllers and more. Other hmods can add their own entries and screens to it.
 
-#### Hibernate/Standby
-This option launches Swingflip’s power menu. The power menu will provide the following options:
+This is my continuation of [CompCom's Options Menu](https://github.com/CompCom/OptionsMenu) (last release 1.3.4, 2019). Version 2 is a rewrite of the interface and a large part of the scripts:
 
- - **Hibernate** - Put the console in a low power state, turn the screen off and when woken up the console will resume whatever you were doing before you put the console in hibernate.
- - **Standby** - Put the console in lowest power state possible, turn the screen off and when woken up the console will reboot and start the console from a fresh boot.
+- **New look:** smooth TTF fonts, preview icons, toggle switches, submenu markers and button hints, with colors you can change (`theme.cfg`)
+- **9 languages:** English, Français, Deutsch, Español, Italiano, Nederlands, Português, Русский, 日本語
+- **New menus:** Controller (autofire, Home combo, Start on the 2nd Famicom controller), Diagnostics, Saved Games, Wi-Fi backups, epilepsy protection
+- **Safer behaviour:** entries that need a USB/SD drive or a missing component are hidden instead of failing, and lists such as Wi-Fi backups let you delete entries
+- **NES/Famicom friendly:** the opening combo is picked automatically for consoles without shoulder buttons
+- A **compat** build for setups where another hmod replaces the console's `libstdc++`
 
-> **Note:** Basically... Standby saves more energy however when you remotely wake the console it will start up as a fresh boot where hibernate will resume where ever you left off when you put it in to hibernate.
+## Install
 
-To wake the console when in hibernate or standby please refer to the below table:
+**From my Mod Hub (recommended):** in hakchi open **Manage repositories**, add `https://defkorns.github.io/hakchi-repo/` and install **Options Menu** from it. Updates show up there automatically.
 
-|Button combination|Hibernate Mode |Standby Mode     |
-|------------------|---------------|-----------------|
-| L + R + UP       |Resume Console |Reboot Console   |
-| L + R + DOWN     |Reboot Console |Shutdown Console |
+**By hand:** download `options_menu.hmod` from [Releases](https://github.com/DefKorns/OptionsMenu/releases), put it in hakchi's `user_mods` folder (or drag and drop it onto the hakchi window), then install it from hakchi (**Modules → Install extra modules**).
 
-#### Shutdown Device
-This option will safely shut down the console.\*
+Installing it replaces CompCom's Options Menu (`options_deluxe`) and the old Hibernate mod, and keeps your button combo, language and Home combo settings.
 
+> **Which build?** Use `options_menu`. Pick `options_menu_compat` only if you have an hmod that replaces the console's `libstdc++` (e.g. RetroArch 1.8.4 Xtreme SC) and the menu doesn't open with the normal build. Installing one removes the other.
 
-#### Restart Device
-This option will safely restart the console.\*
+## Opening it
 
-#### Retroarch Options
-This option will open a menu for managing retroarch configurations (see below).
+Hold **L + R** for about a second. On consoles without shoulder buttons (NES Classic, Famicom Classic, Famicom Shonen Jump), hold **B + Down** instead. You can change the combo in **Advanced Options → Controller**.
 
-#### Advanced Options
-This option will open a menu containing more advanced features (see below).
+| Button | Action |
+| --- | --- |
+| Up / Down | Move (hold to repeat) |
+| A or Start | Run the entry or open its submenu (marked **›**) |
+| B | Back; closes the menu on the main screen |
+| B (hold ~1 second) | Delete the selected entry, on lists that allow it — confirm with A |
 
+The footer always shows the buttons for the current screen.
 
->\***Note:** You should **NOT** turn off your console via the options/power menu while running retroarch. Ensure you properly exit retroarch before shutting down/restarting or you may experience a loss of saves.
+## Menus
 
+### Main menu
 
+| Entry | What it does |
+| --- | --- |
+| Hibernate/Standby | Opens Swingflip's power menu (see below) |
+| Shutdown Device | Safely turns the console off\* |
+| Reboot Device | Safely restarts the console\* |
+| RetroArch › | RetroArch settings, backups and BIOS files. Shown when RetroArch is installed |
+| Network › | IP address, Wi-Fi scan and Wi-Fi config backups |
+| Save Manager › | Back up, restore and clean up your saves. Needs a USB/SD drive |
+| Language › | Menu language; the menu restarts in the new language |
+| Advanced Options › | Controller, diagnostics and system tools |
 
-## Retroarch Options
-#### Restore Default Settings (All)
-Replaces your current retroarch config files with the default files included in the module. This option deletes all game/core overrides and remap files.
-#### Restore Default Settings
-Replaces your current retroarch config files with the default files included in the module. Does not erase your game/core overrides and remap files.
-#### Backup Settings to NAND
-Copies your current retroarch config files to a backup file located at /etc/ra_backup/
-#### Backup Settings to USB (usb only)
-Copies your current retroarch config files to a backup file located at USB:/data/ra_backup/
-#### Restore Settings from NAND
-Overwrites your retroarch configs with the backups located at /etc/ra_backup/
-#### Restore Settings from USB (usb only)
-Overwrites your retroarch configs with the backups located at USB:/data/ra_backup/
-#### Delete all settings backups
-Removes all backup files on both NAND and USB.
-#### Transfer BIOS file(s)
-Copies bios files to USB:/data/ra_bios. Restores bios files from this folder to NAND.
-#### Delete game and core overrides
-Removes only the game and core overrides. Does not modify the Retroarch settings and remap files.
-#### Delete remap files
-Removes only the remap files. Does not modify the Retroarch settings, game and core overrides.
-#### Delete BIOS file(s) from NAND
-Removes all bios files from NAND only.
-#### Toggle RA and Canoe load screens
-Toggle the RetroArch and Canoe loading screens on or off.
+\*Don't shut down or restart from the menu while RetroArch is running: exit RetroArch first, or you may lose saves.
 
-## Advanced Options
-#### Module Uninstaller
-This option launches the module uninstaller program. This program allows you to remove modules from your device. Press the up and down buttons to select a module. Press A to add a module to the uninstall list. Press B to remove a module from the uninstall list. Pressing start will exit if no modules are added to the uninstall list. If there are modules on the uninstall this you will be prompted to ensure you want to remove them press START+SELECT to remove selected modules or B to cancel.
+**Hibernate** turns the screen off and keeps everything in memory, so waking up resumes exactly where you were. **Standby** uses even less power, but waking up boots the console from scratch. To wake it:
 
->**Caution:** The uninstaller will list all modules on the device including the default hakchi modules. Only delete modules you have added yourself. Deleting the default hakchi modules can have unintended effects on your console.
+| Combo | From Hibernate | From Standby |
+| --- | --- | --- |
+| L + R + Up | Resume | Reboot |
+| L + R + Down | Reboot | Shut down |
 
+### RetroArch
 
-#### Display Temp
-This option will display the current temperature of the CPU.
+Works with RetroArch Neo and with the `_km` RetroArch Xtreme (Ozone).
 
-#### Run Top
-This option runs and displays the output of the top binary. This shows the current CPU, memory usage and list of running processes.
+| Entry | What it does |
+| --- | --- |
+| Restore Default Settings (All) | Puts back the default RetroArch config **and** deletes every game/core override and remap |
+| Restore Default Settings | Puts back the default RetroArch config, keeping overrides and remaps |
+| Backup Settings to NAND / USB | Copies your RetroArch config to `/etc/ra_backup/` or `USB:/data/ra_backup/` |
+| Restore Settings from NAND / USB | Restores the config from those backups |
+| Transfer BIOS file(s) | Copies BIOS files to `USB:/data/ra_bios` and restores them from there to NAND |
+| Delete all settings backups | Removes the NAND and USB backups |
+| Delete game and core overrides | Removes only the overrides |
+| Delete remap files | Removes only the remaps |
+| Delete BIOS file(s) from NAND | Removes the BIOS files from NAND |
+| Toggle RA and Canoe load screens | Turns the RetroArch and Canoe loading screens on or off |
 
-#### Benchmark Tool
-This option will go through and echo out useful information regarding your console.
-It will also include information on your:
+The USB entries only show up with a USB/SD drive connected.
 
-  - Current disk mounting information
-  - CPU analysis information
-  - RAM analysis information 
+### Network
 
-> **Note:** The information is displayed in 4 parts and has a 2 second wait between each part
+| Entry | What it does |
+| --- | --- |
+| Display IP Address | Shows your local and public IP |
+| Reconnect | Restarts the network when you're not connected |
+| Search for SSIDs | Lists the Wi-Fi networks in range |
+| Backup Wifi Config (NAND / USB) | Saves your `wpa_supplicant.conf` to `/etc/wifi_backup/<ssid>` or `/media/data/wifi_backup/<ssid>` |
+| Restore Wifi Config (NAND / USB) › | Lists your backups; pick one to restore it and reconnect, or hold **B** to delete it |
 
-#### Dump File Structure (to USB)
-This option will map and echo out your complete file and directory structure for your console and any mounted disks. The log file will be saved to your mounted USB/SD card at:
+Restore entries only show up when there's a backup to restore.
 
-    /media/data/log/Hakchi_file_structure.log
+### Save Manager
 
- > **Note:** If these folders do not exist, they will be created when the option is ran.
+Needs a USB/SD drive with your saves on it. One screen lists the actions on the left; the right panel explains the selected one and shows how many saves are on the console, in the USB backup, left over from removed games and moved aside. Every action asks for confirmation (**Start + Select**).
 
-The log file will also include information on:
+| Action | What it does |
+| --- | --- |
+| Backup Saved Games to USB | Mirrors your saves folder to `/media/data/saves_backup`. Saves you deleted since the last backup are removed from it too; system folders (`FOLDER`, `hakchi`, `home-menu`, `mcp-state`) are skipped |
+| Restore Saved Games from USB › | Lists the saves in the backup (none marked); mark the ones you want back with **A** and press **Start**. They overwrite saves with the same name and leave the others alone. **Select all** restores the whole backup |
+| Clean Saves of Removed Games › | Lists the save folders of games that are no longer in any menu (all marked; **A** unmarks) and moves the marked ones to `/media/data/deleted_games_saves`. Menu folders (`CLV-S-*`) are never touched |
+| Restore Saves of Removed Games › | Lists what was moved aside; mark the ones you want back with **A** and press **Start**. A save already on the console is never overwritten |
 
- - Symbolic Links (Overmounts)
- - File and directory permissions
+In the long lists (here and in the Module Uninstaller), **Left**/**Right** page up and down on a tap and walk the list letter by letter while held; **L**/**R** jump a letter at a time.
 
-#### Toggle Write Access on USB
-This option will toggle read write access on your USB device. By default, if you don't have a saves folder located on your USB/SD, write access is disabled. If you wish to write logs or use your external mounted storage and **not** use external saves... This is the toggle for you. 
+#### Game names
 
- > **Note:** If you already use external saves. You don't need to use this toggle.
+The two "Removed Games" lists show the names of the removed games instead of their codes (`CLV-H-ABCDE`). Every time the console starts, it remembers the names of the games installed at that moment in `game_names.txt` in your saves folder, and a name stays there after its game is removed. The backup keeps the file with your saves, and a restore adds its names without replacing newer ones. Saves without a known name keep showing their code. Getting the names never changes or moves a save.
 
-#### RetroArch Debugger (USB logs)
-This option will run your locally installed RetroArch in full verbose mode. It will also copy the config files for your RetroArch and save them to:
+Games removed before this version was installed were never seen on the console, so their names can only come from your Hakchi CE library. The console can't read your PC, so the PC sends them. With the console on and reachable by Hakchi CE (USB or Wi-Fi), run [`pc/push_game_names.ps1`](pc/push_game_names.ps1) from a PowerShell window:
 
-    /media/data/log/RetroArchConfig
+```powershell
+.\push_game_names.ps1 --ip 192.168.1.50
+```
 
-The full verbose log will be located here:
+- `--ip`: the console's IP address, shown in Hakchi CE or in Options Menu › Network › Display IP Address. Defaults to `169.254.13.37`, the console connected over USB.
+- `--hakchi-path`: the Hakchi CE folder that has the `games` folders. Usually not needed: the script looks in its own folder first, so copying it next to `hakchi.exe` (portable Hakchi CE) is enough. It also finds the library of an open Hakchi CE, and `Documents\hakchi2` for non-portable installs.
 
-    /media/data/log/Hakchi_retroarch_debug.log
+If Windows refuses to run scripts, use `powershell -ExecutionPolicy Bypass -File push_game_names.ps1 --ip 192.168.1.50`.
 
+The names it sends are added to the ones already on the console.
 
-> **Note:** Depending on what you are trying to do, you might have limited functionality within RetroArch when running it via the debugger. This app is primarily designed to debug cores, custom configs and themes.
+### Advanced Options
 
-#### Change Options Button Combo
-This option will allow you to change the button combo used to launch the options menu. You will need to restart the console after setting a new combo.
+| Entry | What it does |
+| --- | --- |
+| Controller › | See below |
+| Diagnostics › | See below |
+| Toggle Write Access on USB | Makes the USB/SD drive writable even if you don't keep your saves on it (it's read-only otherwise). Not needed if you use USB saves |
+| Epilepsy protection (NES) | The console's own dimming of fast flashes in NES/Famicom games. On by default; turn it off to see games exactly as they were. NES/Famicom only |
+| Clear Cache | Asks the kernel to free cached memory. Rarely needed |
+| Module Uninstaller | Remove installed hmods from the console (see below) |
 
-#### Clear Cache
-This option will force the kernel to clear the page cache and free up unused memory. You should not need to call this as the system should manage memory fine on it's own.
+**Module Uninstaller:** installed mods are on the left, the ones queued for removal on the right. **A** queues the selected mod, **B** takes the last one off the queue, **Start** exits — or, with mods queued, asks you to press **Start + Select** to remove them (**B** cancels). It lists hakchi's own modules too: only remove mods you installed yourself.
 
-## Network Options
-#### Display IP Address
-This option will display both your public and internal ip addresses if you have a network adapter connected to your device.
+#### Controller
 
-#### Reconnect
-This option will restart the network service on your device if you are not connected to the internet already.
+| Entry | What it does |
+| --- | --- |
+| Change Options Button Combo | Press the buttons you want to open the menu with. Restart the console afterwards. Overrides the automatic L+R / B+Down choice |
+| Autofire | Turbo for the controllers, with **Fast / Normal / Slow** speed |
+| Use X/Y as turbo A/B | X and Y act as turbo A and B |
+| Home menu button combo | Turns off the combo that sends you from a game back to the Home menu, so you can't press it by accident |
+| Start on 2nd controller | Famicom only: the 2nd Famicom controller has no Start button; this gives it one |
 
-#### Search for SSIDs
-This option will scan and display a list of available SSIDs.
+Changes apply right away, without restarting.
 
-## Developer Information
-### General Information
-The options mod is comprised of two executables. The `optiond` executable acts as a watchdog that waits for the controller combo to be held down and executes the `options` executable. All files are stored with the `/etc/options_menu/` folder. There are two important folders for the usage of the options menu these are the commands and scripts folders. The commands folder stores the options to be displayed on the menu. The scripts folder contains scripts executed by these commands.
-### Command Line Arguments
->Note: The options menu should always be called with the full file path.
->/etc/options_menu/options
+#### Diagnostics
+
+| Entry | What it does |
+| --- | --- |
+| System Information | Console type and region, hakchi/kernel/boot versions, firmware, free space on NAND and USB/SD, size of your saves |
+| Display Temp | CPU temperature |
+| Run Top | CPU and memory use and the running processes |
+| Benchmark Tool | Mounts, CPU and RAM information, in 4 parts |
+| RetroArch Debugger (USB logs) | Runs RetroArch in verbose mode and saves its config and log to `/media/data/log/` |
+| Dump File Structure (to USB) | Writes every file and folder, with permissions and links, to `/media/data/log/Hakchi_file_structure.log` |
+| Save kernel log (to USB) | Writes `dmesg` to `/media/data/log/dmesg.log` |
+
+The USB entries only show up with a USB/SD drive connected. They're the logs to attach when reporting a problem.
+
+## For mod developers
+
+Your hmod can add entries and whole screens to the menu.
+
+### How it works
+
+`optiond` waits for the button combo and launches `options`. Everything lives in `/etc/options_menu/`: each screen is a `commands/` folder with one file per entry, and the scripts they run go in a `scripts/` folder.
+
+`options` takes these arguments (always call it by its full path, `/etc/options_menu/options`):
 
 | Argument | Description |
-|----------|-------------|
-|--commandPath &lt;Command Folder Path&gt;|Set a custom command folder.|
-|--scriptPath &lt;Script Folder Path&gt;|Set custom script folder.|
-|--title &lt;Window Title&gt;|Set custom title for options menu screen.|
+| --- | --- |
+| `--commandPath <folder>` | Commands folder for this screen |
+| `--scriptPath <folder>` | Scripts folder, available as `%script_dir%` |
+| `--title <key>` | Screen title (a translation key or plain text) |
 
-### Command Files
-Command Files must be named in the following format: 
+### Command files
 
-    cxxxx_CommandName
-
-Command Files should contain the following fields:
+One file per entry, named `cNNNN_Name`; entries are sorted by name. Each line is `FIELD=value`, no spaces around `=`, case sensitive.
 
 | Field | Description |
-|-------|-------------|
-|COMMAND_NAME|Display Name of command.|
-|COMMAND_TYPE|Specifies whether command is run inside the options menu pseudo terminal (internally) or run externally. Possible values `INTERNAL` or `EXTERNAL`|
-|RESTART_UI|Specifies if the paused UI should be resumed after running command (external commands only). If you set this value to `FALSE` you must manually resume the UI using `/bin/sh /etc/options_menu/script/ResumeUI.sh` after executing your code.|
-|COMMAND_STR|Command string to be executed. Commands must be single line only. To execute multi-line scripts use a script file.|
-|PREVIEW_IMAGE|Specifies the path to a thumbnail/icon to the oprion menu.|
-|PREVIEW_IMAGE_X|Position the thumbnail/icon on the X axys|
-|PREVIEW_IMAGE_Y|Position the thumbnail/icon on the Y axys.|
-|PREVIEW_IMAGE_WIDTH|Sets the width for the thumbnail/icon.|
-|PREVIEW_IMAGE_HEIGHT|Sets the height for the thumbnail/icon.|
+| --- | --- |
+| `COMMAND_NAME` | Label shown, or a translation key |
+| `COMMAND_TYPE` | `INTERNAL` shows the command's output in the menu's console; `EXTERNAL` runs it with the menu paused |
+| `COMMAND_STR` | Single-line command to run. Use a script for anything longer |
+| `RESTART_UI` | External commands only. `FALSE` leaves the UI paused; resume it yourself with `/bin/sh /etc/options_menu/scripts/ResumeUI.sh` |
+| `IGNORE_INTERRUPT` | `TRUE`: B doesn't interrupt an internal command while it runs |
+| `USB_ONLY` | `TRUE`: only shown when a USB/SD drive is mounted |
+| `ENABLE_IF` | Shell condition; the entry is only shown if it exits 0. `/etc/preinit` is sourced and `script_init` called first, so `$rootfs`, `$mountpoint`, `$sftype`... work, e.g. `ENABLE_IF=[ -d "$rootfs/etc/wifi_backup" ]` |
+| `SUBMENU` | `TRUE`: draws **›**, for entries that open another screen. Ignored on toggles |
+| `CHILD` | `TRUE`: indents the entry under the one above it |
+| `STATE_STR` | Command whose first output line is the entry's state (`1`/`on`/`y`/`yes`/`true` = on). Turns the entry into a toggle switch; `COMMAND_STR` still does the toggling |
+| `DELETE_STR` | Command run when the user holds B on the entry and confirms — makes list entries deletable |
+| `DELETE_CONFIRM_KEY` | Translation key for that confirmation; defaults to a generic "Delete this item?" |
+| `PREVIEW_IMAGE` | PNG shown in the detail panel, scaled to fit |
 
->Note: Fields and values are case sensitive. Values should be separated from fields using '=' without spaces.
+`COMMAND_STR`, `DELETE_STR` and `STATE_STR` can use `%options_path%` (the folder with the `options` binary) and `%script_dir%` (the current `--scriptPath`).
 
-#### Command String Variables
-The command string supports the use of the following variables:
+The shared framework also reads a few grid-only fields (`PREVIEW_NEAREST`, `PREVIEW_SQUARE`, `PREVIEW_GRID_COLS`, `PREVIEW_FIT_CONTAIN`, `PREVIEW_HIDE_LABEL`). The menu itself always shows a list; they're for apps built on the shared framework that use a grid layout. `PREVIEW_IMAGE_X/Y/WIDTH/HEIGHT` from the original format are accepted and ignored.
 
-|Variable | Description|
-|---------|------------|
-|%options_path% | Path to the folder containing the options binary.|
-|%script_dir% | Path to the current script folder set in the options binary.|
+### Translations
 
-### Compiling Options Menu
-The options menu can be compiled using the makefile provided. To compile the options menu you must have the SDL2 and libpng libraries as well as GNU Make installed. To cross-compile the options menu call `make` with the `CROSS_PREFIX` set to the prefix of your cross-compiler toolchain eg. `make CROSS_PREFIX=arm-linux-gnueabihf-`.
+Strings live in `/etc/options_menu/language/<code>.lang` as `KEY=Text`; the chosen language is in `/etc/options_menu/language.cfg`. `en-US` is always loaded first, so missing keys fall back to English.
 
-## Contributions and Thanks
-### Contributions
-- Hibernate Mod and Hakchi-Option-Pack scripts courtesy of Swingflip  
-- Retroarch Configuration scripts courtesy of BsLeNuL  
-- Thanks to ThanosRD for assistance with UI Layout/Design
+Your hmod can ship its own strings in `/etc/options_menu/<your_mod>/lang/<code>.lang`. Every such folder with an `en-US.lang` is merged in at startup.
+
+### Colors
+
+`/etc/options_menu/theme.cfg` holds the UI colors, one `Key=R,G,B` per line (0–255, `#` for comments). It's read once at startup: reopen the menu to see a change. A missing file, line or key uses the default.
+
+| Key | Default | Used for |
+| --- | --- | --- |
+| `Bg` | `12,15,22` | Background |
+| `Border` | `42,44,51` | Dividers, box outlines, unselected tile border |
+| `Accent` | `240,196,61` | Selected entry border, section title bar, **›**, highlights |
+| `SelectedRowBg` | `20,22,26` | Selected entry and tile fill. If only `Bg` is set, it follows `Bg` (slightly lighter) so rounded corners don't show the old color |
+| `Text` | `255,255,255` | Titles, entry labels, button hints |
+| `TextDim` | `141,141,147` | Secondary text, e.g. column headers |
+| `ScrollArrow` | follows `Text` | List scroll arrows |
+| `BadgeLetter` | `28,22,22` | Letter inside the button-hint badges |
+| `BadgeA` / `BadgeADark` | `76,175,110` / `46,107,66` | A badge (Select): fill / rim |
+| `BadgeB` / `BadgeBDark` | `225,85,84` / `140,52,51` | B badge (Back): fill / rim |
+| `BadgeX` / `BadgeXDark` | `108,142,191` / `63,89,127` | Hold-to-delete hint: fill / rim |
+| `BadgeStart` / `BadgeStartDark` | `194,168,94` / `116,101,56` | Start pill: fill / rim |
+| `BadgeY` / `BadgeYDark` | `201,123,132` / `143,71,80` | Reserved |
+| `CheckboxOn` | follows `BadgeB` | Module Uninstaller: marked checkbox |
+| `CheckboxOff` | follows `TextDim` | Module Uninstaller: unmarked checkbox |
+
+Apps built on the same framework read this file too, so they match the menu.
+
+### Icons
+
+Preview images (`/etc/options_menu/images/`, 200×140 PNG) and the UI glyphs in `images/ui/` are rendered from [Bootstrap Icons](https://icons.getbootstrap.com/). The `images/ui/` glyphs are white and tinted with the theme colors at runtime.
+
+## Building
+
+```sh
+git clone --recursive https://github.com/DefKorns/OptionsMenu.git
+cd OptionsMenu
+./build.sh                    # out/options_menu.hmod   (./build.ps1 on PowerShell)
+./build.sh FIX_LIBSTDCXX=1    # out/options_menu_compat.hmod
+./build.sh MOD_VER=test-dev   # override the version for a test build
+```
+
+`build.sh` builds the [classicmini-cross-toolchain](https://github.com/DefKorns/classicmini-cross-toolchain) Docker image if needed and runs `make` inside it — no local ARM toolchain required. Outside Docker, the same `Makefile` works with SDL2, SDL2_ttf, libpng and `make CROSS_PREFIX=arm-linux-gnueabihf-`.
+
+Packaging and versioning come from [hmod-build](https://github.com/DefKorns/hmod-build): the version is the latest `v*` git tag, and the `.hmod` name has no version, so hakchi sees every release as the same mod. Pushing a tag builds both variants and publishes a GitHub Release (a prerelease for tags with a hyphen, e.g. `v2.0.0-alpha5`).
+
+## Credits
+
+- **[CompCom](https://github.com/CompCom)** — the original Options Menu
+- **[DefKorns](https://github.com/DefKorns)** — version 2: the new interface, TTF text, theme colors and icons, translations, Network (with Advokaten), Wi-Fi backups, Save Manager, Controller and Diagnostics menus, build tooling
+- **Swingflip** — Hibernate Mod and Hakchi-Option-Pack scripts
+- **[BsLeNuL](https://github.com/bslenul)** — RetroArch configuration scripts
+- **Advokaten** — Network commands
+- **ThanosRD** — layout and design of the original interface
+- **[MadFranko008](https://www.reddit.com/user/MadFranko008/)** — idea for the Saved Games backup
+
+### Third-party assets
+
+- [Bootstrap Icons](https://icons.getbootstrap.com/) — preview icons and UI glyphs (MIT License)
+- [Noto Sans JP](https://fonts.google.com/noto/specimen/Noto+Sans+JP) — UI font, subset (SIL Open Font License, see `fonts/OFL.txt`)
+- [Misaki font](http://littlelimit.net/misaki.htm) by Num Kadoma — 8×8 kana and kanji glyphs
+
 ### Testing
-Extra thanks to DNA64 (viral_dna) and Swingflip for always testing features.
 
-Also thanks to the following people for testing the options menu:
+Thanks to DNA64 (viral_dna) and Swingflip for always testing, and to Aranthys, AxelStone, BsLeNuL, DR1001, Patton Plays and ThanosRD.
 
-- BsLeNuL  
-- DefKorns  
-- DR1001  
-- Patton Plays  
-- ThanosRD
+## License
+
+GPLv3 or later — see [LICENSE](LICENSE).

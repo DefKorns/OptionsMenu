@@ -1,3 +1,4 @@
-COMMAND_NAME=Backup Settings to NAND
+COMMAND_NAME=RA_BACKUP_NAND
 COMMAND_TYPE=INTERNAL
 COMMAND_STR=sh %script_dir%/backup-nand.sh
+PREVIEW_IMAGE=/etc/options_menu/images/preview_backup_nand.png

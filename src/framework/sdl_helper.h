@@ -12,5 +12,6 @@
 
 #include "sdl_context.h"
 #include "texture.h"
+#include "uitheme.h"
 
 #endif

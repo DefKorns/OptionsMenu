@@ -1,0 +1,5 @@
+COMMAND_NAME=HOME_COMBO
+COMMAND_TYPE=INTERNAL
+COMMAND_STR=sh %script_dir%/clovercon.sh home toggle
+STATE_STR=sh %script_dir%/clovercon.sh home state
+PREVIEW_IMAGE=/etc/options_menu/images/preview_home_combo.png

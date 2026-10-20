@@ -1,3 +1,0 @@
-COMMAND_NAME=Benchmark Tool
-COMMAND_TYPE=INTERNAL
-COMMAND_STR=sh %script_dir%/BenchMark.sh

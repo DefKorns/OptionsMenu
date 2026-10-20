@@ -1,3 +1,0 @@
-COMMAND_NAME=Clear Cache
-COMMAND_TYPE=INTERNAL
-COMMAND_STR=free -m && sync && echo 1 > /proc/sys/vm/drop_caches && free -m

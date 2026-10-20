@@ -1,0 +1,16 @@
+*.o
+.build-flags
+src/cacert.pem
+out/
+local/
+mod/bin/
+!mod/bin/standby
+mod/etc/options_menu/lib/
+mod/etc/options_menu/optiond
+mod/etc/options_menu/options
+mod/etc/options_menu/mod_uninstall/mod_uninstall
+mod/etc/options_menu/save_manager/save_manager
+mod/etc/options_menu/scripts/ChangeCombo
+mod/etc/options_menu/scripts/gen_splash
+mod/etc/options_menu/scripts/downloader
+mod/etc/options_menu/fonts/NotoSansJP-Latin-subset.ttf

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 echo "Grabbing Internal IP..."
 
@@ -6,13 +6,11 @@ ifconfig | grep "inet " | grep -v 127.0.0.1|awk 'match($0, /([0-9]+\.[0-9]+\.[0-
 
 echo "Grabbing External IP... (Might take a bit)"
 
-PUBLIC_IP=$(wget http://ipecho.net/plain -O - -q)
+public_ip=$(wget http://ipecho.net/plain -O - -q)
 
-wget -q --tries=10 --timeout=10 --spider http://google.com
-
-if [[ $? -eq 0 ]]; then
+if wget -q --tries=10 --timeout=10 --spider http://google.com; then
         echo "You are online!"
-        echo "Your external IP is:" $PUBLIC_IP
+        echo "Your external IP is:" "$public_ip"
 else
         echo "You are offline"
 fi

@@ -1,0 +1,22 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  hmod:
+    # Keep in sync with the vendor/hmod-build submodule tag.
+    uses: DefKorns/hmod-build/.github/workflows/hmod.yml@v1.5.0
+    with:
+      release-name: Options Menu
+      docker: true
+      # the compat build relinks with its own rpath and adds a private libstdc++
+      make: |
+        hmod
+        hmod FIX_LIBSTDCXX=1
+    secrets: inherit
+    permissions:
+      contents: write

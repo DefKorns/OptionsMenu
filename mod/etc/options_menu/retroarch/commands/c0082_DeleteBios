@@ -1,4 +1,5 @@
-COMMAND_NAME=Delete BIOS file(s) from NAND
+COMMAND_NAME=RA_DELETE_BIOS
 COMMAND_TYPE=INTERNAL
 USB_ONLY=TRUE
 COMMAND_STR=sh %script_dir%/delete-bios.sh
+PREVIEW_IMAGE=/etc/options_menu/images/preview_ra_delete_bios.png
