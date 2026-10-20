@@ -102,7 +102,10 @@ Command::Command(std::ifstream & in)
         if(param.compare("COMMAND_NAME")==0)
             name = value;
         else if(param.compare("COMMAND_TYPE")==0)
+        {
+            runDownload = (value == "DOWNLOAD");
             runInternal = (value == "INTERNAL");
+        }
         else if(param.compare("RESTART_UI")==0)
             restartUI = (value == "TRUE");
         else if(param.compare("IGNORE_INTERRUPT")==0)
@@ -113,6 +116,8 @@ Command::Command(std::ifstream & in)
             deleteCommand = value;
         else if(param.compare("DELETE_CONFIRM_KEY")==0)
             deleteConfirmKey = value;
+        else if(param.compare("DELETE_BLOCKED_KEY")==0)
+            deleteBlockedKey = value;
         else if(param.compare("CONFIRM_KEY")==0)
             confirmKey = value;
         else if(param.compare("ENABLE_IF")==0)

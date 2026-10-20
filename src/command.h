@@ -33,10 +33,12 @@ struct Command
     std::string command;
     std::string deleteCommand;
     std::string deleteConfirmKey;
+    std::string deleteBlockedKey;
     std::string confirmKey;
     std::string stateCommand;
     std::string enableIfCommand;
     bool runInternal = true;
+    bool runDownload = false;
     bool restartUI = false;
     bool ignoreInterrupt = false;
     bool usbOnly = false;

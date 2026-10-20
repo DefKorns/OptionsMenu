@@ -184,7 +184,7 @@ One file per entry, named `cNNNN_Name`; entries are sorted by name. Each line is
 | Field | Description |
 | --- | --- |
 | `COMMAND_NAME` | Label shown, or a translation key |
-| `COMMAND_TYPE` | `INTERNAL` shows the command's output in the menu's console; `EXTERNAL` runs it with the menu paused |
+| `COMMAND_TYPE` | `INTERNAL` shows the command's output in the menu's console; `EXTERNAL` runs it with the menu paused; `DOWNLOAD` runs it on a progress screen with a bar (fed by the downloader's `--progress` lines on stdout) and a B to cancel, closing on its own when the command exits 0 |
 | `COMMAND_STR` | Single-line command to run. Use a script for anything longer |
 | `RESTART_UI` | External commands only. `FALSE` leaves the UI paused; resume it yourself with `/bin/sh /etc/options_menu/scripts/ResumeUI.sh` |
 | `IGNORE_INTERRUPT` | `TRUE`: B doesn't interrupt an internal command while it runs |
@@ -195,6 +195,7 @@ One file per entry, named `cNNNN_Name`; entries are sorted by name. Each line is
 | `STATE_STR` | Command whose first output line is the entry's state (`1`/`on`/`y`/`yes`/`true` = on). Turns the entry into a toggle switch; `COMMAND_STR` still does the toggling |
 | `DELETE_STR` | Command run when the user holds B on the entry and confirms — makes list entries deletable |
 | `DELETE_CONFIRM_KEY` | Translation key for that confirmation; defaults to a generic "Delete this item?" |
+| `DELETE_BLOCKED_KEY` | Translation key: holding B on the entry shows this message with a Back badge instead of asking to delete it, for entries that can't be removed right now |
 | `PREVIEW_IMAGE` | PNG shown in the detail panel, scaled to fit |
 
 `COMMAND_STR`, `DELETE_STR` and `STATE_STR` can use `%options_path%` (the folder with the `options` binary) and `%script_dir%` (the current `--scriptPath`).

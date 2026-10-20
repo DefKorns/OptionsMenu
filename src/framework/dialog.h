@@ -53,4 +53,18 @@ private:
     SDL_Rect panel_;
 };
 
+class MessageDialog
+{
+public:
+    MessageDialog(SDL_Renderer * renderer, BadgePainter & painter, const std::string & title, Badge back);
+    void Draw();
+
+private:
+    SDL_Renderer * renderer_;
+    BadgePainter * painter_;
+    Texture title_;
+    Badge back_;
+    SDL_Rect panel_;
+};
+
 #endif

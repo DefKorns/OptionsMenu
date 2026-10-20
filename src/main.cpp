@@ -15,6 +15,7 @@
 #include "framework/draw_helpers.h"
 #include "framework/utf8.h"
 #include "command.h"
+#include "download_screen.h"
 #include "localization.h"
 
 #include <algorithm>
@@ -469,7 +470,7 @@ int main(int argc, char * argv[])
         int rightEdge = UiTheme::BadgeClusterRightX;
         rightEdge = DrawBadge(badgeA, rightEdge);
         rightEdge = DrawBadge(backStack.empty() ? badgeBExit : badgeB, rightEdge);
-        if(!commands[currentCommandId].deleteCommand.empty())
+        if(!commands[currentCommandId].deleteCommand.empty() || !commands[currentCommandId].deleteBlockedKey.empty())
             rightEdge = DrawBadge(badgeHold, rightEdge);
         int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
         DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
@@ -517,6 +518,24 @@ int main(int argc, char * argv[])
         return confirmed;
     };
 
+    auto ShowBlocked = [&](const std::string & title)
+    {
+        MessageDialog dialog(renderer, badges, title,
+                             MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB));
+        controller.GetButtonStatus(B);
+        for(;;)
+        {
+            controller.Update();
+            if(controller.GetButtonStatus(B) || controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
+                break;
+            sdl_context.StartFrame();
+            DrawScreen();
+            dialog.Draw();
+            SetDrawColor(renderer, bg);
+            sdl_context.EndFrame();
+        }
+    };
+
     auto ConfirmDelete = [&]() -> bool
     {
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
@@ -559,6 +578,12 @@ int main(int argc, char * argv[])
                             c.UpdateState();
                 RefreshActive();
             }
+            else if(confirmed && commands[currentCommandId].runDownload)
+            {
+                RunDownloadScreen(commands[currentCommandId].command, "", Translate(commands[currentCommandId].name), "",
+                                  sdl_context, controller, { gearIcon, appTitleText, appVersionText, CompComText });
+                RefreshActive();
+            }
             else if(confirmed)
             {
                 system(commands[currentCommandId].command.c_str());
@@ -579,7 +604,9 @@ int main(int argc, char * argv[])
             if(!bHoldFired && bHeldMs >= bHoldThresholdMs)
             {
                 bHoldFired = true;
-                if(!commands[currentCommandId].deleteCommand.empty() && ConfirmDelete())
+                if(!commands[currentCommandId].deleteBlockedKey.empty())
+                    ShowBlocked(Translate(commands[currentCommandId].deleteBlockedKey));
+                else if(!commands[currentCommandId].deleteCommand.empty() && ConfirmDelete())
                     break;
             }
         }

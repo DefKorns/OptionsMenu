@@ -93,3 +93,24 @@ void ConfirmDialog::Draw()
     title_.Draw(renderer_);
     painter_->DrawCentered({ &cancel_, &confirm_ }, panel_.x + panel_.w / 2, title_.rect.y + title_.rect.h + Dialog::BadgeRowGap);
 }
+
+MessageDialog::MessageDialog(SDL_Renderer * renderer, BadgePainter & painter, const std::string & title, Badge back)
+    : renderer_(renderer)
+    , painter_(&painter)
+    , title_(title, Dialog::TitleFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true)
+    , back_(std::move(back))
+{
+    const int width = std::max(MinPanelW, std::max(title_.rect.w, painter.Width(back_)) + 2 * Dialog::PadX);
+    const int height = TopPad + title_.rect.h + Dialog::BadgeRowGap + UiTheme::BadgeOuterSize + Dialog::BottomPad;
+    panel_ = Dialog::PanelRect(width, height);
+    title_.rect.x = panel_.x + (panel_.w - title_.rect.w) / 2;
+    title_.rect.y = panel_.y + TopPad;
+}
+
+void MessageDialog::Draw()
+{
+    Dialog::DrawBackdrop(renderer_);
+    Dialog::DrawPanel(renderer_, panel_);
+    title_.Draw(renderer_);
+    painter_->DrawCentered({ &back_ }, panel_.x + panel_.w / 2, title_.rect.y + title_.rect.h + Dialog::BadgeRowGap);
+}
