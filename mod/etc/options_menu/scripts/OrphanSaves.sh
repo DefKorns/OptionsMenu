@@ -22,8 +22,6 @@
 #   OrphanSaves.sh restore FILE       move them back (never over an existing save)
 #   OrphanSaves.sh backup             entries in the USB backup
 #   OrphanSaves.sh restore-backup FILE  copy FILE's entries back from the USB backup
-#   OrphanSaves.sh hakchi             portable Hakchi CE folders found on the USB drive
-#   OrphanSaves.sh names FILE         cache the games of the Hakchi folders in FILE
 #   OrphanSaves.sh merge-names FILE   add the entry<TAB>name lines in FILE to the cache
 #   OrphanSaves.sh merge-backup-names add the names in the USB backup, keeping newer ones
 #   OrphanSaves.sh sync-names         add the games installed on the console to the cache
@@ -146,11 +144,6 @@ mergeBackupNames() {
   mergeNames "$backup_root/game_names.txt" older
 }
 
-# game folders are pruned so the walk stays shallow on big libraries
-hakchiRoots() {
-  find /media -maxdepth 4 -type d \( -name 'games*' -o -name saves -o -name '.*' \) -prune     -o -type f -name '[Hh][Aa][Kk][Cc][Hh][Ii].[Ee][Xx][Ee]' -print 2>/dev/null | sed 's#/[^/]*$##' | sort -u
-}
-
 # entry<TAB>name per game folder under the folders on stdin; RetroArch names from files and Exec=
 gameNames() {
   local dir
@@ -194,13 +187,6 @@ gameNames() {
     }' | awk -F '\t' '!seen[$1]++'
 }
 
-hakchiNames() {
-  local root
-  while IFS= read -r root; do
-    printf '%s\n' "$root"/games*
-  done < "$1" | gameNames
-}
-
 installedNames() {
   local games_root
   games_root="$(dirname "$(findGameStorage)")"
@@ -231,7 +217,6 @@ addNames() {
   "$@" > "$found"
   mergeNames "$found"
   status=$?
-  [ $status -eq 0 ] && [ "$1" = hakchiNames ] && { grep -c "^CLV-" "$found" || true; }
   rm -f "$found"
   return $status
 }
@@ -261,12 +246,6 @@ case "$1" in
   restore-backup)
     [ -f "$2" ] && restoreFromBackup "$2"
     ;;
-  hakchi)
-    hakchiRoots
-    ;;
-  names)
-    [ -s "$2" ] && addNames hakchiNames "$2"
-    ;;
   merge-names)
     [ -f "$2" ] && mergeNames "$2"
     ;;
@@ -280,7 +259,7 @@ case "$1" in
     cat "$names_cache" 2>/dev/null
     ;;
   *)
-    echo "usage: $0 stats|orphans|deleted|move FILE|restore FILE|backup|restore-backup FILE|hakchi|names FILE|merge-names FILE|merge-backup-names|sync-names|cached-names" >&2
+    echo "usage: $0 stats|orphans|deleted|move FILE|restore FILE|backup|restore-backup FILE|merge-names FILE|merge-backup-names|sync-names|cached-names" >&2
     exit 2
     ;;
 esac

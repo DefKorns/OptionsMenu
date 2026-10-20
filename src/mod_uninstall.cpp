@@ -13,6 +13,7 @@
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
+#include "framework/list_jump.h"
 #include "framework/utf8.h"
 #include "localization.h"
 
@@ -468,6 +469,7 @@ int main(int argc, char * argv[])
         return true;
     };
 
+    ListJumpInput jumpInput;
     for(;;)
     {
         SDL_Event e;
@@ -479,6 +481,7 @@ int main(int argc, char * argv[])
         if(sdl_context.powerwatch->buttonPress())
             return ExitLeaveMenu;
 
+        const ListJump jump = jumpInput.Poll(controller, SDL_GetTicks());
         if(controller.HeldRepeat(UP) && !mods.empty())
         {
             if(currentId > 0)
@@ -492,6 +495,13 @@ int main(int argc, char * argv[])
                 ++currentId;
             else if(listOffset+displayCount < modCount)
                 ++listOffset;
+        }
+        else if(jump != ListJump::None && !mods.empty())
+        {
+            std::vector<std::string> labels;
+            for(const Mod & mod : mods)
+                labels.push_back(mod.name);
+            ApplyListJump(jump, labels, 0, displayCount, listOffset, currentId);
         }
         else if(controller.GetButtonStatus(A) && !mods.empty())
         {

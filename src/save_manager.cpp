@@ -14,6 +14,7 @@
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
+#include "framework/list_jump.h"
 #include "framework/utf8.h"
 #include "localization.h"
 
@@ -32,7 +33,6 @@ namespace
     const std::string OptionsLocation = "/etc/options_menu/";
     const std::string ScriptLocation = OptionsLocation + "scripts/";
     const std::string SelectionFile = "/tmp/save_manager_selection";
-    const std::string HakchiRootsFile = "/tmp/save_manager_hakchi";
     const std::string RetroArchPrefix = "retroarch/";
 
     // narrower than the shared theme to fit the detail panels
@@ -184,7 +184,7 @@ namespace
         return textures;
     }
 
-    // entry<TAB>name lines from the last Hakchi scan
+    // entry<TAB>name lines from the name cache
     GameNames LoadGameNames()
     {
         GameNames names;
@@ -389,7 +389,7 @@ int main(int, char **)
                 return false;
             if(confirm && controller.PeekButtonStatus(START) && controller.PeekButtonStatus(SELECT))
             {
-                // still held on return; Select alone is the Hakchi names shortcut
+                // still held on return
                 controller.GetButtonStatus(START);
                 controller.GetButtonStatus(SELECT);
                 return true;
@@ -459,7 +459,6 @@ int main(int, char **)
         std::vector<Texture> noneHintLines = MakeLines(WrapToWidth(Translate("SAVE_MANAGER_NONE_HINT"), PanelFontSize, PanelInnerW), PanelFontSize, renderer, UiTheme::TextDim);
         std::vector<Texture> noteLines = NoteLines(list.noteKey);
         Badge actionPill = badges.MakePill("Start", "");
-        Badge namesPill = badges.MakePill("Select", Translate("HINT_GAME_NAMES"));
         GameNames gameNames = LoadGameNames();
 
         std::vector<SaveEntry> entries;
@@ -601,48 +600,21 @@ int main(int, char **)
             rightEdge = DrawBadge(badgeBack, rightEdge);
             if(markedCount > 0)
                 rightEdge = DrawBadge(actionPill, rightEdge);
-            rightEdge = DrawBadge(namesPill, rightEdge);
             DrawFooterDivider(rightEdge);
         };
 
-        // read-only: names from a portable Hakchi CE folder on USB
-        auto RefreshNamesFromHakchi = [&]()
+        auto Labels = [&]()
         {
-            ShowBusy(DrawScreen, "SAVE_MANAGER_HAKCHI_SEARCHING");
-            const std::vector<std::string> roots = ReadLines(OrphanSavesCommand("hakchi"));
-            if(roots.empty())
-            {
-                DropPendingInput();
-                RunDialog(DrawScreen, "SAVE_MANAGER_HAKCHI_NOT_FOUND", {}, "SAVE_MANAGER_HAKCHI_NOT_FOUND_NOTE", false);
-                return;
-            }
-
-            ShowBusy(DrawScreen, "SAVE_MANAGER_HAKCHI_SCANNING");
-            {
-                std::ofstream rootsFile(HakchiRootsFile);
-                for(const std::string & root : roots)
-                    rootsFile << root << "\n";
-            }
-            const std::vector<std::string> output = ReadLines(OrphanSavesCommand("names " + HakchiRootsFile));
-            std::remove(HakchiRootsFile.c_str());
-            DropPendingInput();
-            if(output.empty())
-            {
-                RunDialog(DrawScreen, "SAVE_MANAGER_HAKCHI_FAILED", {}, "", false);
-                return;
-            }
-
-            gameNames = LoadGameNames();
-            ApplyNames();
-            const int total = static_cast<int>(entries.size());
-            const int named = static_cast<int>(std::count_if(entries.begin(), entries.end(), [](const SaveEntry & entry) { return entry.named; }));
-            RunDialog(DrawScreen, "SAVE_MANAGER_HAKCHI_DONE",
-                      { Translate("SAVE_MANAGER_HAKCHI_GAMES") + ": " + output.back(),
-                        Translate("SAVE_MANAGER_HAKCHI_NAMED") + ": " + std::to_string(named) + " / " + std::to_string(total) },
-                      named < total ? "SAVE_MANAGER_HAKCHI_PARTIAL_NOTE" : "", false);
+            std::vector<std::string> labels;
+            for(const SaveEntry & entry : entries)
+                labels.push_back(entry.label);
+            return labels;
         };
+        ListJumpInput jumpInput;
 
         Load();
+        if(entries.empty())
+            return ExitBack;
         for(;;)
         {
             SDL_Event e;
@@ -654,6 +626,7 @@ int main(int, char **)
             if(sdl_context.powerwatch->buttonPress())
                 return ExitLeaveMenu;
 
+            const ListJump jump = jumpInput.Poll(controller, SDL_GetTicks());
             const int entryCount = static_cast<int>(entries.size());
             const int rowCount = entryCount + selectAllRows;
             if(controller.HeldRepeat(UP))
@@ -670,6 +643,8 @@ int main(int, char **)
                 else if(listOffset+displayCount < rowCount)
                     ++listOffset;
             }
+            else if(jump != ListJump::None)
+                ApplyListJump(jump, Labels(), selectAllRows, displayCount, listOffset, currentId);
             else if(controller.GetButtonStatus(A) && entryCount > 0)
             {
                 const int row = listOffset + currentId;
@@ -685,8 +660,6 @@ int main(int, char **)
             }
             else if(controller.GetButtonStatus(B))
                 return ExitBack;
-            else if((controller.GetButtonStatus(SELECT) || controller.GetButtonStatus(Y)) && !controller.PeekButtonStatus(START))
-                RefreshNamesFromHakchi();
             else if(controller.GetButtonStatus(START) && markedCount > 0)
             {
                 auto marked = Marked();
@@ -715,6 +688,9 @@ int main(int, char **)
                     Load();
                     if(fromBackup)
                         RunDialog(DrawScreen, ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED", {}, "", false);
+                    // an empty list would still show a checked "select all"
+                    if(entries.empty())
+                        return ExitBack;
                 }
             }
 

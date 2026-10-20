@@ -63,7 +63,7 @@ if (-not (Test-Library $HakchiPath)) {
     Stop-WithError 'Hakchi CE games not found. Put this script next to hakchi.exe, open Hakchi CE first, or pass --hakchi-path with the folder that has the games folders.'
 }
 
-# same rules as OrphanSaves.sh hakchiNames: code -> Name=, RetroArch content -> name of its game
+# same rules as OrphanSaves.sh gameNames: code -> Name=, RetroArch content -> name of its game
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $gameNames = New-Object 'System.Collections.Generic.Dictionary[string,string]'
 $seen = New-Object 'System.Collections.Generic.HashSet[string]'

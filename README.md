@@ -103,6 +103,8 @@ Needs a USB/SD drive with your saves on it. One screen lists the actions on the 
 | Clean Saves of Removed Games › | Lists the save folders of games that are no longer in any menu (all marked; **A** unmarks) and moves the marked ones to `/media/data/deleted_games_saves`. Menu folders (`CLV-S-*`) are never touched |
 | Restore Saves of Removed Games › | Lists what was moved aside; mark the ones you want back with **A** and press **Start**. A save already on the console is never overwritten |
 
+In the long lists (here and in the Module Uninstaller), **Left**/**Right** page up and down on a tap and walk the list letter by letter while held; **L**/**R** jump a letter at a time.
+
 #### Game names
 
 The two "Removed Games" lists show the names of the removed games instead of their codes (`CLV-H-ABCDE`). Every time the console starts, it remembers the names of the games installed at that moment in `game_names.txt` in your saves folder, and a name stays there after its game is removed. The backup keeps the file with your saves, and a restore adds its names without replacing newer ones. Saves without a known name keep showing their code. Getting the names never changes or moves a save.
@@ -118,7 +120,7 @@ Games removed before this version was installed were never seen on the console, 
 
 If Windows refuses to run scripts, use `powershell -ExecutionPolicy Bypass -File push_game_names.ps1 --ip 192.168.1.50`.
 
-The names it sends are added to the ones already on the console. If a portable Hakchi CE folder is on the USB drive itself, press **Select** (or **Y**) in either list to read the names from there instead.
+The names it sends are added to the ones already on the console.
 
 ### Advanced Options
 
