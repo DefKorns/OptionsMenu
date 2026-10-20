@@ -34,7 +34,7 @@ PNG_LIBS = -lpng
 LDFLAGS =
 VENDORED_LIBS =
 endif
-CXXFLAGS = -std=c++11 -Os $(SDL_CFLAGS) -DMOD_VERSION=\"v$(MOD_VER)\"
+CXXFLAGS = -std=c++14 -Os $(SDL_CFLAGS) -DMOD_VERSION=\"v$(MOD_VER)\"
 LDLIBS = $(SDL_LIBS)
 SOURCES = src/main.cpp src/back_stack.cpp src/command.cpp src/download_screen.cpp src/localization.cpp src/framework/badge.cpp src/framework/dialog.cpp src/framework/sdl_context.cpp src/framework/texture.cpp src/framework/controller.cpp src/framework/powerwatch.cpp src/framework/draw_helpers.cpp src/framework/utf8.cpp src/framework/font8x8_lookup.cpp src/framework/uitheme.cpp src/framework/list_jump.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
