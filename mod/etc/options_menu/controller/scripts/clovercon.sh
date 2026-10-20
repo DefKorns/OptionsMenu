@@ -25,11 +25,24 @@ home_disabled="0x7FFF"
 home_default="0x0024"
 home_prev_file="$mountpoint/etc/options_menu/controller/home_combination.prev"
 
+validName() {
+  case "$1" in
+  "" | *[!A-Za-z0-9_]*) return 1 ;;
+  esac
+}
+
+validValue() {
+  case "$1" in
+  "" | *[!A-Za-z0-9_.x-]*) return 1 ;;
+  esac
+}
+
 getCfg() {
   eval "echo \"\$cfg_clovercon_$1\""
 }
 
 apply() {
+  validName "$1" && validValue "$2" || return 1
   eval "cfg_clovercon_$1='$2'"
   save_config
   param_file="/sys/module/clovercon/parameters/$1"
@@ -44,6 +57,12 @@ homeEnabled() {
   current="$(getCfg home_combination)"
   [ -n "$current" ] && [ "$(printf '%d' "$current")" != "$(printf '%d' "$home_disabled")" ]
 }
+
+case "$1" in
+state | toggle | is | set)
+  validName "$2" || exit 1
+  ;;
+esac
 
 case "$1" in
 state)
