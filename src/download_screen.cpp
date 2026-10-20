@@ -235,7 +235,7 @@ bool RunDownloadScreen(const std::string & command, const std::string & heading,
                 percent = std::max(0, ProgressPercent(line));
                 detailText = Centered(line, DetailSize, UiTheme::TextDim, track.y + BarH + 12);
             }
-            else if(!IsBlank(line))
+            else if(!IsBlank(line) && line != "by: " + author)
             {
                 messages.push_back(line);
                 if(messages.size() > MaxMessages)
