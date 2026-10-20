@@ -126,6 +126,8 @@ Command::Command(std::ifstream & in)
             usbOnly = (value == "TRUE");
         else if(param.compare("CHILD")==0)
             child = (value == "TRUE");
+        else if(param.compare("ROW_ICON")==0)
+            rowIcon = value;
         else if(param.compare("PREVIEW_IMAGE")==0)
             previewImage = value;
         else if(param.compare("PREVIEW_IMAGE_X")==0)

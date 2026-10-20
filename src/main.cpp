@@ -303,6 +303,8 @@ int main(int argc, char * argv[])
         }
 
         c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, ToAbgr(UiTheme::Text), true);
+        if(!c.rowIcon.empty())
+            c.rowIconTexture = Texture(c.rowIcon, renderer, 0, 0);
     }
 
     const int modernRowPitch = std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize));
@@ -423,6 +425,13 @@ int main(int argc, char * argv[])
             rowSwitch.rect.x = UiTheme::SwitchRightX - UiTheme::SwitchW;
             rowSwitch.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - UiTheme::SwitchH) / 2;
             rowSwitch.Draw(renderer);
+        }
+        else if(rowCommand.rowIconTexture.texture)
+        {
+            Texture & icon = rowCommand.rowIconTexture;
+            icon.rect.x = UiTheme::RowControlRightX - icon.rect.w;
+            icon.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - icon.rect.h) / 2;
+            icon.Draw(renderer);
         }
         else if(rowCommand.hasSubmenu)
         {

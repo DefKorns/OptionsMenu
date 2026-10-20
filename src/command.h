@@ -46,6 +46,8 @@ struct Command
     bool hasSubmenu = false;
     Texture texture;
     std::string previewImage;
+    std::string rowIcon;
+    Texture rowIconTexture;
     int previewImageX = 920;
     int previewImageY = 300;
     int previewImageWidth = -1;
