@@ -499,8 +499,8 @@ int main(int argc, char * argv[])
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
         if(!Confirm(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey)))
             return false;
-        system(commands[currentCommandId].deleteCommand.c_str());
         lifecycle.Decide(ExitAction::Leave);
+        system(commands[currentCommandId].deleteCommand.c_str());
         return true;
     };
 
@@ -546,8 +546,8 @@ int main(int argc, char * argv[])
             }
             else if(confirmed)
             {
-                system(commands[currentCommandId].command.c_str());
                 lifecycle.Decide(commands[currentCommandId].restartUI ? ExitAction::Resume : ExitAction::Leave);
+                system(commands[currentCommandId].command.c_str());
                 break;
             }
         }
@@ -574,9 +574,9 @@ int main(int argc, char * argv[])
         {
             if(bWasHeld && !bHoldFired)
             {
+                lifecycle.Decide(backCommand.empty() ? ExitAction::Resume : ExitAction::Leave);
                 if(!backCommand.empty())
                     system(backCommand.c_str());
-                lifecycle.Decide(backCommand.empty() ? ExitAction::Resume : ExitAction::Leave);
                 break;
             }
             bHoldFired = false;

@@ -15,6 +15,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+extern char ** environ;
+
 enum class ExitAction { Resume, Leave };
 
 // Resume runs from the destructor, after main()'s locals (SDL) are released.
@@ -30,6 +32,7 @@ public:
         if(action == ExitAction::Resume && !resumed && !script.empty())
         {
             resumed = true;
+            State().resume = 0;
             std::system(("/bin/sh " + script).c_str());
         }
     }
@@ -37,7 +40,7 @@ public:
     void SetResumeScript(std::string path)
     {
         script = std::move(path);
-        State().script = script.c_str();
+        State().argv[1] = script.c_str();
     }
 
     void Decide(ExitAction decision)
@@ -46,7 +49,7 @@ public:
         State().resume = decision == ExitAction::Resume ? 1 : 0;
     }
 
-    // handler may only call async-signal-safe functions
+    // handler may only call async-signal-safe functions; vfork skips the atfork handlers
     void InstallSignalHandlers()
     {
         struct sigaction sa;
@@ -61,12 +64,12 @@ private:
     static void OnTerminate(int sig)
     {
         SignalState & state = State();
-        if(!state.fired && state.resume && state.script)
+        if(!state.fired && state.resume && state.argv[1])
         {
             state.fired = 1;
-            if(fork() == 0)
+            if(vfork() == 0)
             {
-                execl("/bin/sh", "sh", state.script, static_cast<char *>(nullptr));
+                execve("/bin/sh", const_cast<char * const *>(state.argv), environ);
                 _exit(127);
             }
         }
@@ -75,7 +78,7 @@ private:
 
     struct SignalState
     {
-        const char * script = nullptr;
+        const char * argv[3] = { "sh", nullptr, nullptr };
         volatile sig_atomic_t resume = 1;
         volatile sig_atomic_t fired = 0;
     };
