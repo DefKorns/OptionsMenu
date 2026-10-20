@@ -15,12 +15,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// Resume: hand the screen back to the home menu. Leave: something else
-// (a relaunched menu, a delete command) already owns it.
 enum class ExitAction { Resume, Leave };
 
-// Runs the resume script at most once, from the destructor so it happens
-// after main()'s locals (SDL) are released. Undecided means Resume.
+// Resume runs from the destructor, after main()'s locals (SDL) are released.
 class ApplicationLifecycle
 {
 public:
@@ -49,8 +46,7 @@ public:
         State().resume = decision == ExitAction::Resume ? 1 : 0;
     }
 
-    // SIGTERM/SIGHUP (killall, init stop): resume the UI, then die. Only
-    // async-signal-safe calls run in the handler; SIGKILL and crashes stay uncovered.
+    // handler may only call async-signal-safe functions
     void InstallSignalHandlers()
     {
         struct sigaction sa;
