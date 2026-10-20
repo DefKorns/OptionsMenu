@@ -13,3 +13,4 @@ mod/etc/options_menu/save_manager/save_manager
 mod/etc/options_menu/scripts/ChangeCombo
 mod/etc/options_menu/scripts/gen_splash
 mod/etc/options_menu/scripts/downloader
+mod/etc/options_menu/fonts/NotoSansJP-Latin-subset.ttf

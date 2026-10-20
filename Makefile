@@ -46,6 +46,10 @@ ifndef FIX_LIBSTDCXX
 MOD_DEPS += no-private-libstdcxx
 endif
 
+# built into the toolchain image from Noto Sans JP (see its README), not tracked
+FONT_LATIN := mod/etc/options_menu/fonts/NotoSansJP-Latin-subset.ttf
+MOD_DEPS += $(FONT_LATIN)
+
 all: hmod
 
 compile: $(BINARIES) $(VENDORED_LIBS)
@@ -67,6 +71,10 @@ mod/etc/options_menu/options: $(OBJECTS)
 
 mod/etc/options_menu/lib:
 	mkdir -p $@
+
+# always copied, so a new image can't leave a stale font behind
+$(FONT_LATIN): FORCE
+	cp /opt/options-menu/fonts/NotoSansJP-Latin-subset.ttf $@
 
 # built from source in the toolchain image, copied in each build
 mod/etc/options_menu/lib/libSDL2_ttf-2.0.so.0: | mod/etc/options_menu/lib

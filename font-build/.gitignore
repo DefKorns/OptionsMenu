@@ -1,8 +1,0 @@
-# regenerable font binaries
-*.ttf
-
-# 512_8 reference dump, already mined into font8x8_cyrillic.h
-512_8_*
-
-# console-extracted, not ours to redistribute
-lib-staging/
