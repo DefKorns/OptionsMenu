@@ -14,6 +14,7 @@
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/utf8.h"
+#include "application_lifecycle.h"
 #include "back_stack.h"
 #include "command.h"
 #include "download_screen.h"
@@ -51,22 +52,13 @@ std::string CollapseSlashes(const std::string & path)
     return result;
 }
 
-static struct ExitManager
-{
-    std::string exitCommand;
-    bool runExitCommand = true;
-    ~ExitManager()
-    {
-        if(runExitCommand)
-            system(exitCommand.c_str());
-    }
-} _exitManager;
+static ApplicationLifecycle lifecycle;
 
 int main(int argc, char * argv[])
 {
     std::string optionsLocation(argv[0]);
     optionsLocation = CollapseSlashes(optionsLocation.substr(0, optionsLocation.find_last_of('/')+1));
-    _exitManager.exitCommand = "/bin/sh " + optionsLocation + "/scripts/ResumeUI.sh";
+    lifecycle.SetResumeCommand("/bin/sh " + optionsLocation + "/scripts/ResumeUI.sh");
     std::string commandLocation(optionsLocation + "commands/");
     std::string scriptLocation(optionsLocation + "scripts/");
 
@@ -169,12 +161,14 @@ int main(int argc, char * argv[])
     else
     {
         std::cerr << "Cannot open input folder.\n";
+        lifecycle.Decide(ExitAction::Resume);
         exit(1);
     }
 
     if(commands.empty())
     {
         std::cerr << "No usable commands in " << commandLocation << "\n";
+        lifecycle.Decide(ExitAction::Resume);
         exit(1);
     }
 
@@ -505,7 +499,7 @@ int main(int argc, char * argv[])
         if(!Confirm(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey)))
             return false;
         system(commands[currentCommandId].deleteCommand.c_str());
-        _exitManager.runExitCommand = false;
+        lifecycle.Decide(ExitAction::Leave);
         return true;
     };
 
@@ -520,12 +514,14 @@ int main(int argc, char * argv[])
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
+                lifecycle.Decide(ExitAction::Resume);
                 return 0;
             }
         }
 
         if(sdl_context.powerwatch->buttonPress())
         {
+            lifecycle.Decide(ExitAction::Resume);
             break;
         }
         if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
@@ -550,7 +546,7 @@ int main(int argc, char * argv[])
             else if(confirmed)
             {
                 system(commands[currentCommandId].command.c_str());
-                _exitManager.runExitCommand = commands[currentCommandId].restartUI;
+                lifecycle.Decide(commands[currentCommandId].restartUI ? ExitAction::Resume : ExitAction::Leave);
                 break;
             }
         }
@@ -579,7 +575,7 @@ int main(int argc, char * argv[])
             {
                 if(!backCommand.empty())
                     system(backCommand.c_str());
-                _exitManager.runExitCommand = backCommand.empty();
+                lifecycle.Decide(backCommand.empty() ? ExitAction::Resume : ExitAction::Leave);
                 break;
             }
             bHoldFired = false;
