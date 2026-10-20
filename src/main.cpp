@@ -58,7 +58,8 @@ int main(int argc, char * argv[])
 {
     std::string optionsLocation(argv[0]);
     optionsLocation = CollapseSlashes(optionsLocation.substr(0, optionsLocation.find_last_of('/')+1));
-    lifecycle.SetResumeCommand("/bin/sh " + optionsLocation + "/scripts/ResumeUI.sh");
+    lifecycle.SetResumeScript(optionsLocation + "/scripts/ResumeUI.sh");
+    lifecycle.InstallSignalHandlers();
     std::string commandLocation(optionsLocation + "commands/");
     std::string scriptLocation(optionsLocation + "scripts/");
 

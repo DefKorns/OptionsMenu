@@ -8,15 +8,18 @@
 #ifndef APPLICATION_LIFECYCLE_H_
 #define APPLICATION_LIFECYCLE_H_
 
+#include <csignal>
 #include <cstdlib>
 #include <string>
 #include <utility>
+#include <sys/types.h>
+#include <unistd.h>
 
 // Resume: hand the screen back to the home menu. Leave: something else
 // (a relaunched menu, a delete command) already owns it.
 enum class ExitAction { Resume, Leave };
 
-// Runs the resume command at most once, from the destructor so it happens
+// Runs the resume script at most once, from the destructor so it happens
 // after main()'s locals (SDL) are released. Undecided means Resume.
 class ApplicationLifecycle
 {
@@ -27,18 +30,67 @@ public:
 
     ~ApplicationLifecycle()
     {
-        if(action == ExitAction::Resume && !resumed && !resumeCommand.empty())
+        if(action == ExitAction::Resume && !resumed && !script.empty())
         {
             resumed = true;
-            std::system(resumeCommand.c_str());
+            std::system(("/bin/sh " + script).c_str());
         }
     }
 
-    void SetResumeCommand(std::string command) { resumeCommand = std::move(command); }
-    void Decide(ExitAction decision) { action = decision; }
+    void SetResumeScript(std::string path)
+    {
+        script = std::move(path);
+        State().script = script.c_str();
+    }
+
+    void Decide(ExitAction decision)
+    {
+        action = decision;
+        State().resume = decision == ExitAction::Resume ? 1 : 0;
+    }
+
+    // SIGTERM/SIGHUP (killall, init stop): resume the UI, then die. Only
+    // async-signal-safe calls run in the handler; SIGKILL and crashes stay uncovered.
+    void InstallSignalHandlers()
+    {
+        struct sigaction sa;
+        sa.sa_handler = OnTerminate;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(SIGTERM, &sa, nullptr);
+        sigaction(SIGHUP, &sa, nullptr);
+    }
 
 private:
-    std::string resumeCommand;
+    static void OnTerminate(int sig)
+    {
+        SignalState & state = State();
+        if(!state.fired && state.resume && state.script)
+        {
+            state.fired = 1;
+            if(fork() == 0)
+            {
+                execl("/bin/sh", "sh", state.script, static_cast<char *>(nullptr));
+                _exit(127);
+            }
+        }
+        _exit(128 + sig);
+    }
+
+    struct SignalState
+    {
+        const char * script = nullptr;
+        volatile sig_atomic_t resume = 1;
+        volatile sig_atomic_t fired = 0;
+    };
+
+    static SignalState & State()
+    {
+        static SignalState state;
+        return state;
+    }
+
+    std::string script;
     ExitAction action = ExitAction::Resume;
     bool resumed = false;
 };
