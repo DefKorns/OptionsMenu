@@ -14,6 +14,8 @@
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/utf8.h"
+#include "application_lifecycle.h"
+#include "back_stack.h"
 #include "command.h"
 #include "download_screen.h"
 #include "localization.h"
@@ -50,22 +52,14 @@ std::string CollapseSlashes(const std::string & path)
     return result;
 }
 
-static struct ExitManager
-{
-    std::string exitCommand;
-    bool runExitCommand = true;
-    ~ExitManager()
-    {
-        if(runExitCommand)
-            system(exitCommand.c_str());
-    }
-} _exitManager;
+static ApplicationLifecycle lifecycle;
 
 int main(int argc, char * argv[])
 {
     std::string optionsLocation(argv[0]);
     optionsLocation = CollapseSlashes(optionsLocation.substr(0, optionsLocation.find_last_of('/')+1));
-    _exitManager.exitCommand = "/bin/sh " + optionsLocation + "/scripts/ResumeUI.sh";
+    lifecycle.SetResumeScript(optionsLocation + "/scripts/ResumeUI.sh");
+    lifecycle.InstallSignalHandlers();
     std::string commandLocation(optionsLocation + "commands/");
     std::string scriptLocation(optionsLocation + "scripts/");
 
@@ -113,12 +107,9 @@ int main(int argc, char * argv[])
     commandLocation = CollapseSlashes(commandLocation);
     scriptLocation = CollapseSlashes(scriptLocation);
 
-    std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey + (selectedMarker.empty() ? "" : "," + selectedMarker);
-    size_t lastSep = backStack.find_last_of(';');
-    std::string lastEntry = backStack.empty() ? "" : (lastSep == std::string::npos ? backStack : backStack.substr(lastSep + 1));
-    if(lastEntry == myEntry)
-        backStack = (lastSep == std::string::npos) ? "" : backStack.substr(0, lastSep);
-    setenv("OM_BACK_STACK", (backStack.empty() ? myEntry : backStack + ";" + myEntry).c_str(), 1);
+    const std::string myEntry = back_stack::MakeEntry(commandLocation, scriptLocation, titleKey, selectedMarker);
+    backStack = back_stack::PopIfLast(backStack, myEntry);
+    setenv("OM_BACK_STACK", back_stack::Push(backStack, myEntry).c_str(), 1);
 
     auto ExpandTemplates = [&](std::string & cmd)
     {
@@ -171,51 +162,18 @@ int main(int argc, char * argv[])
     else
     {
         std::cerr << "Cannot open input folder.\n";
+        lifecycle.Decide(ExitAction::Resume);
         exit(1);
     }
 
     if(commands.empty())
     {
         std::cerr << "No usable commands in " << commandLocation << "\n";
+        lifecycle.Decide(ExitAction::Resume);
         exit(1);
     }
 
-    std::string backCommand;
-    if(!backStack.empty())
-    {
-        std::vector<std::string> entries;
-        for(size_t start = 0; start < backStack.size();)
-        {
-            size_t sep = backStack.find(';', start);
-            if(sep == std::string::npos) sep = backStack.size();
-            entries.push_back(backStack.substr(start, sep-start));
-            start = sep+1;
-        }
-        std::string lastEntry = entries.back();
-        entries.pop_back();
-        std::string remainingStack;
-        for(size_t i = 0; i < entries.size(); ++i)
-        {
-            if(i) remainingStack += ";";
-            remainingStack += entries[i];
-        }
-
-        const size_t c1 = lastEntry.find(',');
-        const size_t c2 = c1 == std::string::npos ? c1 : lastEntry.find(',', c1+1);
-        if(c2 != std::string::npos)
-        {
-            std::string backPath = lastEntry.substr(0, c1);
-            std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
-            const size_t c3 = lastEntry.find(',', c2+1);
-            std::string backTitleKey = lastEntry.substr(c2+1, c3 == std::string::npos ? std::string::npos : c3-c2-1);
-            std::string backMarker = c3 == std::string::npos ? "" : lastEntry.substr(c3+1);
-
-            backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
-                + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
-                + " --title \"" + backTitleKey + "\""
-                + (backMarker.empty() ? "" : " --selectedMarker \"" + backMarker + "\"") + " &";
-        }
-    }
+    const std::string backCommand = back_stack::BackCommand(backStack, optionsLocation);
 
     int currentCommandId = 0;
 
@@ -541,8 +499,8 @@ int main(int argc, char * argv[])
         const std::string & confirmKey = commands[currentCommandId].deleteConfirmKey;
         if(!Confirm(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey)))
             return false;
+        lifecycle.Decide(ExitAction::Leave);
         system(commands[currentCommandId].deleteCommand.c_str());
-        _exitManager.runExitCommand = false;
         return true;
     };
 
@@ -557,12 +515,14 @@ int main(int argc, char * argv[])
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
+                lifecycle.Decide(ExitAction::Resume);
                 return 0;
             }
         }
 
         if(sdl_context.powerwatch->buttonPress())
         {
+            lifecycle.Decide(ExitAction::Resume);
             break;
         }
         if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
@@ -586,8 +546,8 @@ int main(int argc, char * argv[])
             }
             else if(confirmed)
             {
+                lifecycle.Decide(commands[currentCommandId].restartUI ? ExitAction::Resume : ExitAction::Leave);
                 system(commands[currentCommandId].command.c_str());
-                _exitManager.runExitCommand = commands[currentCommandId].restartUI;
                 break;
             }
         }
@@ -614,9 +574,9 @@ int main(int argc, char * argv[])
         {
             if(bWasHeld && !bHoldFired)
             {
+                lifecycle.Decide(backCommand.empty() ? ExitAction::Resume : ExitAction::Leave);
                 if(!backCommand.empty())
                     system(backCommand.c_str());
-                _exitManager.runExitCommand = backCommand.empty();
                 break;
             }
             bHoldFired = false;

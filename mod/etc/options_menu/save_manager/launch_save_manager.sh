@@ -29,11 +29,14 @@ remaining="${OM_BACK_STACK%;*}"
 command_path="${entry%%,*}"
 rest="${entry#*,}"
 script_path="${rest%%,*}"
-title_key="${rest#*,}"
+title_rest="${rest#*,}"
+title_key="${title_rest%%,*}"
+marker=""
+[ "$title_rest" != "$title_key" ] && marker="${title_rest#*,}"
 
 usleep 50000
-if [ -n "$script_path" ]; then
-  OM_BACK_STACK="$remaining" "$options_path/options" --commandPath "$command_path" --scriptPath "$script_path" --title "$title_key"
-else
-  OM_BACK_STACK="$remaining" "$options_path/options" --commandPath "$command_path" --title "$title_key"
-fi
+set -- --commandPath "$command_path"
+[ -n "$script_path" ] && set -- "$@" --scriptPath "$script_path"
+set -- "$@" --title "$title_key"
+[ -n "$marker" ] && set -- "$@" --selectedMarker "$marker"
+OM_BACK_STACK="$remaining" "$options_path/options" "$@"
