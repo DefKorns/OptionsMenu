@@ -26,5 +26,5 @@ fi
 if [ "$ok" = 1 ]; then
   echo "RetroArch load screen toggle complete!"
 else
-  echo "Failed to locate load screens... Please ensure you are using the latest RetroArch 'Neo' Build!"
+  echo "Failed to locate load screens - this RetroArch build doesn't support this option."
 fi

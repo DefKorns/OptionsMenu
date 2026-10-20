@@ -9,6 +9,7 @@
 
 #include "command.h"
 #include "framework/controller.h"
+#include "framework/draw_helpers.h"
 #include "localization.h"
 
 #include <cctype>
@@ -16,8 +17,62 @@
 #include <list>
 #include <vector>
 #include <poll.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-// std::stoi throws on non-numeric input; avoid crashing on a bad command file
+struct CommandProcess
+{
+    FILE * out;
+    pid_t pid;
+};
+
+static CommandProcess StartCommand(const std::string & command)
+{
+    int fds[2];
+    if(pipe(fds) != 0)
+        return { nullptr, -1 };
+    const pid_t pid = fork();
+    if(pid < 0)
+    {
+        close(fds[0]);
+        close(fds[1]);
+        return { nullptr, -1 };
+    }
+    if(pid == 0)
+    {
+        setpgid(0, 0);
+        dup2(fds[1], STDOUT_FILENO);
+        close(fds[0]);
+        close(fds[1]);
+        execl("/bin/sh", "sh", "-c", command.c_str(), static_cast<char *>(nullptr));
+        _exit(127);
+    }
+    setpgid(pid, pid);
+    close(fds[1]);
+    FILE * out = fdopen(fds[0], "r");
+    if(!out)
+    {
+        close(fds[0]);
+        kill(-pid, SIGKILL);
+        waitpid(pid, nullptr, 0);
+        return { nullptr, -1 };
+    }
+    return { out, pid };
+}
+
+static void FinishCommand(const CommandProcess & process, bool abort)
+{
+    if(process.pid <= 0)
+        return;
+    if(abort)
+        kill(-process.pid, SIGTERM);
+    if(process.out)
+        fclose(process.out);
+    waitpid(process.pid, nullptr, 0);
+}
+
 static int SafeStoi(const std::string & value, int fallback = 0)
 {
     try
@@ -58,6 +113,10 @@ Command::Command(std::ifstream & in)
             deleteCommand = value;
         else if(param.compare("DELETE_CONFIRM_KEY")==0)
             deleteConfirmKey = value;
+        else if(param.compare("CONFIRM_KEY")==0)
+            confirmKey = value;
+        else if(param.compare("ENABLE_IF")==0)
+            enableIfCommand = value;
         else if(param.compare("STATE_STR")==0)
         {
             stateCommand = value;
@@ -67,6 +126,8 @@ Command::Command(std::ifstream & in)
             usbOnly = (value == "TRUE");
         else if(param.compare("CHILD")==0)
             child = (value == "TRUE");
+        else if(param.compare("ROW_ICON")==0)
+            rowIcon = value;
         else if(param.compare("PREVIEW_IMAGE")==0)
             previewImage = value;
         else if(param.compare("PREVIEW_IMAGE_X")==0)
@@ -77,35 +138,59 @@ Command::Command(std::ifstream & in)
             previewImageWidth = SafeStoi(value, -1);
         else if(param.compare("PREVIEW_IMAGE_HEIGHT")==0)
             previewImageHeight = SafeStoi(value, -1);
+        else if(param.compare("PREVIEW_NEAREST")==0)
+            previewNearest = (value == "TRUE");
+        else if(param.compare("PREVIEW_SQUARE")==0)
+            previewSquare = (value == "TRUE");
+        else if(param.compare("PREVIEW_GRID_COLS")==0)
+            previewGridCols = SafeStoi(value, -1);
+        else if(param.compare("PREVIEW_FIT_CONTAIN")==0)
+            previewFitContain = (value == "TRUE");
+        else if(param.compare("PREVIEW_HIDE_LABEL")==0)
+            previewHideLabel = (value == "TRUE");
+        else if(param.compare("SUBMENU")==0)
+            hasSubmenu = (value == "TRUE");
     }
+    if(isToggle)
+        hasSubmenu = false;
     in.close();
 }
 
-void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Sprite & menuL, Sprite & menuU, bool modernUI, const NineSlice & frame, Uint8 bgR, Uint8 bgG, Uint8 bgB) const
+void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Color bg) const
 {
     std::list<Texture> textList;
-    FILE* pipe = popen(command.c_str(), "r");
-    if(pipe)
+    const CommandProcess process = StartCommand(command);
+    FILE * out = process.out;
+    if(out)
     {
         auto renderer = sdl_context.renderer;
-        if(modernUI)
-            SDL_SetRenderDrawColor(renderer, UiTheme::BgR, UiTheme::BgG, UiTheme::BgB, SDL_ALPHA_OPAQUE);
-        else
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SetDrawColor(renderer, UiTheme::Bg);
         char buffer[128] = {0};
-        const int textX = modernUI ? UiTheme::FrameRect.x + UiTheme::FrameInset : 30;
-        const int textFirstY = modernUI ? UiTheme::HeaderDividerY + 24 : 100;
+        const int textX = UiTheme::FrameRect.x + UiTheme::FrameInset;
+        const int textFirstY = UiTheme::HeaderDividerY + 24;
 
-        auto render = [&](Texture * closeText = nullptr)
+        Texture exitLetter("B", 16, renderer, 0, 0, false, ToAbgr(UiTheme::BadgeLetter), true);
+        Texture exitLabel(Translate("EXIT"), 16, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
+        int badgeGroupW = UiTheme::BadgeOuterSize + UiTheme::BadgeLabelGap + exitLabel.rect.w;
+        SDL_Rect exitBadge{ UiTheme::BadgeClusterRightX - badgeGroupW, UiTheme::BadgeBandY, UiTheme::BadgeOuterSize, UiTheme::BadgeOuterSize };
+        exitLetter.rect.x = exitBadge.x + (exitBadge.w - exitLetter.rect.w) / 2;
+        exitLetter.rect.y = exitBadge.y + (exitBadge.h - exitLetter.rect.h) / 2;
+        exitLabel.rect.x = exitBadge.x + exitBadge.w + UiTheme::BadgeLabelGap;
+        exitLabel.rect.y = exitBadge.y + (exitBadge.h - exitLabel.rect.h) / 2;
+
+        auto render = [&]()
         {
             sdl_context.StartFrame();
-            if(modernUI)
-                frame.Draw(renderer, UiTheme::FrameRect);
-            else
-            {
-                menuU.Draw(renderer);
-                menuL.Draw(renderer);
-            }
+            DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
+            chrome.gearIcon.Draw(renderer);
+            chrome.appTitleText.Draw(renderer);
+            chrome.appVersionText.Draw(renderer);
+            DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
+            DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
+            chrome.creditText.Draw(renderer);
+            DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB, exitBadge.w/2);
+            exitLetter.Draw(renderer);
+            exitLabel.Draw(renderer);
             int y = textFirstY;
             for(auto & t : textList)
             {
@@ -113,23 +198,33 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
                 t.Draw(renderer);
                 y+=10;
             }
-            if(closeText)
-                closeText->Draw(renderer);
+            SetDrawColor(renderer, UiTheme::Bg); // last color call, or it leaks into the next clear
             sdl_context.EndFrame();
         };
 
-        int fd = fileno(pipe);
-        while(!feof(pipe))
+        int fd = fileno(out);
+        fcntl(fd, F_SETFL, O_NONBLOCK);
+        const int PollTimeoutMs = 20;
+        bool aborted = false;
+        bool lastWasProgress = false;
+        while(!feof(out))
         {
-            // poll with a short timeout instead of blocking fgets, so a script
-            // that stalls without output doesn't also freeze input/rendering
+            // stdio can hold lines poll() never sees, so fgets drains every pass
             struct pollfd pfd{fd, POLLIN, 0};
-            if(poll(&pfd, 1, 100) > 0 && fgets(buffer, 128, pipe) != nullptr)
+            poll(&pfd, 1, PollTimeoutMs);
+            while(fgets(buffer, 128, out) != nullptr)
             {
                 std::string sBuffer(buffer);
                 int pos = sBuffer.find('\n');
                 if(pos > 0)
                     sBuffer[pos] = '\0';
+                // a leading \r rewrites the previous progress line in place
+                const bool isProgress = !sBuffer.empty() && sBuffer[0] == '\r';
+                if(isProgress)
+                    sBuffer.erase(0, 1);
+                if(isProgress && lastWasProgress && !textList.empty())
+                    textList.pop_back();
+                lastWasProgress = isProgress;
                 textList.push_back(Texture(sBuffer, 8, renderer, textX));
 
                 if(textList.size() > 40)
@@ -137,22 +232,36 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Spr
                     textList.erase(textList.begin());
                 }
             }
+            if(!feof(out))
+                clearerr(out);
 
-            controller->Update();
-            if(!ignoreInterrupt && controller->GetButtonStatus(B))
-                break;
+            // ignoreInterrupt commands read the controller themselves
+            if(!ignoreInterrupt)
+            {
+                controller->Update();
+                if(controller->GetButtonStatus(B))
+                {
+                    aborted = true;
+                    break;
+                }
+            }
 
-            render();
+            if(!textList.empty())
+                render();
         }
-        pclose(pipe);
-        Texture closeText(Translate("PRESS_B_EXIT"), 12, renderer, textX, modernUI ? UiTheme::CreditY : 610);
+        FinishCommand(process, aborted);
 
+        if(textList.empty() || aborted)
+        {
+            SetDrawColor(renderer, bg);
+            return;
+        }
         while (!controller->GetButtonStatus(B))
         {
             controller->Update();
-            render(&closeText);
+            render();
         }
-        SDL_SetRenderDrawColor(renderer, bgR, bgG, bgB, 0xFF);
+        SetDrawColor(renderer, bg);
     }
 }
 
@@ -168,7 +277,6 @@ void Command::UpdateState()
 
     char buffer[64] = {0};
     std::string result;
-    // state scripts are expected to be near-instant; don't let a stuck one block menu load
     struct pollfd pfd{fileno(pipe), POLLIN, 0};
     if(poll(&pfd, 1, 1000) > 0 && fgets(buffer, sizeof(buffer), pipe))
         result = buffer;

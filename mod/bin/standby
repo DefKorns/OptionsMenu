@@ -3,7 +3,7 @@
 source /etc/preinit
 script_init
 
-Hibernate()
+hibernate()
 {
   xz -dc "$rootfs/etc/hibernate_mod/hibernating.png.xz" > /dev/fb0
   echo "Initiating shutdown followed by hibernate mode..."
@@ -13,7 +13,7 @@ Hibernate()
   echo "Hibernation mode active! Awaiting input..."
 }
 
-Standby()
+standby()
 {
   xz -dc "$rootfs/etc/hibernate_mod/hibernating.png.xz" > /dev/fb0
   /etc/init.d/S8103OptionsMenu stop
@@ -22,51 +22,51 @@ Standby()
   killall udevd
   modprobe -r clvcon
   killall -9 clover-mcp
-  Uikill TERM
+  uiKill TERM
   echo 0 > /sys/devices/virtual/disp/disp/attr/lcd
   [ -b '/dev/sda1' ] && umount /dev/sda1
   echo "Initialising standby mode..."
   #echo "Core Temperature at the time of standby: $(hakchi hwmon)c"
-  echo "Standby mode active! Awaiting input..."
+  echo "standby mode active! Awaiting input..."
 }
 
 #UI Commands from latest hakchi version
-Uilist(){
+uiList(){
   lsof -n | grep -F "/dev/fb0" | grep -v "standby" | grep -v "busybox" | awk '{print $1}' | sort -u
 }
 
-Uikill(){
+uiKill(){
   [ -z "$1" ] && return 1
-  Uilist | xargs -r kill -s "$1"
+  uiList | xargs -r kill -s "$1"
 }
 
-DisplayMenu()
+displayMenu()
 {
-  Uikill STOP
+  uiKill STOP
   #xz -dc "$rootfs/etc/hibernate_mod/1.png.xz" > /dev/fb0
 }
 
-Resume()
+resume()
 {
   rm -f /tmp/power_menu_screen
-  Uikill CONT
+  uiKill CONT
 }
 
-HibernateReboot()
+hibernateReboot()
 {
   echo "Shutting down console out from hibernation mode..."
-  Resume
+  resume
   sync
   reboot
 }
 
-ReloadImagePayload()
+reloadImagePayload()
 {
-  payloadCount=$(find "$rootfs/etc/hibernate_mod/" -type f -name *.png.xz | wc -l) 
-  #echo $payloadCount
-  payloadCount=$(($payloadCount-1)) #Deduct 1 to account for the hibernate.png.xz
-  #echo $payloadCount  
-  if [ $payloadCount = 1 ]; then #lite version in play...
+  payload_count=$(find "$rootfs/etc/hibernate_mod/" -type f -name *.png.xz | wc -l) 
+  #echo $payload_count
+  payload_count=$(($payload_count-1)) #Deduct 1 to account for the hibernate.png.xz
+  #echo $payload_count  
+  if [ $payload_count = 1 ]; then #lite version in play...
     #echo "Lite version in play"
     if [ ! -f /tmp/power_menu_screen ]; then
       #echo "File doesn't exist"
@@ -74,14 +74,14 @@ ReloadImagePayload()
     fi
   else
     #echo "Deluxe version in play"
-    DIFF=$(($payloadCount-1+1))
+    image_range=$(($payload_count-1+1))
     RANDOM=$$
     
-    selectedImage="$rootfs/etc/hibernate_mod/"$(($(($RANDOM%$DIFF))+1))".png.xz"
-    #echo $selectedImage
+    selected_image="$rootfs/etc/hibernate_mod/"$(($(($RANDOM%$image_range))+1))".png.xz"
+    #echo $selected_image
     rm -f /tmp/power_menu_screen #Just incase
     
-    xz -dc $selectedImage > /tmp/power_menu_screen
+    xz -dc $selected_image > /tmp/power_menu_screen
   fi
 }
 

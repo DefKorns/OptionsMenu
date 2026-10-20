@@ -19,21 +19,21 @@
 source $mountpoint/etc/options_menu/scripts/om_functions
 script_init
 
-omNetwork="$optionsMenu/network"
-omNetworkCmds="$omNetwork/commands"
-omNetworkScripts="$omNetwork/scripts"
-omWifiRestore="$omNetwork/restore"
-omWifiRestoreCmds="$omWifiRestore/commands"
-omWifiRestoreScripts="$omWifiRestore/scripts"
+om_network="$options_menu/network"
+om_network_cmds="$om_network/commands"
+om_network_scripts="$om_network/scripts"
+om_wifi_restore="$om_network/restore"
+om_wifi_restore_cmds="$om_wifi_restore/commands"
+om_wifi_restore_scripts="$om_wifi_restore/scripts"
 
 usb_backup="/media/data/wifi_backup"
 nand_backup="$rootfs/etc/wifi_backup"
 wpa_supplicant="/etc/wpa_supplicant"
 
-disableRestoreUSB="$omNetworkCmds/_RestoreUsb"
-disableRestoreNAND="$omNetworkCmds/_RestoreNand"
-enableRestoreUSB="$omNetworkCmds/c0060_RestoreUsb"
-enableRestoreNAND="$omNetworkCmds/c0050_RestoreNand"
+disable_restore_usb="$om_network_cmds/_RestoreUsb"
+disable_restore_nand="$om_network_cmds/_RestoreNand"
+enable_restore_usb="$om_network_cmds/c0060_RestoreUsb"
+enable_restore_nand="$om_network_cmds/c0050_RestoreNand"
 
 backup_path="/media/data/wifi_backup"
-dst="usb"
+backup_dest="usb"
