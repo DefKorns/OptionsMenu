@@ -14,6 +14,7 @@
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/utf8.h"
+#include "back_stack.h"
 #include "command.h"
 #include "download_screen.h"
 #include "localization.h"
@@ -113,12 +114,9 @@ int main(int argc, char * argv[])
     commandLocation = CollapseSlashes(commandLocation);
     scriptLocation = CollapseSlashes(scriptLocation);
 
-    std::string myEntry = commandLocation + "," + scriptLocation + "," + titleKey + (selectedMarker.empty() ? "" : "," + selectedMarker);
-    size_t lastSep = backStack.find_last_of(';');
-    std::string lastEntry = backStack.empty() ? "" : (lastSep == std::string::npos ? backStack : backStack.substr(lastSep + 1));
-    if(lastEntry == myEntry)
-        backStack = (lastSep == std::string::npos) ? "" : backStack.substr(0, lastSep);
-    setenv("OM_BACK_STACK", (backStack.empty() ? myEntry : backStack + ";" + myEntry).c_str(), 1);
+    const std::string myEntry = back_stack::MakeEntry(commandLocation, scriptLocation, titleKey, selectedMarker);
+    backStack = back_stack::PopIfLast(backStack, myEntry);
+    setenv("OM_BACK_STACK", back_stack::Push(backStack, myEntry).c_str(), 1);
 
     auto ExpandTemplates = [&](std::string & cmd)
     {
@@ -180,42 +178,7 @@ int main(int argc, char * argv[])
         exit(1);
     }
 
-    std::string backCommand;
-    if(!backStack.empty())
-    {
-        std::vector<std::string> entries;
-        for(size_t start = 0; start < backStack.size();)
-        {
-            size_t sep = backStack.find(';', start);
-            if(sep == std::string::npos) sep = backStack.size();
-            entries.push_back(backStack.substr(start, sep-start));
-            start = sep+1;
-        }
-        std::string lastEntry = entries.back();
-        entries.pop_back();
-        std::string remainingStack;
-        for(size_t i = 0; i < entries.size(); ++i)
-        {
-            if(i) remainingStack += ";";
-            remainingStack += entries[i];
-        }
-
-        const size_t c1 = lastEntry.find(',');
-        const size_t c2 = c1 == std::string::npos ? c1 : lastEntry.find(',', c1+1);
-        if(c2 != std::string::npos)
-        {
-            std::string backPath = lastEntry.substr(0, c1);
-            std::string backScriptPath = lastEntry.substr(c1+1, c2-c1-1);
-            const size_t c3 = lastEntry.find(',', c2+1);
-            std::string backTitleKey = lastEntry.substr(c2+1, c3 == std::string::npos ? std::string::npos : c3-c2-1);
-            std::string backMarker = c3 == std::string::npos ? "" : lastEntry.substr(c3+1);
-
-            backCommand = "usleep 50000 && OM_BACK_STACK=\"" + remainingStack + "\" " + optionsLocation + "options --commandPath " + backPath
-                + (backScriptPath.empty() ? "" : " --scriptPath " + backScriptPath)
-                + " --title \"" + backTitleKey + "\""
-                + (backMarker.empty() ? "" : " --selectedMarker \"" + backMarker + "\"") + " &";
-        }
-    }
+    const std::string backCommand = back_stack::BackCommand(backStack, optionsLocation);
 
     int currentCommandId = 0;
 
