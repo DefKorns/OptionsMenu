@@ -12,8 +12,17 @@
 
 #include "framework/sdl_helper.h"
 
+#include <vector>
+
 class Controller;
 class ScreenChrome;
+
+struct ChoiceOption
+{
+    std::string value;
+    std::string label;
+    std::string preview;
+};
 
 struct Command
 {
@@ -21,6 +30,11 @@ struct Command
     Command(std::ifstream & in);
     void RunCommand(SDL_Context & sdl_context, Controller * controller, ScreenChrome & chrome, Color bg = UiTheme::Bg) const;
     void UpdateState();
+    bool Selectable() const { return !command.empty() || isChoice; }
+    void UpdateChoice();
+    void SetChoice(const std::string & value);
+    // the value in effect: the automatic one resolves through CHOICE_RESOLVED
+    const ChoiceOption * ShownChoice() const;
 
     std::string name;
     std::string command;
@@ -39,8 +53,19 @@ struct Command
     bool isToggle = false;
     bool stateOn = false;
     bool hasSubmenu = false;
+    bool isChoice = false;
+    std::string choiceListCommand;
+    std::string choiceGetCommand;
+    std::string choiceSetCommand;
+    std::string choiceResolvedCommand;
+    std::string choiceAutoKey;
+    std::vector<ChoiceOption> choices;
+    std::string choiceValue;
+    std::string choiceResolved;
+    std::string choiceAutoResolved;
     Texture texture;
     std::string previewImage;
+    Texture valueTexture;
     std::string rowIcon;
     Texture rowIconTexture;
     int previewImageX = 920;

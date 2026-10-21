@@ -44,7 +44,12 @@ for om_legacy in advanced_commands/c0020_ModUninstall advanced_commands/c0030_Di
                  commands/c0080_NetworkOptions commands/c9999_Exit \
                  network/commands/c9999_Back network/commands/c9999_Exit \
                  retroarch/commands/c0025_ToggleLoadScreens retroarch/commands/c0061_DeleteBackups \
-                 retroarch/commands/c9999_Back retroarch/commands/c9999_Exit; do
+                 retroarch/commands/c9999_Back retroarch/commands/c9999_Exit \
+                 language/commands/c0010_English language/commands/c0020_French \
+                 language/commands/c0030_German language/commands/c0040_Spanish \
+                 language/commands/c0050_Italian language/commands/c0060_Dutch \
+                 language/commands/c0070_Portuguese language/commands/c0080_Russian \
+                 language/commands/c0090_Japanese; do
   rm -f "$om_root/$om_legacy"
 done
 return 1

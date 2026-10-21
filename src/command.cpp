@@ -106,6 +106,7 @@ Command::Command(std::ifstream & in)
         {
             runDownload = (value == "DOWNLOAD");
             runInternal = (value == "INTERNAL");
+            isChoice = (value == "CHOICE");
         }
         else if(param.compare("RESTART_UI")==0)
             restartUI = (value == "TRUE");
@@ -154,6 +155,16 @@ Command::Command(std::ifstream & in)
             previewFitContain = (value == "TRUE");
         else if(param.compare("PREVIEW_HIDE_LABEL")==0)
             previewHideLabel = (value == "TRUE");
+        else if(param.compare("CHOICE_LIST")==0)
+            choiceListCommand = value;
+        else if(param.compare("CHOICE_GET")==0)
+            choiceGetCommand = value;
+        else if(param.compare("CHOICE_SET")==0)
+            choiceSetCommand = value;
+        else if(param.compare("CHOICE_RESOLVED")==0)
+            choiceResolvedCommand = value;
+        else if(param.compare("CHOICE_AUTO")==0)
+            choiceAutoKey = value;
         else if(param.compare("SUBMENU")==0)
             hasSubmenu = (value == "TRUE");
     }
@@ -263,6 +274,85 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Scr
         }
         SetDrawColor(renderer, bg);
     }
+}
+
+static std::vector<std::string> ReadLines(const std::string & command)
+{
+    std::vector<std::string> lines;
+    FILE * pipe = command.empty() ? nullptr : popen(command.c_str(), "r");
+    if(!pipe)
+        return lines;
+    std::string line;
+    struct pollfd pfd{fileno(pipe), POLLIN, 0};
+    while(poll(&pfd, 1, 2000) > 0)
+    {
+        const int ch = fgetc(pipe);
+        if(ch == EOF)
+            break;
+        if(ch != '\n')
+            line += static_cast<char>(ch);
+        else
+        {
+            if(!line.empty() && line.back() == '\r')
+                line.pop_back();
+            lines.push_back(line);
+            line.clear();
+        }
+    }
+    if(!line.empty())
+        lines.push_back(line);
+    pclose(pipe);
+    return lines;
+}
+
+static std::string ReadFirstLine(const std::string & command)
+{
+    const std::vector<std::string> lines = ReadLines(command);
+    return lines.empty() ? "" : lines.front();
+}
+
+// CHOICE_LIST prints one "value<TAB>label<TAB>preview" line per option; the label may be a translation key
+void Command::UpdateChoice()
+{
+    if(choices.empty())
+        for(const std::string & line : ReadLines(choiceListCommand))
+        {
+            const size_t tab1 = line.find('\t');
+            const size_t tab2 = tab1 == std::string::npos ? tab1 : line.find('\t', tab1 + 1);
+            ChoiceOption option{ line.substr(0, tab1), "", "" };
+            if(tab1 != std::string::npos)
+                option.label = line.substr(tab1 + 1, tab2 == std::string::npos ? tab2 : tab2 - tab1 - 1);
+            if(tab2 != std::string::npos)
+                option.preview = line.substr(tab2 + 1);
+            if(option.label.empty())
+                option.label = option.value;
+            if(!option.value.empty())
+                choices.push_back(option);
+        }
+    // the automatic value doesn't move while the row is on screen, and resolving it can be slow
+    if(choiceAutoResolved.empty())
+        choiceAutoResolved = ReadFirstLine(choiceResolvedCommand);
+    choiceValue = ReadFirstLine(choiceGetCommand);
+    choiceResolved = choiceValue.empty() ? choiceAutoResolved : choiceValue;
+}
+
+void Command::SetChoice(const std::string & value)
+{
+    std::string set = choiceSetCommand;
+    size_t pos;
+    while((pos = set.find("%value%")) != std::string::npos)
+        set.replace(pos, 7, value);
+    system(set.c_str());
+    choiceValue = value;
+    choiceResolved = value.empty() ? choiceAutoResolved : value;
+}
+
+const ChoiceOption * Command::ShownChoice() const
+{
+    for(const ChoiceOption & option : choices)
+        if(option.value == choiceResolved)
+            return &option;
+    return nullptr;
 }
 
 void Command::UpdateState()

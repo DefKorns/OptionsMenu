@@ -60,6 +60,24 @@ private:
     Texture down_;
 };
 
+// a row value that Left/Right cycles: "‹ value ›" while the row is selected
+class ValuePicker
+{
+public:
+    ValuePicker(const std::string & optionsLocation, SDL_Renderer * renderer);
+    void SetHintLabel(const std::string & label);
+    // room the value needs, chevrons included
+    int Width(const Texture & value) const;
+    void DrawValue(Texture & value, int rightX, int midY, bool selected);
+    // the "‹› label" footer hint; returns the next right edge, like BadgePainter::Draw
+    int DrawHint(int rightEdgeX, int y);
+
+private:
+    SDL_Renderer * renderer_;
+    Texture chevron_;
+    Texture hint_;
+};
+
 class NoteBox
 {
 public:

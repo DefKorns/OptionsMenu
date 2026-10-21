@@ -71,13 +71,36 @@ rename() {
   [ -f "$1" ] && mv "$1" "$2"
 }
 
+# language.cfg, else the console's (Console Language's when it fills the Japanese slot)
+omLangCode() {
+  local code
+  local lang_file
+  code="$(cat "$options_menu/language.cfg" 2>/dev/null)"
+  if [ -z "$code" ]; then
+    code="$(cat /var/lib/clover/profiles/0/lang.txt 2>/dev/null)"
+    case "$code" in ja*) [ -s /var/console_language_ui ] && code="$(cat /var/console_language_ui)" ;; esac
+    lang_file="$(ls "$options_menu/language/$(echo "$code" | cut -c1-2)"-*.lang 2>/dev/null | head -n 1)"
+    code="$(basename "$lang_file" .lang)"
+  fi
+  echo "${code:-en-US}"
+}
+
+# value, own name and preview of each menu language, for the CHOICE row
+omLangList() {
+  local lang_file
+  local code
+  for lang_file in "$options_menu"/language/*.lang; do
+    code="$(basename "$lang_file" .lang)"
+    printf '%s\t%s\t%s\n' "$code" "$(grep '^LANGUAGE_NAME=' "$lang_file" | head -n 1 | cut -d= -f2-)" "$options_menu/images/preview_lang_${code%%-*}.png"
+  done
+}
+
 translate() {
   local key="$1"
-  local lang_code="en-US"
+  local lang_code
   local lang_dir
   local value=""
-  [ -f "$options_menu/language.cfg" ] && lang_code="$(cat "$options_menu/language.cfg")"
-  [ -z "$lang_code" ] && lang_code="en-US"
+  lang_code="$(omLangCode)"
 
   for lang_dir in "$options_menu/language" "$options_menu"/*/lang; do
     [ -z "$value" ] && [ -f "$lang_dir/$lang_code.lang" ] && value="$(grep "^${key}=" "$lang_dir/$lang_code.lang" 2>/dev/null | tail -1 | cut -d= -f2-)"

@@ -68,7 +68,6 @@ int main(int argc, char * argv[])
     SetTTFFontPath(optionsLocation);
     UiTheme::LoadThemeConfig(optionsLocation);
 
-    std::string titleString(Translate("OPTIONS_TITLE"));
     std::string titleKey = "OPTIONS_TITLE";
     std::string selectedMarker;
     const char * backStackEnv = getenv("OM_BACK_STACK");
@@ -96,7 +95,6 @@ int main(int argc, char * argv[])
         else if(strcmp(argv[i], "--title") == 0 && i + 1 < argc)
         {
             titleKey = argv[i+1];
-            titleString = Translate(argv[i+1]);
             ++i;
         }
         else if(strcmp(argv[i], "--selectedMarker") == 0 && i + 1 < argc)
@@ -137,7 +135,7 @@ int main(int argc, char * argv[])
             if(in.is_open())
             {
                 Command c(in);
-                if(!(commands.size() == 0 && c.command.size() == 0))
+                if(!(commands.empty() && !c.Selectable()))
                 {
                     if(!c.usbOnly || (c.usbOnly && usbReady))
                     {
@@ -154,6 +152,12 @@ int main(int argc, char * argv[])
                             ExpandTemplates(c.stateCommand);
                             c.UpdateState();
                         }
+                        if(c.isChoice)
+                        {
+                            for(std::string * choiceCommand : { &c.choiceListCommand, &c.choiceGetCommand, &c.choiceSetCommand, &c.choiceResolvedCommand })
+                                ExpandTemplates(*choiceCommand);
+                            c.UpdateChoice();
+                        }
                         commands.push_back(c);
                     }
                 }
@@ -167,6 +171,8 @@ int main(int argc, char * argv[])
         exit(1);
     }
 
+    while(!commands.empty() && !commands.back().Selectable())
+        commands.pop_back();
     if(commands.empty())
     {
         std::cerr << "No usable commands in " << commandLocation << "\n";
@@ -191,7 +197,6 @@ int main(int argc, char * argv[])
     Texture switchOff(optionsLocation + UiTheme::AssetSwitchOff, renderer);
 
     ScreenChrome chrome(optionsLocation, renderer, "OptionsMenu", MOD_VERSION, "created by CompCom - Modern UI by DefKorns");
-    chrome.SetSectionTitle(titleString);
     SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
     ScrollArrows scrollArrows(optionsLocation, renderer);
 
@@ -200,10 +205,7 @@ int main(int argc, char * argv[])
     {
         return badges.Make(letter, Translate(hintKey), rim, fill);
     };
-    Badge badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
-    Badge badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
-    Badge badgeBExit = MakeBadge("B", "EXIT", UiTheme::BadgeBDark, UiTheme::BadgeB);
-    Badge badgeHold = MakeBadge("B", "HINT_DELETE", UiTheme::BadgeXDark, UiTheme::BadgeX);
+    Badge badgeA, badgeB, badgeBExit, badgeHold, badgeAuto;
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
@@ -214,6 +216,7 @@ int main(int argc, char * argv[])
     const int RowTextGapPx = 16;
     Texture chevronIcon(optionsLocation + UiTheme::AssetChevronRight, renderer);
     SetColorMod(chevronIcon.texture.get(), UiTheme::Accent);
+    ValuePicker valuePicker(optionsLocation, renderer);
     for(Command & c : commands)
     {
         if(c.hasSubmenu)
@@ -229,11 +232,34 @@ int main(int argc, char * argv[])
                     c.hasSubmenu = false;
             }
         }
+    }
 
+    // everything translated, again after the language changes
+    auto BuildTexts = [&]()
+    {
+        chrome.SetSectionTitle(Translate(titleKey));
+        badgeA = MakeBadge("A", "HINT_SELECT", UiTheme::BadgeADark, UiTheme::BadgeA);
+        badgeB = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
+        badgeBExit = MakeBadge("B", "EXIT", UiTheme::BadgeBDark, UiTheme::BadgeB);
+        badgeHold = MakeBadge("B", "HINT_DELETE", UiTheme::BadgeXDark, UiTheme::BadgeX);
+        valuePicker.SetHintLabel(Translate("HINT_CHANGE"));
+
+        for(Command & c : commands)
+        {
         int textX = UiTheme::RowTextX + (c.child ? ChildIndent : 0);
         std::string label = Translate(c.name);
 
         int maxRight = UiTheme::RowControlRightX - RowTextGapPx;
+        if(c.isChoice)
+        {
+            const ChoiceOption * shown = c.ShownChoice();
+            std::string value = shown ? Translate(shown->label) : c.choiceResolved;
+            if(c.choiceValue.empty() && !c.choiceAutoKey.empty())
+                value = value.empty() ? Translate(c.choiceAutoKey) : Translate(c.choiceAutoKey) + " · " + value;
+            c.valueTexture = Texture(value, RowGlyphSize, renderer, 0, 0, false, ToAbgr(UiTheme::TextDim), true);
+            c.previewImage = shown ? shown->preview : "";
+            maxRight -= valuePicker.Width(c.valueTexture);
+        }
         bool rowUsesTTF = CanRenderWithTTF(label, RowGlyphSize);
         int available = std::max(0, maxRight - textX);
         if(rowUsesTTF)
@@ -256,7 +282,9 @@ int main(int argc, char * argv[])
         c.texture = Texture(label, RowGlyphSize, renderer, textX, 0, false, ToAbgr(UiTheme::Text), true);
         if(!c.rowIcon.empty())
             c.rowIconTexture = Texture(c.rowIcon, renderer, 0, 0);
-    }
+        }
+    };
+    BuildTexts();
 
     const int modernRowPitch = std::max(UiTheme::RowPitch, GetTTFLineHeight(RowGlyphSize));
     const int commandCount = static_cast<int>(commands.size());
@@ -264,6 +292,16 @@ int main(int argc, char * argv[])
 
     int topListItemNumber = 1;
     std::shared_ptr<Texture> PreviewImage;
+    auto LayoutRows = [&]()
+    {
+        int y = UiTheme::RowFirstY;
+        for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
+        {
+            Texture & rowTexture = commands[i+topListItemNumber].texture;
+            rowTexture.rect.y = y + (modernRowPitch - rowTexture.rect.h) / 2 + UiTheme::RowTextYNudge;
+            y += modernRowPitch;
+        }
+    };
     auto SetCurrentCommand = [&] (int newCommandId)
     {
         currentCommandId = newCommandId;
@@ -281,15 +319,10 @@ int main(int argc, char * argv[])
             updateCommandYPos = true;
         }
         if(updateCommandYPos)
-        {
-            int y = UiTheme::RowFirstY;
-            for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
-            {
-                Texture & rowTexture = commands[i+topListItemNumber].texture;
-                rowTexture.rect.y = y + (modernRowPitch - rowTexture.rect.h) / 2 + UiTheme::RowTextYNudge;
-                y += modernRowPitch;
-            }
-        }
+            LayoutRows();
+
+        if(currentCommand.isChoice && !currentCommand.choiceAutoKey.empty())
+            badgeAuto = MakeBadge("Y", currentCommand.choiceAutoKey.c_str(), UiTheme::BadgeYDark, UiTheme::BadgeY);
 
         selectedRowRect.y = currentCommand.texture.rect.y - 2;
         selectedRowRect.h = currentCommand.texture.rect.h + 4;
@@ -356,7 +389,7 @@ int main(int argc, char * argv[])
         for(size_t tries = 0; tries < commands.size(); ++tries)
         {
             newCommandId = (newCommandId + step + commands.size()) % commands.size();
-            if(commands[newCommandId].command.size() != 0)
+            if(commands[newCommandId].Selectable())
                 break;
         }
         SetCurrentCommand(newCommandId);
@@ -384,13 +417,15 @@ int main(int argc, char * argv[])
             icon.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - icon.rect.h) / 2;
             icon.Draw(renderer);
         }
+        else if(rowCommand.isChoice)
+            valuePicker.DrawValue(rowCommand.valueTexture, UiTheme::RowControlRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h / 2, selected);
         else if(rowCommand.hasSubmenu)
         {
             chevronIcon.rect.x = UiTheme::RowControlRightX - chevronIcon.rect.w;
             chevronIcon.rect.y = rowCommand.texture.rect.y + (rowCommand.texture.rect.h - chevronIcon.rect.h) / 2;
             chevronIcon.Draw(renderer);
         }
-        if(!selected && !active && !rowCommand.command.empty() && !isLastOverall)
+        if(!selected && !active && rowCommand.Selectable() && !isLastOverall)
             DrawHLine(renderer, UiTheme::ListX, UiTheme::ListContentRightX, rowCommand.texture.rect.y + rowCommand.texture.rect.h + 3, UiTheme::Border);
     };
 
@@ -411,8 +446,16 @@ int main(int argc, char * argv[])
         }
 
         int rightEdge = UiTheme::BadgeClusterRightX;
-        rightEdge = DrawBadge(badgeA, rightEdge);
+        const Command & current = commands[currentCommandId];
+        if(!current.isChoice)
+            rightEdge = DrawBadge(badgeA, rightEdge);
         rightEdge = DrawBadge(backStack.empty() ? badgeBExit : badgeB, rightEdge);
+        if(current.isChoice)
+        {
+            if(!current.choiceAutoKey.empty() && !current.choiceValue.empty())
+                rightEdge = DrawBadge(badgeAuto, rightEdge);
+            rightEdge = valuePicker.DrawHint(rightEdge, UiTheme::BadgeBandY);
+        }
         if(!commands[currentCommandId].deleteCommand.empty() || !commands[currentCommandId].deleteBlockedKey.empty())
             rightEdge = DrawBadge(badgeHold, rightEdge);
         int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
@@ -483,6 +526,32 @@ int main(int argc, char * argv[])
         return true;
     };
 
+    // a choice can be the menu's own language, so the strings reload with it
+    auto ApplyChoice = [&](const std::string & value)
+    {
+        commands[currentCommandId].SetChoice(value);
+        LoadLanguageFromConfig(optionsLocation);
+        BuildTexts();
+        LayoutRows();
+        SetCurrentCommand(currentCommandId);
+    };
+    // with CHOICE_AUTO, the empty value (automatic) comes before the first option
+    auto CycleChoice = [&](int step)
+    {
+        const Command & current = commands[currentCommandId];
+        const int count = static_cast<int>(current.choices.size());
+        const int first = current.choiceAutoKey.empty() ? 0 : -1;
+        const int span = count - first;
+        if(count == 0)
+            return;
+        int index = first;
+        for(int i = 0; i < count; ++i)
+            if(current.choices[i].value == current.choiceValue)
+                index = i;
+        index = (index - first + step + span) % span + first;
+        ApplyChoice(index < 0 ? "" : current.choices[index].value);
+    };
+
     const unsigned int bHoldThresholdMs = 1000;
     bool bWasHeld = false, bHoldFired = false;
 
@@ -504,7 +573,21 @@ int main(int argc, char * argv[])
             lifecycle.Decide(ExitAction::Resume);
             break;
         }
-        if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
+        const bool onPicker = commands[currentCommandId].isChoice;
+        if(onPicker && controller.HeldRepeat(LEFT))
+            CycleChoice(-1);
+        else if(onPicker && controller.HeldRepeat(RIGHT))
+            CycleChoice(1);
+        else if(onPicker && controller.GetButtonStatus(Y))
+        {
+            const Command & current = commands[currentCommandId];
+            if(!current.choiceAutoKey.empty() && !current.choiceValue.empty())
+                ApplyChoice("");
+        }
+        else if(onPicker && (controller.GetButtonStatus(A) || controller.GetButtonStatus(START)))
+        {
+        }
+        else if(controller.GetButtonStatus(A) || controller.GetButtonStatus(START))
         {
             const std::string & confirmKey = commands[currentCommandId].confirmKey;
             const bool confirmed = confirmKey.empty() || Confirm(Translate(confirmKey));

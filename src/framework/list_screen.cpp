@@ -32,6 +32,10 @@ namespace
     constexpr int SelectedRowStrokeW = 2;
     constexpr int RowSeparatorGap = 3;
 
+    constexpr int PickerChevronGap = 10;
+    constexpr int PickerHintChevronGap = 4;
+    constexpr int PickerHintFontSize = 16;
+
     constexpr int NoteFontSize = 15;
     constexpr int NoteLinePitch = 20;
     constexpr int NoteIconOffsetX = 26;
@@ -119,6 +123,57 @@ void ScrollArrows::Draw(bool moreAbove, bool moreBelow)
         up_.Draw(renderer_);
     if(moreBelow)
         down_.Draw(renderer_, SDL_FLIP_VERTICAL);
+}
+
+ValuePicker::ValuePicker(const std::string & optionsLocation, SDL_Renderer * renderer)
+    : renderer_(renderer)
+    , chevron_(optionsLocation + UiTheme::AssetChevronRight, renderer)
+{
+    SetColorMod(chevron_.texture.get(), UiTheme::Accent);
+}
+
+void ValuePicker::SetHintLabel(const std::string & label)
+{
+    hint_ = Texture(label, PickerHintFontSize, renderer_, 0, 0, false, ToAbgr(UiTheme::Text), true);
+}
+
+int ValuePicker::Width(const Texture & value) const
+{
+    return value.rect.w + 2 * (chevron_.rect.w + PickerChevronGap);
+}
+
+void ValuePicker::DrawValue(Texture & value, int rightX, int midY, bool selected)
+{
+    chevron_.rect.y = midY - chevron_.rect.h / 2;
+    if(selected)
+    {
+        chevron_.rect.x = rightX - chevron_.rect.w;
+        chevron_.Draw(renderer_);
+        rightX = chevron_.rect.x - PickerChevronGap;
+    }
+    value.rect.x = rightX - value.rect.w;
+    value.rect.y = midY - value.rect.h / 2;
+    value.Draw(renderer_);
+    if(selected)
+    {
+        chevron_.rect.x = value.rect.x - PickerChevronGap - chevron_.rect.w;
+        chevron_.Draw(renderer_, SDL_FLIP_HORIZONTAL);
+    }
+}
+
+int ValuePicker::DrawHint(int rightEdgeX, int y)
+{
+    const int midY = y + UiTheme::BadgeOuterSize / 2;
+    const int x = rightEdgeX - (2 * chevron_.rect.w + PickerHintChevronGap + UiTheme::BadgeLabelGap + hint_.rect.w);
+    chevron_.rect.x = x;
+    chevron_.rect.y = midY - chevron_.rect.h / 2;
+    chevron_.Draw(renderer_, SDL_FLIP_HORIZONTAL);
+    chevron_.rect.x = x + chevron_.rect.w + PickerHintChevronGap;
+    chevron_.Draw(renderer_);
+    hint_.rect.x = chevron_.rect.x + chevron_.rect.w + UiTheme::BadgeLabelGap;
+    hint_.rect.y = midY - hint_.rect.h / 2;
+    hint_.Draw(renderer_);
+    return x - UiTheme::BadgeGroupGap;
 }
 
 NoteBox::NoteBox(SDL_Renderer * renderer, SDL_Rect rect)
