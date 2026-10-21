@@ -30,6 +30,9 @@ public:
     ScreenChrome(const std::string & optionsLocation, SDL_Renderer * renderer, const std::string & appTitle,
                  const std::string & version, const std::string & credit);
     void SetSectionTitle(const std::string & title);
+    const SDL_Rect & SectionTitleRect() const;
+    // everything but the section title, for screens that lay out their own
+    void DrawFrame();
     void Draw();
 
 private:

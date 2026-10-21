@@ -10,6 +10,7 @@
 #include "command.h"
 #include "framework/controller.h"
 #include "framework/draw_helpers.h"
+#include "framework/list_screen.h"
 #include "localization.h"
 
 #include <cctype>
@@ -161,7 +162,7 @@ Command::Command(std::ifstream & in)
     in.close();
 }
 
-void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Color bg) const
+void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, ScreenChrome & chrome, Color bg) const
 {
     std::list<Texture> textList;
     const CommandProcess process = StartCommand(command);
@@ -186,13 +187,7 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, con
         auto render = [&]()
         {
             sdl_context.StartFrame();
-            DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
-            chrome.gearIcon.Draw(renderer);
-            chrome.appTitleText.Draw(renderer);
-            chrome.appVersionText.Draw(renderer);
-            DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
-            DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-            chrome.creditText.Draw(renderer);
+            chrome.DrawFrame();
             DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB, exitBadge.w/2);
             exitLetter.Draw(renderer);
             exitLabel.Draw(renderer);

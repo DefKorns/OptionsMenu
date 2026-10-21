@@ -21,6 +21,6 @@
 // heading is shown before the title ("Installing"), author under it; both may be empty.
 bool RunDownloadScreen(const std::string & command, const std::string & heading, const std::string & title,
                        const std::string & author, SDL_Context & sdlContext, Controller & controller,
-                       const ModernChrome & chrome);
+                       ScreenChrome & chrome);
 
 #endif

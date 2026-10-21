@@ -57,7 +57,12 @@ void ScreenChrome::SetSectionTitle(const std::string & title)
     sectionTitle_ = Texture(title, UiTheme::SectionTitleFontSize, renderer_, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
 }
 
-void ScreenChrome::Draw()
+const SDL_Rect & ScreenChrome::SectionTitleRect() const
+{
+    return sectionTitle_.rect;
+}
+
+void ScreenChrome::DrawFrame()
 {
     DrawStrokeRect(renderer_, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
     gear_.Draw(renderer_);
@@ -65,13 +70,18 @@ void ScreenChrome::Draw()
     appVersion_.Draw(renderer_);
     DrawHLine(renderer_, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
     DrawHLine(renderer_, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
+    credit_.Draw(renderer_);
+}
+
+void ScreenChrome::Draw()
+{
+    DrawFrame();
     if(sectionTitle_.texture)
     {
         const int accentBarY = sectionTitle_.rect.y + (sectionTitle_.rect.h - UiTheme::SectionAccentBarH) / 2;
         DrawFillRect(renderer_, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - SectionAccentGap, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
         sectionTitle_.Draw(renderer_);
     }
-    credit_.Draw(renderer_);
 }
 
 void DrawFooterDivider(SDL_Renderer * renderer, int rightEdge)
