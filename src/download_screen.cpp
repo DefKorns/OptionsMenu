@@ -9,6 +9,7 @@
 
 #include "download_screen.h"
 #include "framework/draw_helpers.h"
+#include "framework/list_screen.h"
 #include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
@@ -123,7 +124,7 @@ namespace
 
 bool RunDownloadScreen(const std::string & command, const std::string & heading, const std::string & title,
                        const std::string & author, SDL_Context & sdlContext, Controller & controller,
-                       const ModernChrome & chrome)
+                       ScreenChrome & chrome)
 {
     ChildProcess process(Foreground(command));
     FILE * out = process.Output();
@@ -176,13 +177,7 @@ bool RunDownloadScreen(const std::string & command, const std::string & heading,
     auto render = [&]()
     {
         sdlContext.StartFrame();
-        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
-        chrome.gearIcon.Draw(renderer);
-        chrome.appTitleText.Draw(renderer);
-        chrome.appVersionText.Draw(renderer);
-        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        chrome.creditText.Draw(renderer);
+        chrome.DrawFrame();
         DrawRoundedFillRect(renderer, exitBadge, UiTheme::BadgeB, exitBadge.w / 2);
         exitLetter.Draw(renderer);
         exitLabel.Draw(renderer);

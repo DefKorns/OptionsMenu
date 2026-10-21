@@ -13,20 +13,13 @@
 #include "framework/sdl_helper.h"
 
 class Controller;
-
-struct ModernChrome
-{
-    Texture & gearIcon;
-    Texture & appTitleText;
-    Texture & appVersionText;
-    Texture & creditText;
-};
+class ScreenChrome;
 
 struct Command
 {
     Command();
     Command(std::ifstream & in);
-    void RunCommand(SDL_Context & sdl_context, Controller * controller, const ModernChrome & chrome, Color bg = UiTheme::Bg) const;
+    void RunCommand(SDL_Context & sdl_context, Controller * controller, ScreenChrome & chrome, Color bg = UiTheme::Bg) const;
     void UpdateState();
 
     std::string name;

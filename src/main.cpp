@@ -187,17 +187,12 @@ int main(int argc, char * argv[])
     const Color bg = UiTheme::Bg;
     SetDrawColor(renderer, bg);
 
-    Texture gearIcon(optionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
     Texture switchOn(optionsLocation + UiTheme::AssetSwitchOn, renderer);
     Texture switchOff(optionsLocation + UiTheme::AssetSwitchOff, renderer);
 
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appTitleText.rect.y -= appTitleText.rect.h / 2;
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
+    ScreenChrome chrome(optionsLocation, renderer, "OptionsMenu", MOD_VERSION, "created by CompCom - Modern UI by DefKorns");
+    chrome.SetSectionTitle(titleString);
     SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
-    Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
     ScrollArrows scrollArrows(optionsLocation, renderer);
 
     BadgePainter badges(optionsLocation, renderer);
@@ -401,14 +396,7 @@ int main(int argc, char * argv[])
 
     auto DrawChrome = [&]()
     {
-        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
-        gearIcon.Draw(renderer);
-        appTitleText.Draw(renderer);
-        appVersionText.Draw(renderer);
-        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
-        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
+        chrome.Draw();
 
         DrawRoundedFillRect(renderer, selectedRowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
         DrawStrokeRect(renderer, selectedRowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
@@ -434,12 +422,9 @@ int main(int argc, char * argv[])
     auto DrawScreen = [&]()
     {
         DrawChrome();
-        titleText.Draw(renderer);
 
         for(int i = 0, count = std::min(DisplayItemCount, commandCount-topListItemNumber); i < count; ++i)
             DrawRow(commands[i+topListItemNumber], (i+topListItemNumber) == commandCount-1);
-
-        CompComText.Draw(renderer);
 
         scrollArrows.Draw(topListItemNumber != 0, (topListItemNumber + DisplayItemCount) < commandCount);
     };
@@ -525,7 +510,7 @@ int main(int argc, char * argv[])
             const bool confirmed = confirmKey.empty() || Confirm(Translate(confirmKey));
             if(confirmed && commands[currentCommandId].runInternal)
             {
-                commands[currentCommandId].RunCommand(sdl_context, &controller, { gearIcon, appTitleText, appVersionText, CompComText }, bg);
+                commands[currentCommandId].RunCommand(sdl_context, &controller, chrome, bg);
                 if(commands[currentCommandId].isToggle)
                     for(Command & c : commands)
                         if(c.isToggle)
@@ -535,7 +520,7 @@ int main(int argc, char * argv[])
             else if(confirmed && commands[currentCommandId].runDownload)
             {
                 RunDownloadScreen(commands[currentCommandId].command, "", Translate(commands[currentCommandId].name), "",
-                                  sdl_context, controller, { gearIcon, appTitleText, appVersionText, CompComText });
+                                  sdl_context, controller, chrome);
                 RefreshActive();
             }
             else if(confirmed)
