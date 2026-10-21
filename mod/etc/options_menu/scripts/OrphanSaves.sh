@@ -42,8 +42,9 @@ raContent() {
   sed -E "s/$ra_save_suffix//"
 }
 
+# a game folder with only empty files holds no save
 saveEntries() {
-  ls "$1" 2>/dev/null | grep "^CLV-" | grep -v "^CLV-S-"
+  find "$1" -mindepth 2 -path "$1/CLV-*" -type f -size +0 2>/dev/null | sed "s#^$1/##; s#/.*##" | grep -v "^CLV-S-" | sort -u
   ls "$1/retroarch" 2>/dev/null | raContent | sed 's#^#retroarch/#'
 }
 

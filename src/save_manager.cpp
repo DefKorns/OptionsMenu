@@ -45,6 +45,8 @@ namespace
     const int DetailW = UiTheme::FrameX + UiTheme::FrameW - 16 - DetailX;
 
     const int ListFontSize = 16;
+    const int TagFontSize = 14;
+    const int TagGap = 12;
     const int PanelFontSize = 16;
     const int PanelHeaderFontSize = 18;
 
@@ -93,7 +95,9 @@ namespace
         std::string code;
         std::string label;
         bool named = false;
+        std::string tag;
         Texture text;
+        Texture tagText;
         bool marked = false;
     };
 
@@ -147,6 +151,16 @@ namespace
         const bool retroArch = entry.compare(0, RetroArchPrefix.size(), RetroArchPrefix) == 0;
         const std::string shown = found != names.end() ? found->second : retroArch ? entry.substr(RetroArchPrefix.size()) : entry;
         return retroArch ? "RetroArch: " + shown : shown;
+    }
+
+    std::string EntryTag(const std::string & entry)
+    {
+        return entry.compare(0, RetroArchPrefix.size(), RetroArchPrefix) == 0 ? entry.substr(RetroArchPrefix.size()) : entry;
+    }
+
+    std::string ShownLabel(const SaveEntry & entry)
+    {
+        return entry.tag.empty() ? entry.label : entry.label + " (" + entry.tag + ")";
     }
 
     void DrawDot(SDL_Renderer * renderer, int x, int centerY)
@@ -283,7 +297,7 @@ int main(int, char **)
             int shown = (count > SummaryMaxRows) ? SummaryMaxRows - 1 : count;
             summaryNames.clear();
             for(int i = 0; i < shown; ++i)
-                summaryNames.emplace_back(TruncateToWidth(marked[i]->label, PanelFontSize, PanelInnerW - BulletTextGap), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::Text), true);
+                summaryNames.emplace_back(TruncateToWidth(ShownLabel(*marked[i]), PanelFontSize, PanelInnerW - BulletTextGap), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::Text), true);
             moreText = (shown < count)
                 ? Texture("+" + std::to_string(count - shown), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::TextDim), true)
                 : Texture();
@@ -292,11 +306,20 @@ int main(int, char **)
         // named entries first, alphabetically; the rest keep their code order
         auto ApplyNames = [&]()
         {
+            std::map<std::string, int> labelCount;
             for(SaveEntry & entry : entries)
             {
                 entry.named = gameNames.count(entry.code) != 0;
                 entry.label = EntryLabel(entry.code, gameNames);
-                entry.text = Texture(TruncateToWidth(entry.label, ListFontSize, RowTextMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
+                ++labelCount[entry.label];
+            }
+            for(SaveEntry & entry : entries)
+            {
+                const bool repeated = labelCount[entry.label] > 1;
+                entry.tag = repeated ? EntryTag(entry.code) : "";
+                entry.tagText = repeated ? Texture(entry.tag, TagFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::TextDim), true) : Texture();
+                const int textMaxW = repeated ? RowTextMaxW - entry.tagText.rect.w - TagGap : RowTextMaxW;
+                entry.text = Texture(TruncateToWidth(entry.label, ListFontSize, textMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
             }
             std::stable_sort(entries.begin(), entries.end(), [](const SaveEntry & a, const SaveEntry & b)
             {
@@ -338,6 +361,13 @@ int main(int, char **)
                 text.rect.y = centerY - text.rect.h/2;
                 SetColorMod(text.texture.get(), row != 0 && marked ? UiTheme::TextDim : UiTheme::Text);
                 text.Draw(renderer);
+                if(row != 0 && entries[row - selectAllRows].tagText.texture)
+                {
+                    Texture & tag = entries[row - selectAllRows].tagText;
+                    tag.rect.x = CheckboxX - TagGap - tag.rect.w;
+                    tag.rect.y = centerY - tag.rect.h/2;
+                    tag.Draw(renderer);
+                }
                 Texture & checkbox = marked ? checkboxOn : checkboxOff;
                 checkbox.rect.x = CheckboxX;
                 checkbox.rect.y = centerY - checkbox.rect.h/2;
@@ -454,7 +484,7 @@ int main(int, char **)
                 PanelDialogText text;
                 text.title = Translate(list.confirmKey);
                 for(int i = 0; i < std::min(maxNames, static_cast<int>(marked.size())); ++i)
-                    text.body.push_back(marked[i]->label);
+                    text.body.push_back(ShownLabel(*marked[i]));
                 text.hiddenCount = std::max(0, static_cast<int>(marked.size()) - maxNames);
                 text.note = Translate(list.noteKey);
                 const DialogResult answer = Confirm(DrawScreen, text, list.destructive);
