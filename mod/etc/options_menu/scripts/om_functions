@@ -189,6 +189,60 @@ omDownloadAll() {
   return "$rc"
 }
 
+# omSplash <key...>: one translated line per key, drawn straight to the screen
+omSplash() {
+  "$om_scripts/gen_splash" /tmp/om_splash.png "$@" && decodepng /tmp/om_splash.png >/dev/fb0
+}
+
+# omFreeKb <dir>
+omFreeKb() {
+  df -Pk "$1" | awk 'NR==2 {print $4}'
+}
+
+# omUnpackedKb <tar.gz>: the size in the gzip trailer, plus 10% for the filesystem
+omUnpackedKb() {
+  local size_kb=$(($(tail -c4 "$1" | od -An -tu4) / 1024 + 1))
+  echo $((size_kb + size_kb / 10))
+}
+
+# omUnpack <tar.gz> <dir>: 0 unpacked, 1 broken, 3 no space left (downloadError's codes); removes the tarball
+omUnpack() {
+  local rc=0
+  if [ "$(omFreeKb "$2")" -lt "$(omUnpackedKb "$1")" ]; then
+    rc=3
+    gzip -t "$1" 2>/dev/null || rc=1
+  elif ! tar -xzf "$1" -C "$2"; then
+    rc=1
+    [ "$(omFreeKb "$2")" -lt 1024 ] && rc=3
+  fi
+  rm -f "$1"
+  return "$rc"
+}
+
+# omReloadMenuLater [command...]: the menu holds /dev/fb0 and uistop kills every holder,
+# so remote-exec runs omReloadMenu once the caller has exited
+omReloadMenuLater() {
+  echo "source $om_scripts/om_functions; omReloadMenu $*" >/var/exec.flag.tmp
+  mv /var/exec.flag.tmp /var/exec.flag
+}
+
+# omReloadMenu [command...]: stops the UI, runs the command, then reloads the current folder;
+# chmenu refuses the folder already shown unless its state says otherwise
+omReloadMenu() {
+  local menu_state="/var/saves/$modname/menu" current_menu="000"
+  rm -f /tmp/options.flag
+  uistop
+  uiresume
+  timeout="" waittimeout 1500 '! lsof -n | grep -qF "/dev/fb0"' "framebuffer"
+  [ $# -gt 0 ] && "$@"
+  [ -f "$menu_state" ] && current_menu="$(cat "$menu_state")"
+  echo reload >"$menu_state"
+  /bin/chmenu "$current_menu" || /bin/chmenu 000 || {
+    echo "$current_menu" >"$menu_state"
+    uistart
+  }
+}
+
 overlayFS() {
   [ -d "$1" ] && mount -t overlayfs -o lowerdir="$2",upperdir="$1" overlayfs "$2"
 }

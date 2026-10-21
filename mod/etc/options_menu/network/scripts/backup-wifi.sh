@@ -55,7 +55,7 @@ restoreWifi() {
 
 case "$2" in
 backup)
-  "$om_scripts/gen_splash" /tmp/wifi_backup_splash.png WIFI_BACKUP_SPLASH_LINE1 WIFI_BACKUP_SPLASH_LINE2 && decodepng /tmp/wifi_backup_splash.png >/dev/fb0
+  omSplash WIFI_BACKUP_SPLASH_LINE1 WIFI_BACKUP_SPLASH_LINE2
   backupWifi
   echo "WIFI config backed up to $network"
   sleep 1
