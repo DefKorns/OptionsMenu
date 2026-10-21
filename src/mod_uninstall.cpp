@@ -8,13 +8,13 @@
   */
 
 #include "framework/badge.h"
-#include "framework/dialog.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_jump.h"
 #include "framework/list_screen.h"
+#include "framework/panel_dialog.h"
 #include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
@@ -32,7 +32,6 @@ namespace
     const int ListFontSize = 16;
     const int PanelFontSize = 16;
     const int PanelHeaderFontSize = 18;
-    const int NoteFontSize = 15;
 
     const int ExitBack = 0;
     const int ExitLeaveMenu = 1;
@@ -278,90 +277,30 @@ int main(int argc, char * argv[])
         sdl_context.EndFrame();
     };
 
-    auto ConfirmUninstall = [&]() -> bool
+    auto ConfirmUninstall = [&]()
     {
         auto marked = MarkedMods();
         const int maxNames = 8;
-        const int namePitch = 30;
-        const int shown = std::min(maxNames, static_cast<int>(marked.size()));
-        const bool overflow = static_cast<int>(marked.size()) > shown;
-        const int listRows = shown + (overflow ? 1 : 0);
-
-        const int boxW = 560;
-        const int badgeRowH = Dialog::BadgeRowGap + UiTheme::BadgeOuterSize;
-        const int boxH = 150 + listRows*namePitch + badgeRowH;
-        const SDL_Rect box = Dialog::PanelRect(boxW, boxH);
-
-        Texture confirmTitle(Translate("MOD_UNINSTALL_CONFIRM"), 24, renderer, 640, box.y + 36, true, ToAbgr(UiTheme::Text), true);
-        std::vector<Texture> names;
-        int nameW = 0;
-        for(int i = 0; i < shown; ++i)
-        {
-            names.emplace_back(TruncateToWidth(marked[i]->name, PanelFontSize, boxW - 80), PanelFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
-            nameW = std::max(nameW, names.back().rect.w);
-        }
-        if(overflow)
-            names.emplace_back("+" + std::to_string(marked.size() - shown), PanelFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::TextDim), true);
-        const int listX = 640 - (nameW + BulletTextGap)/2;
-        std::vector<Texture> noteLines = MakeLines(WrapToWidth(Translate("MOD_UNINSTALL_REBOOT_NOTE"), NoteFontSize, boxW - 48), NoteFontSize, renderer, UiTheme::TextDim);
-
-        controller.GetButtonStatus(B);
-        bool confirmed = false;
-        for(;;)
-        {
-            SDL_Event e;
-            while(SDL_PollEvent(&e))
-                if(e.type == SDL_QUIT)
-                    return false;
-            controller.Update();
-            if(sdl_context.powerwatch->buttonPress() || controller.GetButtonStatus(B))
-                break;
-            if(controller.PeekButtonStatus(START) && controller.PeekButtonStatus(SELECT))
-            {
-                confirmed = true;
-                break;
-            }
-
-            sdl_context.StartFrame();
-            DrawScreen();
-            Dialog::DrawBackdrop(renderer);
-            Dialog::DrawPanel(renderer, box);
-            confirmTitle.Draw(renderer);
-            int y = box.y + 78;
-            for(int i = 0; i < static_cast<int>(names.size()); ++i)
-            {
-                if(i < shown)
-                    DrawDot(renderer, listX, y);
-                names[i].rect.x = listX + BulletTextGap;
-                names[i].rect.y = y - names[i].rect.h/2;
-                names[i].Draw(renderer);
-                y += namePitch;
-            }
-            int noteY = box.y + box.h - badgeRowH - 34 - (static_cast<int>(noteLines.size()) - 1) * 10;
-            for(Texture & line : noteLines)
-            {
-                line.rect.x = 640 - line.rect.w/2;
-                line.rect.y = noteY - line.rect.h/2;
-                line.Draw(renderer);
-                noteY += 20;
-            }
-
-            badges.DrawCentered({ &badgeCancel, &confirmPill }, box.x + box.w / 2, box.y + box.h - Dialog::BottomPad - UiTheme::BadgeOuterSize);
-
-            SetDrawColor(renderer, bg);
-            sdl_context.EndFrame();
-        }
-        if(!confirmed)
-            return false;
+        PanelDialogText text;
+        text.title = Translate("MOD_UNINSTALL_CONFIRM");
+        for(int i = 0; i < std::min(maxNames, static_cast<int>(marked.size())); ++i)
+            text.body.push_back(marked[i]->name);
+        text.hiddenCount = std::max(0, static_cast<int>(marked.size()) - maxNames);
+        text.note = Translate("MOD_UNINSTALL_REBOOT_NOTE");
+        PanelDialog dialog(renderer, badges, PanelDialog::Kind::Confirm, text, { &badgeCancel, &confirmPill });
+        dialog.SetBulletColor(UiTheme::CheckboxOn);
+        const DialogResult answer = dialog.Run(sdl_context, controller, DrawScreen);
+        if(answer != DialogResult::Confirmed)
+            return answer;
 
         std::ofstream out("/tmp/uninstall");
         if(!out.is_open())
-            return false;
+            return DialogResult::Cancelled;
         for(const Mod * mod : marked)
             out << mod->name << " ";
         out.close();
         system(("/bin/sh " + folderLocation + "/FinishUninstall.sh &").c_str());
-        return true;
+        return DialogResult::Confirmed;
     };
 
     ListJumpInput jumpInput;
@@ -408,7 +347,10 @@ int main(int argc, char * argv[])
             return ExitBack;
         else if(controller.GetButtonStatus(START) && markedCount > 0)
         {
-            if(ConfirmUninstall())
+            const DialogResult answer = ConfirmUninstall();
+            if(answer == DialogResult::Quit)
+                return ExitLeaveMenu;
+            if(answer == DialogResult::Confirmed)
                 return ExitUninstallStarted;
         }
 

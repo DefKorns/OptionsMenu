@@ -9,13 +9,13 @@
   */
 
 #include "framework/badge.h"
-#include "framework/dialog.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_jump.h"
 #include "framework/list_screen.h"
+#include "framework/panel_dialog.h"
 #include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
@@ -47,7 +47,6 @@ namespace
     const int ListFontSize = 16;
     const int PanelFontSize = 16;
     const int PanelHeaderFontSize = 18;
-    const int NoteFontSize = 15;
 
     const int ExitBack = 0;
     const int ExitLeaveMenu = 1;
@@ -221,100 +220,23 @@ int main(int, char **)
     {
         return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
     };
-    // confirm (Start + Select) or acknowledge (A); B cancels
-    auto RunDialog = [&](const std::function<void()> & drawUnder, const std::string & titleKey, const std::vector<std::string> & bodyLines,
-                         const std::string & noteKey, bool confirm) -> bool
+    auto Confirm = [&](const std::function<void()> & drawUnder, const PanelDialogText & text)
     {
-        const int boxW = 600;
-        const int bodyPitch = 30;
-        const int badgeRowH = Dialog::BadgeRowGap + UiTheme::BadgeOuterSize;
-        std::vector<Texture> body;
-        for(const std::string & line : bodyLines)
-            body.emplace_back(TruncateToWidth(line, PanelFontSize, boxW - 80), PanelFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
-        std::vector<Texture> noteLines = noteKey.empty() ? std::vector<Texture>()
-            : MakeLines(WrapToWidth(Translate(noteKey), NoteFontSize, boxW - 48), NoteFontSize, renderer, UiTheme::TextDim);
-        const int titlePitch = 32;
-        std::vector<Texture> titleLines;
-        for(const std::string & line : WrapToWidth(Translate(titleKey), Dialog::TitleFontSize, boxW - 48))
-            titleLines.emplace_back(line, Dialog::TitleFontSize, renderer, 640, 0, true, ToAbgr(UiTheme::Text), true);
-        const int titleExtraH = std::max(0, static_cast<int>(titleLines.size()) - 1) * titlePitch;
-        const int boxH = 110 + titleExtraH + static_cast<int>(body.size())*bodyPitch + static_cast<int>(noteLines.size())*20 + badgeRowH;
-        const SDL_Rect box = Dialog::PanelRect(boxW, boxH);
-        for(size_t i = 0; i < titleLines.size(); ++i)
-            titleLines[i].rect.y = box.y + 36 + static_cast<int>(i)*titlePitch - titleLines[i].rect.h/2;
-
-        controller.GetButtonStatus(A);
-        controller.GetButtonStatus(B);
-        for(;;)
-        {
-            SDL_Event e;
-            while(SDL_PollEvent(&e))
-                if(e.type == SDL_QUIT)
-                    return false;
-            controller.Update();
-            if(sdl_context.powerwatch->buttonPress() || controller.GetButtonStatus(B))
-                return false;
-            if(confirm && controller.PeekButtonStatus(START) && controller.PeekButtonStatus(SELECT))
-            {
-                // still held on return
-                controller.GetButtonStatus(START);
-                controller.GetButtonStatus(SELECT);
-                return true;
-            }
-            if(!confirm && controller.GetButtonStatus(A))
-                return true;
-
-            sdl_context.StartFrame();
-            drawUnder();
-            Dialog::DrawBackdrop(renderer);
-            Dialog::DrawPanel(renderer, box);
-            for(Texture & line : titleLines)
-                line.Draw(renderer);
-            int y = box.y + 72 + titleExtraH;
-            for(Texture & line : body)
-            {
-                line.rect.x = 640 - line.rect.w/2;
-                line.rect.y = y;
-                line.Draw(renderer);
-                y += bodyPitch;
-            }
-            DrawLinesCentered(renderer, noteLines, 640, y + 6, 20);
-            if(confirm)
-                badges.DrawCentered({ &badgeCancel, &confirmPill }, box.x + box.w / 2, box.y + box.h - Dialog::BottomPad - UiTheme::BadgeOuterSize);
-            else
-                badges.DrawCentered({ &badgeOk }, box.x + box.w / 2, box.y + box.h - Dialog::BottomPad - UiTheme::BadgeOuterSize);
-            SetDrawColor(renderer, bg);
-            sdl_context.EndFrame();
-        }
+        return PanelDialog(renderer, badges, PanelDialog::Kind::Confirm, text, { &badgeCancel, &confirmPill }).Run(sdl_context, controller, drawUnder);
     };
 
-    // Shows a progress panel for one frame; the caller then runs the blocking work.
-    auto ShowBusy = [&](const std::function<void()> & drawUnder, const std::string & messageKey)
+    auto ShowMessage = [&](const std::function<void()> & drawUnder, const std::string & titleKey)
     {
-        const std::string message = Translate(messageKey);
-        const SDL_Rect box = Dialog::PanelRect(std::max(420, TextWidth(message, Dialog::TitleFontSize) + 96), 110);
-        Texture working(message, Dialog::TitleFontSize, renderer, 640, box.y + box.h/2 - 12, true, ToAbgr(UiTheme::Text), true);
-        sdl_context.StartFrame();
-        drawUnder();
-        Dialog::DrawBackdrop(renderer);
-        Dialog::DrawPanel(renderer, box);
-        working.Draw(renderer);
-        SetDrawColor(renderer, bg);
-        sdl_context.EndFrame();
-    };
-
-    auto DropPendingInput = [&]()
-    {
-        controller.Update();
-        controller.GetButtonStatus(A);
-        controller.GetButtonStatus(B);
+        PanelDialogText text;
+        text.title = Translate(titleKey);
+        return PanelDialog(renderer, badges, PanelDialog::Kind::Acknowledge, text, { &badgeOk }).Run(sdl_context, controller, drawUnder);
     };
 
     auto RunBusy = [&](const std::function<void()> & drawUnder, const std::string & command) -> bool
     {
-        ShowBusy(drawUnder, "SAVE_MANAGER_WORKING");
+        ShowBusy(sdl_context, drawUnder, Translate("SAVE_MANAGER_WORKING"));
         const int status = system(command.c_str());
-        DropPendingInput();
+        DropPendingInput(controller);
         return status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 0;
     };
 
@@ -530,13 +452,17 @@ int main(int, char **)
             else if(controller.GetButtonStatus(START) && markedCount > 0)
             {
                 auto marked = Marked();
-                std::vector<std::string> lines;
                 const int maxNames = 6;
+                PanelDialogText text;
+                text.title = Translate(list.confirmKey);
                 for(int i = 0; i < std::min(maxNames, static_cast<int>(marked.size())); ++i)
-                    lines.push_back(marked[i]->label);
-                if(static_cast<int>(marked.size()) > maxNames)
-                    lines.push_back("+" + std::to_string(marked.size() - maxNames));
-                if(RunDialog(DrawScreen, list.confirmKey, lines, list.noteKey, true))
+                    text.body.push_back(marked[i]->label);
+                text.hiddenCount = std::max(0, static_cast<int>(marked.size()) - maxNames);
+                text.note = Translate(list.noteKey);
+                const DialogResult answer = Confirm(DrawScreen, text);
+                if(answer == DialogResult::Quit)
+                    return ExitLeaveMenu;
+                if(answer == DialogResult::Confirmed)
                 {
                     const bool fromBackup = &list == &RestoreBackupList;
                     bool ok;
@@ -553,8 +479,8 @@ int main(int, char **)
                         std::remove(SelectionFile.c_str());
                     }
                     Load();
-                    if(fromBackup)
-                        RunDialog(DrawScreen, ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED", {}, "", false);
+                    if(fromBackup && ShowMessage(DrawScreen, ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED") == DialogResult::Quit)
+                        return ExitLeaveMenu;
                     // an empty list would still show a checked "select all"
                     if(entries.empty())
                         return ExitBack;
@@ -671,23 +597,27 @@ int main(int, char **)
         DrawFooterDivider(renderer, rightEdge);
     };
 
-    auto ShowMessage = [&](const std::string & titleKey, const std::string & noteKey)
-    {
-        RunDialog(DrawActions, titleKey, {}, noteKey, false);
-    };
-
     auto RunAction = [&](Action action) -> int
     {
         switch(action)
         {
         case Action::Backup:
-            if(RunDialog(DrawActions, "SAVE_MANAGER_BACKUP_CONFIRM", {}, "SAVE_MANAGER_BACKUP_DESC", true))
+        {
+            PanelDialogText text;
+            text.title = Translate("SAVE_MANAGER_BACKUP_CONFIRM");
+            text.note = Translate("SAVE_MANAGER_BACKUP_DESC");
+            const DialogResult answer = Confirm(DrawActions, text);
+            if(answer == DialogResult::Quit)
+                return ExitLeaveMenu;
+            if(answer == DialogResult::Confirmed)
             {
                 const bool ok = RunBusy(DrawActions, "sh " + ScriptLocation + "BackupSavesUsb.sh >/dev/null 2>&1");
                 RefreshStats();
-                ShowMessage(ok ? "BACKUP_SAVES_USB_DONE" : "BACKUP_SAVES_USB_FAILED", "");
+                if(ShowMessage(DrawActions, ok ? "BACKUP_SAVES_USB_DONE" : "BACKUP_SAVES_USB_FAILED") == DialogResult::Quit)
+                    return ExitLeaveMenu;
             }
             return -1;
+        }
         case Action::RestoreUsb:
         case Action::Clean:
         case Action::RestoreDeleted:
@@ -695,8 +625,8 @@ int main(int, char **)
             const int available = action == Action::RestoreUsb ? stats.backupSaves : action == Action::Clean ? stats.orphans : stats.deleted;
             if(available <= 0)
             {
-                ShowMessage(action == Action::RestoreUsb ? "RESTORE_SAVES_USB_NOT_FOUND" : action == Action::Clean ? "SAVE_MANAGER_NO_ORPHANS" : "SAVE_MANAGER_NO_DELETED", "");
-                return -1;
+                const std::string titleKey = action == Action::RestoreUsb ? "RESTORE_SAVES_USB_NOT_FOUND" : action == Action::Clean ? "SAVE_MANAGER_NO_ORPHANS" : "SAVE_MANAGER_NO_DELETED";
+                return ShowMessage(DrawActions, titleKey) == DialogResult::Quit ? ExitLeaveMenu : -1;
             }
             const int result = RunSaveList(action == Action::RestoreUsb ? RestoreBackupList : action == Action::Clean ? CleanList : RestoreDeletedList);
             SetTitle("SAVE_MANAGER");
