@@ -15,6 +15,7 @@
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_jump.h"
+#include "framework/list_screen.h"
 #include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
@@ -152,17 +153,6 @@ namespace
     {
         DrawRoundedFillRect(renderer, { x, centerY - 4, 8, 8 }, UiTheme::Accent, 4);
     }
-
-    void DrawLinesCentered(SDL_Renderer * renderer, std::vector<Texture> & lines, int centerX, int y, int pitch)
-    {
-        for(Texture & line : lines)
-        {
-            line.rect.x = centerX - line.rect.w/2;
-            line.rect.y = y;
-            line.Draw(renderer);
-            y += pitch;
-        }
-    }
 }
 
 int main(int, char **)
@@ -178,16 +168,10 @@ int main(int, char **)
     const Color bg = UiTheme::Bg;
     SetDrawColor(renderer, bg);
 
-    Texture gearIcon(OptionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appTitleText.rect.y -= appTitleText.rect.h / 2;
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture creditText("Save Manager - by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
-    Texture titleText;
+    ScreenChrome chrome(OptionsLocation, renderer, "OptionsMenu", MOD_VERSION, "Save Manager - by DefKorns");
     auto SetTitle = [&](const std::string & key)
     {
-        titleText = Texture(Translate(key), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
+        chrome.SetSectionTitle(Translate(key));
     };
 
     const int RowBoxH = UiTheme::RowPitch - 6;
@@ -214,14 +198,12 @@ int main(int, char **)
     const int SummaryRowPitch = 28;
     const int SummaryMaxRows = (summaryBox.y + summaryBox.h - PanelPad - SummaryListY) / SummaryRowPitch;
     const int BulletTextGap = 18;
-    const SDL_Rect noteBox{ DetailX, summaryBox.y + summaryBox.h + 16, DetailW, 72 };
-    const int NoteIconCX = noteBox.x + 26;
+    NoteBox note(renderer, { DetailX, summaryBox.y + summaryBox.h + 16, DetailW, 72 });
     const int StatPitch = 26;
     const int StatsBoxH = 4*StatPitch + 2*PanelPad - 6;
     const int DetailBottomY = UiTheme::FooterDividerY - UiTheme::ListBottomMargin;
     const SDL_Rect statsBox{ DetailX, DetailBottomY - StatsBoxH, DetailW, StatsBoxH };
     const SDL_Rect descriptionBox{ DetailX, UiTheme::RowFirstY, DetailW, statsBox.y - 16 - UiTheme::RowFirstY };
-    const int NoteTextX = noteBox.x + 46;
 
     BadgePainter badges(OptionsLocation, renderer);
     auto MakeBadge = [&](const std::string & letter, const std::string & labelKey, Color rim, Color fill) -> Badge
@@ -239,62 +221,6 @@ int main(int, char **)
     {
         return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
     };
-    auto DrawFooterDivider = [&](int rightEdge)
-    {
-        int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
-        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
-    };
-
-    auto DrawChrome = [&]()
-    {
-        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
-        gearIcon.Draw(renderer);
-        appTitleText.Draw(renderer);
-        appVersionText.Draw(renderer);
-        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
-        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
-        titleText.Draw(renderer);
-        creditText.Draw(renderer);
-    };
-
-    auto DrawRowFrame = [&](int index, bool selected) -> SDL_Rect
-    {
-        SDL_Rect rowRect{ UiTheme::ListX, UiTheme::RowFirstY + index*UiTheme::RowPitch, ListRightX - UiTheme::ListX, RowBoxH };
-        if(selected)
-        {
-            DrawRoundedFillRect(renderer, rowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
-            DrawStrokeRect(renderer, rowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
-        }
-        else
-            DrawHLine(renderer, rowRect.x, rowRect.x + rowRect.w, rowRect.y + rowRect.h + 3, UiTheme::Border, 1);
-        return rowRect;
-    };
-
-    auto DrawNote = [&](std::vector<Texture> & lines)
-    {
-        DrawStrokeRect(renderer, noteBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
-        int noteCenterY = noteBox.y + noteBox.h/2;
-        DrawStrokeRect(renderer, { NoteIconCX - 9, noteCenterY - 9, 18, 18 }, UiTheme::TextDim, 2, 9);
-        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 5, 2, 2 }, UiTheme::TextDim);
-        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 1, 2, 6 }, UiTheme::TextDim);
-        const int noteLinePitch = 20;
-        int y = noteCenterY - (static_cast<int>(lines.size()) * noteLinePitch)/2;
-        for(Texture & line : lines)
-        {
-            line.rect.x = NoteTextX;
-            line.rect.y = y + (noteLinePitch - line.rect.h)/2;
-            line.Draw(renderer);
-            y += noteLinePitch;
-        }
-    };
-
-    auto NoteLines = [&](const std::string & key)
-    {
-        return MakeLines(WrapToWidth(Translate(key), NoteFontSize, noteBox.x + noteBox.w - PanelPad - NoteTextX), NoteFontSize, renderer, UiTheme::TextDim);
-    };
-
     // confirm (Start + Select) or acknowledge (A); B cancels
     auto RunDialog = [&](const std::function<void()> & drawUnder, const std::string & titleKey, const std::vector<std::string> & bodyLines,
                          const std::string & noteKey, bool confirm) -> bool
@@ -398,7 +324,7 @@ int main(int, char **)
         Texture summaryHeader(Translate(list.headerKey), PanelHeaderFontSize, renderer, PanelInnerX, summaryBox.y + 14, false, ToAbgr(UiTheme::TextDim), true);
         Texture noneMarkedText(Translate("SAVE_MANAGER_NONE_MARKED"), PanelFontSize, renderer, PanelInnerX, SummaryListY, false, ToAbgr(UiTheme::Text), true);
         std::vector<Texture> noneHintLines = MakeLines(WrapToWidth(Translate("SAVE_MANAGER_NONE_HINT"), PanelFontSize, PanelInnerW), PanelFontSize, renderer, UiTheme::TextDim);
-        std::vector<Texture> noteLines = NoteLines(list.noteKey);
+        note.SetText(Translate(list.noteKey));
         Badge actionPill = badges.MakePill("Start", "");
         GameNames gameNames = LoadGameNames();
 
@@ -475,14 +401,14 @@ int main(int, char **)
 
         auto DrawScreen = [&]()
         {
-            DrawChrome();
+            chrome.Draw();
             const int entryCount = static_cast<int>(entries.size());
             const int rowCount = entryCount + selectAllRows;
             const int count = std::min(displayCount, rowCount - listOffset);
             for(int i = 0; i < count; ++i)
             {
                 const int row = listOffset + i;
-                SDL_Rect rowRect = DrawRowFrame(i, i == currentId);
+                SDL_Rect rowRect = DrawListRow(renderer, i, ListRightX, RowBoxH, i == currentId);
                 int centerY = rowRect.y + rowRect.h/2;
                 Texture & text = row == 0 ? selectAllText : entries[row - selectAllRows].text;
                 const bool marked = row == 0 ? markedCount == entryCount : entries[row - selectAllRows].marked;
@@ -532,7 +458,7 @@ int main(int, char **)
                     moreText.Draw(renderer);
                 }
             }
-            DrawNote(noteLines);
+            note.Draw();
 
             int rightEdge = UiTheme::BadgeClusterRightX;
             const int row = listOffset + currentId;
@@ -541,7 +467,7 @@ int main(int, char **)
             rightEdge = DrawBadge(badgeBack, rightEdge);
             if(markedCount > 0)
                 rightEdge = DrawBadge(actionPill, rightEdge);
-            DrawFooterDivider(rightEdge);
+            DrawFooterDivider(renderer, rightEdge);
         };
 
         auto Labels = [&]()
@@ -699,10 +625,10 @@ int main(int, char **)
 
     auto DrawActions = [&]()
     {
-        DrawChrome();
+        chrome.Draw();
         for(int i = 0; i < static_cast<int>(Actions.size()); ++i)
         {
-            SDL_Rect rowRect = DrawRowFrame(i, i == currentAction);
+            SDL_Rect rowRect = DrawListRow(renderer, i, ListRightX, RowBoxH, i == currentAction);
             int centerY = rowRect.y + rowRect.h/2;
             actionTexts[i].rect.y = centerY - actionTexts[i].rect.h/2;
             actionTexts[i].Draw(renderer);
@@ -742,7 +668,7 @@ int main(int, char **)
         int rightEdge = UiTheme::BadgeClusterRightX;
         rightEdge = DrawBadge(badgeSelect, rightEdge);
         rightEdge = DrawBadge(badgeBack, rightEdge);
-        DrawFooterDivider(rightEdge);
+        DrawFooterDivider(renderer, rightEdge);
     };
 
     auto ShowMessage = [&](const std::string & titleKey, const std::string & noteKey)

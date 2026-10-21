@@ -14,6 +14,7 @@
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_jump.h"
+#include "framework/list_screen.h"
 #include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
@@ -95,13 +96,8 @@ int main(int argc, char * argv[])
     const Color bg = UiTheme::Bg;
     SetDrawColor(renderer, bg);
 
-    Texture gearIcon(OptionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appTitleText.rect.y -= appTitleText.rect.h / 2;
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture titleText(Translate("MODULE_UNINSTALLER"), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
-    Texture creditText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
+    ScreenChrome chrome(OptionsLocation, renderer, "OptionsMenu", MOD_VERSION, "created by CompCom - Modern UI by DefKorns");
+    chrome.SetSectionTitle(Translate("MODULE_UNINSTALLER"));
 
     const int RowBoxH = UiTheme::RowPitch - 6;
     Texture checkboxOn(OptionsLocation + UiTheme::AssetCheckboxOn, renderer);
@@ -131,15 +127,13 @@ int main(int argc, char * argv[])
     const int SummaryRowPitch = 28;
     const int SummaryMaxRows = (summaryBox.y + summaryBox.h - PanelPad - SummaryListY) / SummaryRowPitch;
     const int BulletTextGap = 18;
-    const SDL_Rect noteBox{ UiTheme::DetailX, summaryBox.y + summaryBox.h + 16, UiTheme::DetailW, 72 };
-    const int NoteIconCX = noteBox.x + 26;
-    const int NoteTextX = noteBox.x + 46;
+    NoteBox rebootNote(renderer, { UiTheme::DetailX, summaryBox.y + summaryBox.h + 16, UiTheme::DetailW, 72 });
+    rebootNote.SetText(Translate("MOD_UNINSTALL_REBOOT_NOTE"));
 
     Texture summaryHeader(Translate("MOD_UNINSTALLER_TO_REMOVE"), PanelHeaderFontSize, renderer, PanelInnerX, summaryBox.y + 14, false, ToAbgr(UiTheme::TextDim), true);
     Texture summaryCount;
     Texture noneMarkedText(Translate("MOD_UNINSTALL_NONE_MARKED"), PanelFontSize, renderer, PanelInnerX, SummaryListY, false, ToAbgr(UiTheme::Text), true);
     std::vector<Texture> noneHintLines = MakeLines(WrapToWidth(Translate("MOD_UNINSTALL_NONE_HINT"), PanelFontSize, PanelInnerW), PanelFontSize, renderer, UiTheme::TextDim);
-    std::vector<Texture> rebootNoteLines = MakeLines(WrapToWidth(Translate("MOD_UNINSTALL_REBOOT_NOTE"), NoteFontSize, noteBox.x + noteBox.w - PanelPad - NoteTextX), NoteFontSize, renderer, UiTheme::TextDim);
     Texture moreText;
     std::vector<Texture> summaryNames;
 
@@ -157,11 +151,6 @@ int main(int argc, char * argv[])
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
-    };
-    auto DrawFooterDivider = [&](int rightEdge)
-    {
-        int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
-        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
     };
 
     int listOffset = 0;
@@ -197,20 +186,6 @@ int main(int argc, char * argv[])
     };
     RefreshSummary();
 
-    auto DrawChrome = [&]()
-    {
-        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
-        gearIcon.Draw(renderer);
-        appTitleText.Draw(renderer);
-        appVersionText.Draw(renderer);
-        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
-        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
-        titleText.Draw(renderer);
-        creditText.Draw(renderer);
-    };
-
     auto DrawList = [&]()
     {
         if(mods.empty())
@@ -223,16 +198,8 @@ int main(int argc, char * argv[])
         for(int i = 0; i < count; ++i)
         {
             Mod & mod = mods[listOffset + i];
-            SDL_Rect rowRect{ UiTheme::ListX, UiTheme::RowFirstY + i*UiTheme::RowPitch, UiTheme::ListContentRightX - UiTheme::ListX, RowBoxH };
+            SDL_Rect rowRect = DrawListRow(renderer, i, UiTheme::ListContentRightX, RowBoxH, i == currentId);
             int centerY = rowRect.y + rowRect.h/2;
-            if(i == currentId)
-            {
-                DrawRoundedFillRect(renderer, rowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
-                DrawStrokeRect(renderer, rowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
-            }
-            else
-                DrawHLine(renderer, rowRect.x, rowRect.x + rowRect.w, rowRect.y + rowRect.h + 3, UiTheme::Border, 1);
-
             mod.text.rect.y = centerY - mod.text.rect.h/2;
             SetColorMod(mod.text.texture.get(), mod.marked ? UiTheme::TextDim : UiTheme::Text);
             mod.text.Draw(renderer);
@@ -285,25 +252,12 @@ int main(int argc, char * argv[])
             }
         }
 
-        DrawStrokeRect(renderer, noteBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
-        int noteCenterY = noteBox.y + noteBox.h/2;
-        DrawStrokeRect(renderer, { NoteIconCX - 9, noteCenterY - 9, 18, 18 }, UiTheme::TextDim, 2, 9);
-        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 5, 2, 2 }, UiTheme::TextDim);
-        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 1, 2, 6 }, UiTheme::TextDim);
-        const int noteLinePitch = 20;
-        int y = noteCenterY - (static_cast<int>(rebootNoteLines.size()) * noteLinePitch)/2;
-        for(Texture & line : rebootNoteLines)
-        {
-            line.rect.x = NoteTextX;
-            line.rect.y = y + (noteLinePitch - line.rect.h)/2;
-            line.Draw(renderer);
-            y += noteLinePitch;
-        }
+        rebootNote.Draw();
     };
 
     auto DrawScreen = [&]()
     {
-        DrawChrome();
+        chrome.Draw();
         DrawList();
         DrawSummary();
 
@@ -313,7 +267,7 @@ int main(int argc, char * argv[])
         rightEdge = DrawBadge(badgeBack, rightEdge);
         if(markedCount > 0)
             rightEdge = DrawBadge(uninstallPill, rightEdge);
-        DrawFooterDivider(rightEdge);
+        DrawFooterDivider(renderer, rightEdge);
     };
 
     auto render = [&]()
