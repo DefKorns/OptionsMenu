@@ -17,7 +17,7 @@
 
 SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit) : fpsTime(fpsTime), powerButtonExit(powerButtonExit)
 {
-    powerwatch = new PowerWatch();
+    powerwatch = std::make_unique<PowerWatch>();
     window = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_FULLSCREEN);
     renderer = SDL_CreateRenderer(window, -1, 0);
     if(renderer == NULL) {
@@ -35,7 +35,6 @@ SDL_Context::~SDL_Context()
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-    delete powerwatch;
 }
 
 void SDL_Context::StartFrame()

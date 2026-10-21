@@ -29,7 +29,7 @@ public:
     SDL_Window* window;
     SDL_Renderer* renderer;
     std::chrono::milliseconds fpsTime;
-    PowerWatch * powerwatch;
+    std::unique_ptr<PowerWatch> powerwatch;
 
 private:
     std::chrono::time_point<std::chrono::system_clock> nextFrameTime;
