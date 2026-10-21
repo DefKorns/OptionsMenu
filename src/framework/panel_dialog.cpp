@@ -147,14 +147,12 @@ DialogResult PanelDialog::Run(SDL_Context & sdl, Controller & controller, const 
         controller.Update();
         if(quit || sdl.powerwatch->buttonPress())
             return Finish(controller, DialogResult::Quit);
-        if(kind_ == Kind::Confirm)
-        {
-            if(controller.GetButtonStatus(B))
-                return Finish(controller, DialogResult::Cancelled);
-            if(controller.PeekButtonStatus(START) && controller.PeekButtonStatus(SELECT))
-                return Finish(controller, DialogResult::Confirmed);
-        }
-        else if(controller.GetButtonStatus(A))
+        if(kind_ != Kind::Acknowledge && controller.GetButtonStatus(B))
+            return Finish(controller, DialogResult::Cancelled);
+        const bool confirmed = kind_ == Kind::ConfirmDestructive
+            ? controller.PeekButtonStatus(START) && controller.PeekButtonStatus(SELECT)
+            : controller.GetButtonStatus(A);
+        if(confirmed)
             return Finish(controller, DialogResult::Confirmed);
 
         sdl.StartFrame();

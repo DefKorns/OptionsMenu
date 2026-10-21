@@ -65,11 +65,12 @@ namespace
         std::string listArgs;
         std::string actionArgs;
         bool preMarked;
+        bool destructive;
     };
 
-    const ListInfo CleanList{ "SAVE_MANAGER_CLEAN", "SAVE_MANAGER_TO_MOVE", "SAVE_MANAGER_CLEAN_NOTE", "SAVE_MANAGER_CLEAN_CONFIRM", "HINT_MOVE", "orphans", "move ", true };
-    const ListInfo RestoreDeletedList{ "SAVE_MANAGER_RESTORE_DELETED", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_NOTE", "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", "HINT_RESTORE", "deleted", "restore ", false };
-    const ListInfo RestoreBackupList{ "RESTORE_SAVES_USB", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_USB_NOTE", "SAVE_MANAGER_RESTORE_CONFIRM", "HINT_RESTORE", "backup", "restore-backup ", false };
+    const ListInfo CleanList{ "SAVE_MANAGER_CLEAN", "SAVE_MANAGER_TO_MOVE", "SAVE_MANAGER_CLEAN_NOTE", "SAVE_MANAGER_CLEAN_CONFIRM", "HINT_MOVE", "orphans", "move ", true, true };
+    const ListInfo RestoreDeletedList{ "SAVE_MANAGER_RESTORE_DELETED", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_NOTE", "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", "HINT_RESTORE", "deleted", "restore ", false, false };
+    const ListInfo RestoreBackupList{ "RESTORE_SAVES_USB", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_USB_NOTE", "SAVE_MANAGER_RESTORE_CONFIRM", "HINT_RESTORE", "backup", "restore-backup ", false, true };
 
     struct ActionInfo
     {
@@ -212,14 +213,17 @@ int main(int, char **)
     Badge badgeOk = MakeBadge("A", "HINT_OK", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeBack = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
     Badge badgeCancel = MakeBadge("B", "HINT_CANCEL", UiTheme::BadgeBDark, UiTheme::BadgeB);
+    Badge badgeConfirm = MakeBadge("A", "HINT_CONFIRM", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge confirmPill = badges.MakePill("Start + Select", Translate("HINT_CONFIRM"));
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
     };
-    auto Confirm = [&](const std::function<void()> & drawUnder, const PanelDialogText & text)
+    auto Confirm = [&](const std::function<void()> & drawUnder, const PanelDialogText & text, bool destructive)
     {
-        return PanelDialog(renderer, badges, PanelDialog::Kind::Confirm, text, { &badgeCancel, &confirmPill }).Run(sdl_context, controller, drawUnder);
+        if(destructive)
+            return PanelDialog(renderer, badges, PanelDialog::Kind::ConfirmDestructive, text, { &badgeCancel, &confirmPill }).Run(sdl_context, controller, drawUnder);
+        return PanelDialog(renderer, badges, PanelDialog::Kind::Confirm, text, { &badgeCancel, &badgeConfirm }).Run(sdl_context, controller, drawUnder);
     };
 
     auto ShowMessage = [&](const std::function<void()> & drawUnder, const std::string & titleKey)
@@ -453,7 +457,7 @@ int main(int, char **)
                     text.body.push_back(marked[i]->label);
                 text.hiddenCount = std::max(0, static_cast<int>(marked.size()) - maxNames);
                 text.note = Translate(list.noteKey);
-                const DialogResult answer = Confirm(DrawScreen, text);
+                const DialogResult answer = Confirm(DrawScreen, text, list.destructive);
                 if(answer == DialogResult::Quit)
                     return ExitLeaveMenu;
                 if(answer == DialogResult::Confirmed)
@@ -600,7 +604,7 @@ int main(int, char **)
             PanelDialogText text;
             text.title = Translate("SAVE_MANAGER_BACKUP_CONFIRM");
             text.note = Translate("SAVE_MANAGER_BACKUP_DESC");
-            const DialogResult answer = Confirm(DrawActions, text);
+            const DialogResult answer = Confirm(DrawActions, text, true);
             if(answer == DialogResult::Quit)
                 return ExitLeaveMenu;
             if(answer == DialogResult::Confirmed)

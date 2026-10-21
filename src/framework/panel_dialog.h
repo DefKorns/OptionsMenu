@@ -39,11 +39,11 @@ struct PanelDialogText
     std::string note;
 };
 
-// Acknowledge closes on A only; Confirm needs Start + Select held, B cancels.
+// Acknowledge closes on A only. Confirm takes A, ConfirmDestructive needs Start + Select held; both cancel on B.
 class PanelDialog
 {
 public:
-    enum class Kind { Acknowledge, Confirm };
+    enum class Kind { Acknowledge, Confirm, ConfirmDestructive };
 
     PanelDialog(SDL_Renderer * renderer, BadgePainter & painter, Kind kind, const PanelDialogText & text, std::vector<Badge *> badges);
     void SetBulletColor(Color color);

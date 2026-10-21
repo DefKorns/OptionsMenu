@@ -281,7 +281,7 @@ int main(int argc, char * argv[])
             text.body.push_back(marked[i]->name);
         text.hiddenCount = std::max(0, static_cast<int>(marked.size()) - maxNames);
         text.note = Translate("MOD_UNINSTALL_REBOOT_NOTE");
-        PanelDialog dialog(renderer, badges, PanelDialog::Kind::Confirm, text, { &badgeCancel, &confirmPill });
+        PanelDialog dialog(renderer, badges, PanelDialog::Kind::ConfirmDestructive, text, { &badgeCancel, &confirmPill });
         dialog.SetBulletColor(UiTheme::CheckboxOn);
         const DialogResult answer = dialog.Run(sdl_context, controller, DrawScreen);
         if(answer != DialogResult::Confirmed)
