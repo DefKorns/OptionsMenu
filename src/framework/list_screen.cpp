@@ -19,6 +19,9 @@
 #include "draw_helpers.h"
 #include "text_layout.h"
 #include "uitheme.h"
+#include "utf8.h"
+
+#include <algorithm>
 
 namespace
 {
@@ -117,7 +120,18 @@ NoteBox::NoteBox(SDL_Renderer * renderer, SDL_Rect rect)
 void NoteBox::SetText(const std::string & text)
 {
     const int textW = rect_.w - NotePadRight - NoteTextOffsetX;
-    lines_ = MakeLines(WrapToWidth(text, NoteFontSize, textW), NoteFontSize, renderer_, UiTheme::TextDim);
+    std::vector<std::string> wrapped = WrapToWidth(text, NoteFontSize, textW);
+    const size_t maxLines = static_cast<size_t>(std::max(1, rect_.h / NoteLinePitch));
+    if(wrapped.size() > maxLines)
+    {
+        wrapped.resize(maxLines);
+        std::string & last = wrapped.back();
+        int n = Utf8Length(last);
+        while(n > 0 && TextWidth(TruncateUtf8(last, n) + "...", NoteFontSize) > textW)
+            --n;
+        last = TruncateUtf8(last, n) + "...";
+    }
+    lines_ = MakeLines(wrapped, NoteFontSize, renderer_, UiTheme::TextDim);
 }
 
 void NoteBox::Draw()
