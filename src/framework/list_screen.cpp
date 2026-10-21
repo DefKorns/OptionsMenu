@@ -62,9 +62,12 @@ void ScreenChrome::Draw()
     appVersion_.Draw(renderer_);
     DrawHLine(renderer_, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
     DrawHLine(renderer_, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-    const int accentBarY = sectionTitle_.rect.y + (sectionTitle_.rect.h - UiTheme::SectionAccentBarH) / 2;
-    DrawFillRect(renderer_, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - SectionAccentGap, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
-    sectionTitle_.Draw(renderer_);
+    if(sectionTitle_.texture)
+    {
+        const int accentBarY = sectionTitle_.rect.y + (sectionTitle_.rect.h - UiTheme::SectionAccentBarH) / 2;
+        DrawFillRect(renderer_, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - SectionAccentGap, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
+        sectionTitle_.Draw(renderer_);
+    }
     credit_.Draw(renderer_);
 }
 
