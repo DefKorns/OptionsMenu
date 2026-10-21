@@ -15,6 +15,7 @@
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_jump.h"
+#include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
 
@@ -122,66 +123,6 @@ namespace
     std::string OrphanSavesCommand(const std::string & args)
     {
         return "sh " + ScriptLocation + "OrphanSaves.sh " + args;
-    }
-
-    int TextWidth(const std::string & text, int fontSize)
-    {
-        if(CanRenderWithTTF(text, fontSize))
-            return MeasureTTFWidth(text, fontSize);
-        return Utf8Length(text) * fontSize;
-    }
-
-    std::string TruncateToWidth(const std::string & text, int fontSize, int maxWidth)
-    {
-        if(TextWidth(text, fontSize) <= maxWidth)
-            return text;
-        int n = Utf8Length(text);
-        while(n > 0 && TextWidth(TruncateUtf8(text, n) + "...", fontSize) > maxWidth)
-            --n;
-        return TruncateUtf8(text, n) + "...";
-    }
-
-    std::vector<std::string> WrapToWidth(const std::string & text, int fontSize, int maxWidth)
-    {
-        std::vector<std::string> lines;
-        std::string line;
-        size_t pos = 0;
-        while(pos < text.size())
-        {
-            size_t end = text.find(' ', pos);
-            std::string word = text.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
-            pos = (end == std::string::npos) ? text.size() : end + 1;
-
-            std::string candidate = line.empty() ? word : line + " " + word;
-            if(TextWidth(candidate, fontSize) <= maxWidth)
-            {
-                line = candidate;
-                continue;
-            }
-            if(!line.empty())
-                lines.push_back(line);
-            line = word;
-            while(TextWidth(line, fontSize) > maxWidth && Utf8Length(line) > 1)
-            {
-                int n = Utf8Length(line) - 1;
-                while(n > 1 && TextWidth(TruncateUtf8(line, n), fontSize) > maxWidth)
-                    --n;
-                std::string head = TruncateUtf8(line, n);
-                lines.push_back(head);
-                line = line.substr(head.size());
-            }
-        }
-        if(!line.empty())
-            lines.push_back(line);
-        return lines;
-    }
-
-    std::vector<Texture> MakeLines(const std::vector<std::string> & lines, int fontSize, SDL_Renderer * renderer, Color color)
-    {
-        std::vector<Texture> textures;
-        for(const std::string & line : lines)
-            textures.emplace_back(line, fontSize, renderer, 0, 0, false, ToAbgr(color), true);
-        return textures;
     }
 
     // entry<TAB>name lines from the name cache

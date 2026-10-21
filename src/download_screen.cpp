@@ -9,6 +9,7 @@
 
 #include "download_screen.h"
 #include "framework/draw_helpers.h"
+#include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
 
@@ -117,23 +118,6 @@ namespace
     bool IsBlank(const std::string & line)
     {
         return line.find_first_not_of(" \t") == std::string::npos;
-    }
-
-    int TextWidth(const std::string & text, int fontSize)
-    {
-        if(CanRenderWithTTF(text, fontSize))
-            return MeasureTTFWidth(text, fontSize);
-        return Utf8Length(text) * fontSize;
-    }
-
-    std::string TruncateToWidth(const std::string & text, int fontSize, int maxWidth)
-    {
-        if(TextWidth(text, fontSize) <= maxWidth)
-            return text;
-        int n = Utf8Length(text);
-        while(n > 0 && TextWidth(TruncateUtf8(text, n) + "...", fontSize) > maxWidth)
-            --n;
-        return TruncateUtf8(text, n) + "...";
     }
 }
 
