@@ -32,4 +32,6 @@ std::vector<std::string> WrapToWidth(const std::string & text, int fontSize, int
 
 std::vector<Texture> MakeLines(const std::vector<std::string> & lines, int fontSize, SDL_Renderer * renderer, Color color);
 
+void DrawLinesCentered(SDL_Renderer * renderer, std::vector<Texture> & lines, int centerX, int y, int pitch);
+
 #endif

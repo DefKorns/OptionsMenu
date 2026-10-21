@@ -120,8 +120,11 @@ namespace UiTheme
     const int CreditY = FooterY + FooterH/2 - 8;
 
     const int ScrollX = FrameX + (ListX - FrameX) / 2 - 7;
+    const int ScrollArrowH = 24;
+    const int ListRows = (FooterDividerY - ListBottomMargin - RowFirstY) / RowPitch;
+    const int ListBottomY = RowFirstY + ListRows * RowPitch - 6;
     const int ScrollUpY = HeaderDividerY + 90;
-    const int ScrollDownY = FooterDividerY - 104;
+    const int ScrollDownY = ListBottomY - (ScrollUpY - RowFirstY) - ScrollArrowH;
 
     const char * const AssetBadgeOuter = "/images/ui/badge_outer.png";
     const char * const AssetBadgeInner = "/images/ui/badge_inner.png";

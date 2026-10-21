@@ -77,3 +77,14 @@ std::vector<Texture> MakeLines(const std::vector<std::string> & lines, int fontS
         textures.emplace_back(line, fontSize, renderer, 0, 0, false, ToAbgr(color), true);
     return textures;
 }
+
+void DrawLinesCentered(SDL_Renderer * renderer, std::vector<Texture> & lines, int centerX, int y, int pitch)
+{
+    for(Texture & line : lines)
+    {
+        line.rect.x = centerX - line.rect.w / 2;
+        line.rect.y = y;
+        line.Draw(renderer);
+        y += pitch;
+    }
+}

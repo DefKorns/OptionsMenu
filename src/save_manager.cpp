@@ -9,12 +9,13 @@
   */
 
 #include "framework/badge.h"
-#include "framework/dialog.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_jump.h"
+#include "framework/list_screen.h"
+#include "framework/panel_dialog.h"
 #include "framework/text_layout.h"
 #include "framework/utf8.h"
 #include "localization.h"
@@ -44,9 +45,10 @@ namespace
     const int DetailW = UiTheme::FrameX + UiTheme::FrameW - 16 - DetailX;
 
     const int ListFontSize = 16;
+    const int TagFontSize = 14;
+    const int TagGap = 12;
     const int PanelFontSize = 16;
     const int PanelHeaderFontSize = 18;
-    const int NoteFontSize = 15;
 
     const int ExitBack = 0;
     const int ExitLeaveMenu = 1;
@@ -65,11 +67,12 @@ namespace
         std::string listArgs;
         std::string actionArgs;
         bool preMarked;
+        bool destructive;
     };
 
-    const ListInfo CleanList{ "SAVE_MANAGER_CLEAN", "SAVE_MANAGER_TO_MOVE", "SAVE_MANAGER_CLEAN_NOTE", "SAVE_MANAGER_CLEAN_CONFIRM", "HINT_MOVE", "orphans", "move ", true };
-    const ListInfo RestoreDeletedList{ "SAVE_MANAGER_RESTORE_DELETED", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_NOTE", "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", "HINT_RESTORE", "deleted", "restore ", false };
-    const ListInfo RestoreBackupList{ "RESTORE_SAVES_USB", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_USB_NOTE", "SAVE_MANAGER_RESTORE_CONFIRM", "HINT_RESTORE", "backup", "restore-backup ", false };
+    const ListInfo CleanList{ "SAVE_MANAGER_CLEAN", "SAVE_MANAGER_TO_MOVE", "SAVE_MANAGER_CLEAN_NOTE", "SAVE_MANAGER_CLEAN_CONFIRM", "HINT_MOVE", "orphans", "move ", true, true };
+    const ListInfo RestoreDeletedList{ "SAVE_MANAGER_RESTORE_DELETED", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_NOTE", "SAVE_MANAGER_RESTORE_DELETED_CONFIRM", "HINT_RESTORE", "deleted", "restore ", false, false };
+    const ListInfo RestoreBackupList{ "RESTORE_SAVES_USB", "SAVE_MANAGER_TO_RESTORE", "SAVE_MANAGER_RESTORE_USB_NOTE", "SAVE_MANAGER_RESTORE_CONFIRM", "HINT_RESTORE", "backup", "restore-backup ", false, true };
 
     struct ActionInfo
     {
@@ -92,7 +95,9 @@ namespace
         std::string code;
         std::string label;
         bool named = false;
+        std::string tag;
         Texture text;
+        Texture tagText;
         bool marked = false;
     };
 
@@ -148,20 +153,19 @@ namespace
         return retroArch ? "RetroArch: " + shown : shown;
     }
 
+    std::string EntryTag(const std::string & entry)
+    {
+        return entry.compare(0, RetroArchPrefix.size(), RetroArchPrefix) == 0 ? entry.substr(RetroArchPrefix.size()) : entry;
+    }
+
+    std::string ShownLabel(const SaveEntry & entry)
+    {
+        return entry.tag.empty() ? entry.label : entry.label + " (" + entry.tag + ")";
+    }
+
     void DrawDot(SDL_Renderer * renderer, int x, int centerY)
     {
         DrawRoundedFillRect(renderer, { x, centerY - 4, 8, 8 }, UiTheme::Accent, 4);
-    }
-
-    void DrawLinesCentered(SDL_Renderer * renderer, std::vector<Texture> & lines, int centerX, int y, int pitch)
-    {
-        for(Texture & line : lines)
-        {
-            line.rect.x = centerX - line.rect.w/2;
-            line.rect.y = y;
-            line.Draw(renderer);
-            y += pitch;
-        }
     }
 }
 
@@ -178,16 +182,10 @@ int main(int, char **)
     const Color bg = UiTheme::Bg;
     SetDrawColor(renderer, bg);
 
-    Texture gearIcon(OptionsLocation + UiTheme::AssetGear, renderer, UiTheme::GearX, UiTheme::GearY);
-    Texture appTitleText("OptionsMenu", UiTheme::TitleFontSize, renderer, UiTheme::TitleX, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appTitleText.rect.y -= appTitleText.rect.h / 2;
-    Texture appVersionText(MOD_VERSION, UiTheme::VersionFontSize, renderer, appTitleText.rect.x + appTitleText.rect.w + UiTheme::VersionGap, UiTheme::TitleY, false, ToAbgr(UiTheme::Text), true);
-    appVersionText.rect.y -= appVersionText.rect.h / 2;
-    Texture creditText("Save Manager - by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
-    Texture titleText;
+    ScreenChrome chrome(OptionsLocation, renderer, "OptionsMenu", MOD_VERSION, "Save Manager - by DefKorns");
     auto SetTitle = [&](const std::string & key)
     {
-        titleText = Texture(Translate(key), UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
+        chrome.SetSectionTitle(Translate(key));
     };
 
     const int RowBoxH = UiTheme::RowPitch - 6;
@@ -200,10 +198,7 @@ int main(int, char **)
     const int RowTextMaxW = CheckboxX - 16 - UiTheme::RowTextX;
     const int displayCount = std::max(1, (UiTheme::FooterDividerY - UiTheme::ListBottomMargin - UiTheme::RowFirstY) / UiTheme::RowPitch);
 
-    Texture scrollUp(OptionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
-    SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
-    Texture scrollDown = scrollUp;
-    scrollDown.rect.y = UiTheme::ScrollDownY;
+    ScrollArrows scrollArrows(OptionsLocation, renderer);
 
     const int PanelPad = 16;
     const int PanelInnerX = DetailX + PanelPad;
@@ -214,14 +209,12 @@ int main(int, char **)
     const int SummaryRowPitch = 28;
     const int SummaryMaxRows = (summaryBox.y + summaryBox.h - PanelPad - SummaryListY) / SummaryRowPitch;
     const int BulletTextGap = 18;
-    const SDL_Rect noteBox{ DetailX, summaryBox.y + summaryBox.h + 16, DetailW, 72 };
-    const int NoteIconCX = noteBox.x + 26;
+    NoteBox note(renderer, { DetailX, summaryBox.y + summaryBox.h + 16, DetailW, 72 });
     const int StatPitch = 26;
     const int StatsBoxH = 4*StatPitch + 2*PanelPad - 6;
     const int DetailBottomY = UiTheme::FooterDividerY - UiTheme::ListBottomMargin;
     const SDL_Rect statsBox{ DetailX, DetailBottomY - StatsBoxH, DetailW, StatsBoxH };
     const SDL_Rect descriptionBox{ DetailX, UiTheme::RowFirstY, DetailW, statsBox.y - 16 - UiTheme::RowFirstY };
-    const int NoteTextX = noteBox.x + 46;
 
     BadgePainter badges(OptionsLocation, renderer);
     auto MakeBadge = [&](const std::string & letter, const std::string & labelKey, Color rim, Color fill) -> Badge
@@ -234,161 +227,31 @@ int main(int, char **)
     Badge badgeOk = MakeBadge("A", "HINT_OK", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge badgeBack = MakeBadge("B", "HINT_BACK", UiTheme::BadgeBDark, UiTheme::BadgeB);
     Badge badgeCancel = MakeBadge("B", "HINT_CANCEL", UiTheme::BadgeBDark, UiTheme::BadgeB);
+    Badge badgeConfirm = MakeBadge("A", "HINT_CONFIRM", UiTheme::BadgeADark, UiTheme::BadgeA);
     Badge confirmPill = badges.MakePill("Start + Select", Translate("HINT_CONFIRM"));
     auto DrawBadge = [&](Badge & badge, int rightEdgeX) -> int
     {
         return badges.Draw(badge, rightEdgeX, UiTheme::BadgeBandY);
     };
-    auto DrawFooterDivider = [&](int rightEdge)
+    auto Confirm = [&](const std::function<void()> & drawUnder, const PanelDialogText & text, bool destructive)
     {
-        int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
-        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
+        if(destructive)
+            return PanelDialog(renderer, badges, PanelDialog::Kind::ConfirmDestructive, text, { &badgeCancel, &confirmPill }).Run(sdl_context, controller, drawUnder);
+        return PanelDialog(renderer, badges, PanelDialog::Kind::Confirm, text, { &badgeCancel, &badgeConfirm }).Run(sdl_context, controller, drawUnder);
     };
 
-    auto DrawChrome = [&]()
+    auto ShowMessage = [&](const std::function<void()> & drawUnder, const std::string & titleKey)
     {
-        DrawStrokeRect(renderer, UiTheme::OuterRect, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BorderRadius);
-        gearIcon.Draw(renderer);
-        appTitleText.Draw(renderer);
-        appVersionText.Draw(renderer);
-        DrawHLine(renderer, UiTheme::HeaderDividerX, UiTheme::HeaderDividerX + UiTheme::HeaderDividerW, UiTheme::HeaderDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        DrawHLine(renderer, UiTheme::OuterRect.x, UiTheme::OuterRect.x + UiTheme::OuterRect.w, UiTheme::FooterDividerY, UiTheme::Border, UiTheme::BorderWidth);
-        int accentBarY = titleText.rect.y + (titleText.rect.h - UiTheme::SectionAccentBarH) / 2;
-        DrawFillRect(renderer, { UiTheme::SectionTitleX - UiTheme::SectionAccentBarW - 14, accentBarY, UiTheme::SectionAccentBarW, UiTheme::SectionAccentBarH }, UiTheme::Accent);
-        titleText.Draw(renderer);
-        creditText.Draw(renderer);
-    };
-
-    auto DrawRowFrame = [&](int index, bool selected) -> SDL_Rect
-    {
-        SDL_Rect rowRect{ UiTheme::ListX, UiTheme::RowFirstY + index*UiTheme::RowPitch, ListRightX - UiTheme::ListX, RowBoxH };
-        if(selected)
-        {
-            DrawRoundedFillRect(renderer, rowRect, UiTheme::SelectedRowBg, UiTheme::BoxRadius);
-            DrawStrokeRect(renderer, rowRect, UiTheme::Accent, 2, UiTheme::BoxRadius);
-        }
-        else
-            DrawHLine(renderer, rowRect.x, rowRect.x + rowRect.w, rowRect.y + rowRect.h + 3, UiTheme::Border, 1);
-        return rowRect;
-    };
-
-    auto DrawNote = [&](std::vector<Texture> & lines)
-    {
-        DrawStrokeRect(renderer, noteBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
-        int noteCenterY = noteBox.y + noteBox.h/2;
-        DrawStrokeRect(renderer, { NoteIconCX - 9, noteCenterY - 9, 18, 18 }, UiTheme::TextDim, 2, 9);
-        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 5, 2, 2 }, UiTheme::TextDim);
-        DrawFillRect(renderer, { NoteIconCX - 1, noteCenterY - 1, 2, 6 }, UiTheme::TextDim);
-        const int noteLinePitch = 20;
-        int y = noteCenterY - (static_cast<int>(lines.size()) * noteLinePitch)/2;
-        for(Texture & line : lines)
-        {
-            line.rect.x = NoteTextX;
-            line.rect.y = y + (noteLinePitch - line.rect.h)/2;
-            line.Draw(renderer);
-            y += noteLinePitch;
-        }
-    };
-
-    auto NoteLines = [&](const std::string & key)
-    {
-        return MakeLines(WrapToWidth(Translate(key), NoteFontSize, noteBox.x + noteBox.w - PanelPad - NoteTextX), NoteFontSize, renderer, UiTheme::TextDim);
-    };
-
-    // confirm (Start + Select) or acknowledge (A); B cancels
-    auto RunDialog = [&](const std::function<void()> & drawUnder, const std::string & titleKey, const std::vector<std::string> & bodyLines,
-                         const std::string & noteKey, bool confirm) -> bool
-    {
-        const int boxW = 600;
-        const int bodyPitch = 30;
-        const int badgeRowH = Dialog::BadgeRowGap + UiTheme::BadgeOuterSize;
-        std::vector<Texture> body;
-        for(const std::string & line : bodyLines)
-            body.emplace_back(TruncateToWidth(line, PanelFontSize, boxW - 80), PanelFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::Text), true);
-        std::vector<Texture> noteLines = noteKey.empty() ? std::vector<Texture>()
-            : MakeLines(WrapToWidth(Translate(noteKey), NoteFontSize, boxW - 48), NoteFontSize, renderer, UiTheme::TextDim);
-        const int titlePitch = 32;
-        std::vector<Texture> titleLines;
-        for(const std::string & line : WrapToWidth(Translate(titleKey), Dialog::TitleFontSize, boxW - 48))
-            titleLines.emplace_back(line, Dialog::TitleFontSize, renderer, 640, 0, true, ToAbgr(UiTheme::Text), true);
-        const int titleExtraH = std::max(0, static_cast<int>(titleLines.size()) - 1) * titlePitch;
-        const int boxH = 110 + titleExtraH + static_cast<int>(body.size())*bodyPitch + static_cast<int>(noteLines.size())*20 + badgeRowH;
-        const SDL_Rect box = Dialog::PanelRect(boxW, boxH);
-        for(size_t i = 0; i < titleLines.size(); ++i)
-            titleLines[i].rect.y = box.y + 36 + static_cast<int>(i)*titlePitch - titleLines[i].rect.h/2;
-
-        controller.GetButtonStatus(A);
-        controller.GetButtonStatus(B);
-        for(;;)
-        {
-            SDL_Event e;
-            while(SDL_PollEvent(&e))
-                if(e.type == SDL_QUIT)
-                    return false;
-            controller.Update();
-            if(sdl_context.powerwatch->buttonPress() || controller.GetButtonStatus(B))
-                return false;
-            if(confirm && controller.PeekButtonStatus(START) && controller.PeekButtonStatus(SELECT))
-            {
-                // still held on return
-                controller.GetButtonStatus(START);
-                controller.GetButtonStatus(SELECT);
-                return true;
-            }
-            if(!confirm && controller.GetButtonStatus(A))
-                return true;
-
-            sdl_context.StartFrame();
-            drawUnder();
-            Dialog::DrawBackdrop(renderer);
-            Dialog::DrawPanel(renderer, box);
-            for(Texture & line : titleLines)
-                line.Draw(renderer);
-            int y = box.y + 72 + titleExtraH;
-            for(Texture & line : body)
-            {
-                line.rect.x = 640 - line.rect.w/2;
-                line.rect.y = y;
-                line.Draw(renderer);
-                y += bodyPitch;
-            }
-            DrawLinesCentered(renderer, noteLines, 640, y + 6, 20);
-            if(confirm)
-                badges.DrawCentered({ &badgeCancel, &confirmPill }, box.x + box.w / 2, box.y + box.h - Dialog::BottomPad - UiTheme::BadgeOuterSize);
-            else
-                badges.DrawCentered({ &badgeOk }, box.x + box.w / 2, box.y + box.h - Dialog::BottomPad - UiTheme::BadgeOuterSize);
-            SetDrawColor(renderer, bg);
-            sdl_context.EndFrame();
-        }
-    };
-
-    // Shows a progress panel for one frame; the caller then runs the blocking work.
-    auto ShowBusy = [&](const std::function<void()> & drawUnder, const std::string & messageKey)
-    {
-        const std::string message = Translate(messageKey);
-        const SDL_Rect box = Dialog::PanelRect(std::max(420, TextWidth(message, Dialog::TitleFontSize) + 96), 110);
-        Texture working(message, Dialog::TitleFontSize, renderer, 640, box.y + box.h/2 - 12, true, ToAbgr(UiTheme::Text), true);
-        sdl_context.StartFrame();
-        drawUnder();
-        Dialog::DrawBackdrop(renderer);
-        Dialog::DrawPanel(renderer, box);
-        working.Draw(renderer);
-        SetDrawColor(renderer, bg);
-        sdl_context.EndFrame();
-    };
-
-    auto DropPendingInput = [&]()
-    {
-        controller.Update();
-        controller.GetButtonStatus(A);
-        controller.GetButtonStatus(B);
+        PanelDialogText text;
+        text.title = Translate(titleKey);
+        return PanelDialog(renderer, badges, PanelDialog::Kind::Acknowledge, text, { &badgeOk }).Run(sdl_context, controller, drawUnder);
     };
 
     auto RunBusy = [&](const std::function<void()> & drawUnder, const std::string & command) -> bool
     {
-        ShowBusy(drawUnder, "SAVE_MANAGER_WORKING");
+        ShowBusy(sdl_context, drawUnder, Translate("SAVE_MANAGER_WORKING"));
         const int status = system(command.c_str());
-        DropPendingInput();
+        DropPendingInput(controller);
         return status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 0;
     };
 
@@ -398,7 +261,7 @@ int main(int, char **)
         Texture summaryHeader(Translate(list.headerKey), PanelHeaderFontSize, renderer, PanelInnerX, summaryBox.y + 14, false, ToAbgr(UiTheme::TextDim), true);
         Texture noneMarkedText(Translate("SAVE_MANAGER_NONE_MARKED"), PanelFontSize, renderer, PanelInnerX, SummaryListY, false, ToAbgr(UiTheme::Text), true);
         std::vector<Texture> noneHintLines = MakeLines(WrapToWidth(Translate("SAVE_MANAGER_NONE_HINT"), PanelFontSize, PanelInnerW), PanelFontSize, renderer, UiTheme::TextDim);
-        std::vector<Texture> noteLines = NoteLines(list.noteKey);
+        note.SetText(Translate(list.noteKey));
         Badge actionPill = badges.MakePill("Start", "");
         GameNames gameNames = LoadGameNames();
 
@@ -434,7 +297,7 @@ int main(int, char **)
             int shown = (count > SummaryMaxRows) ? SummaryMaxRows - 1 : count;
             summaryNames.clear();
             for(int i = 0; i < shown; ++i)
-                summaryNames.emplace_back(TruncateToWidth(marked[i]->label, PanelFontSize, PanelInnerW - BulletTextGap), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::Text), true);
+                summaryNames.emplace_back(TruncateToWidth(ShownLabel(*marked[i]), PanelFontSize, PanelInnerW - BulletTextGap), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::Text), true);
             moreText = (shown < count)
                 ? Texture("+" + std::to_string(count - shown), PanelFontSize, renderer, PanelInnerX + BulletTextGap, 0, false, ToAbgr(UiTheme::TextDim), true)
                 : Texture();
@@ -443,11 +306,20 @@ int main(int, char **)
         // named entries first, alphabetically; the rest keep their code order
         auto ApplyNames = [&]()
         {
+            std::map<std::string, int> labelCount;
             for(SaveEntry & entry : entries)
             {
                 entry.named = gameNames.count(entry.code) != 0;
                 entry.label = EntryLabel(entry.code, gameNames);
-                entry.text = Texture(TruncateToWidth(entry.label, ListFontSize, RowTextMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
+                ++labelCount[entry.label];
+            }
+            for(SaveEntry & entry : entries)
+            {
+                const bool repeated = labelCount[entry.label] > 1;
+                entry.tag = repeated ? EntryTag(entry.code) : "";
+                entry.tagText = repeated ? Texture(entry.tag, TagFontSize, renderer, 0, 0, false, ToAbgr(UiTheme::TextDim), true) : Texture();
+                const int textMaxW = repeated ? RowTextMaxW - entry.tagText.rect.w - TagGap : RowTextMaxW;
+                entry.text = Texture(TruncateToWidth(entry.label, ListFontSize, textMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
             }
             std::stable_sort(entries.begin(), entries.end(), [](const SaveEntry & a, const SaveEntry & b)
             {
@@ -475,29 +347,33 @@ int main(int, char **)
 
         auto DrawScreen = [&]()
         {
-            DrawChrome();
+            chrome.Draw();
             const int entryCount = static_cast<int>(entries.size());
             const int rowCount = entryCount + selectAllRows;
             const int count = std::min(displayCount, rowCount - listOffset);
             for(int i = 0; i < count; ++i)
             {
                 const int row = listOffset + i;
-                SDL_Rect rowRect = DrawRowFrame(i, i == currentId);
+                SDL_Rect rowRect = DrawListRow(renderer, i, ListRightX, RowBoxH, i == currentId);
                 int centerY = rowRect.y + rowRect.h/2;
                 Texture & text = row == 0 ? selectAllText : entries[row - selectAllRows].text;
                 const bool marked = row == 0 ? markedCount == entryCount : entries[row - selectAllRows].marked;
                 text.rect.y = centerY - text.rect.h/2;
                 SetColorMod(text.texture.get(), row != 0 && marked ? UiTheme::TextDim : UiTheme::Text);
                 text.Draw(renderer);
+                if(row != 0 && entries[row - selectAllRows].tagText.texture)
+                {
+                    Texture & tag = entries[row - selectAllRows].tagText;
+                    tag.rect.x = CheckboxX - TagGap - tag.rect.w;
+                    tag.rect.y = centerY - tag.rect.h/2;
+                    tag.Draw(renderer);
+                }
                 Texture & checkbox = marked ? checkboxOn : checkboxOff;
                 checkbox.rect.x = CheckboxX;
                 checkbox.rect.y = centerY - checkbox.rect.h/2;
                 checkbox.Draw(renderer);
             }
-            if(listOffset != 0)
-                scrollUp.Draw(renderer);
-            if(listOffset + displayCount < rowCount)
-                scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
+            scrollArrows.Draw(listOffset != 0, listOffset + displayCount < rowCount);
 
             DrawStrokeRect(renderer, summaryBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
             summaryHeader.Draw(renderer);
@@ -532,7 +408,7 @@ int main(int, char **)
                     moreText.Draw(renderer);
                 }
             }
-            DrawNote(noteLines);
+            note.Draw();
 
             int rightEdge = UiTheme::BadgeClusterRightX;
             const int row = listOffset + currentId;
@@ -541,7 +417,7 @@ int main(int, char **)
             rightEdge = DrawBadge(badgeBack, rightEdge);
             if(markedCount > 0)
                 rightEdge = DrawBadge(actionPill, rightEdge);
-            DrawFooterDivider(rightEdge);
+            DrawFooterDivider(renderer, rightEdge);
         };
 
         auto Labels = [&]()
@@ -604,13 +480,17 @@ int main(int, char **)
             else if(controller.GetButtonStatus(START) && markedCount > 0)
             {
                 auto marked = Marked();
-                std::vector<std::string> lines;
                 const int maxNames = 6;
+                PanelDialogText text;
+                text.title = Translate(list.confirmKey);
                 for(int i = 0; i < std::min(maxNames, static_cast<int>(marked.size())); ++i)
-                    lines.push_back(marked[i]->label);
-                if(static_cast<int>(marked.size()) > maxNames)
-                    lines.push_back("+" + std::to_string(marked.size() - maxNames));
-                if(RunDialog(DrawScreen, list.confirmKey, lines, list.noteKey, true))
+                    text.body.push_back(ShownLabel(*marked[i]));
+                text.hiddenCount = std::max(0, static_cast<int>(marked.size()) - maxNames);
+                text.note = Translate(list.noteKey);
+                const DialogResult answer = Confirm(DrawScreen, text, list.destructive);
+                if(answer == DialogResult::Quit)
+                    return ExitLeaveMenu;
+                if(answer == DialogResult::Confirmed)
                 {
                     const bool fromBackup = &list == &RestoreBackupList;
                     bool ok;
@@ -627,8 +507,8 @@ int main(int, char **)
                         std::remove(SelectionFile.c_str());
                     }
                     Load();
-                    if(fromBackup)
-                        RunDialog(DrawScreen, ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED", {}, "", false);
+                    if(fromBackup && ShowMessage(DrawScreen, ok ? "RESTORE_SAVES_USB_DONE" : "RESTORE_SAVES_USB_FAILED") == DialogResult::Quit)
+                        return ExitLeaveMenu;
                     // an empty list would still show a checked "select all"
                     if(entries.empty())
                         return ExitBack;
@@ -699,10 +579,10 @@ int main(int, char **)
 
     auto DrawActions = [&]()
     {
-        DrawChrome();
+        chrome.Draw();
         for(int i = 0; i < static_cast<int>(Actions.size()); ++i)
         {
-            SDL_Rect rowRect = DrawRowFrame(i, i == currentAction);
+            SDL_Rect rowRect = DrawListRow(renderer, i, ListRightX, RowBoxH, i == currentAction);
             int centerY = rowRect.y + rowRect.h/2;
             actionTexts[i].rect.y = centerY - actionTexts[i].rect.h/2;
             actionTexts[i].Draw(renderer);
@@ -742,12 +622,7 @@ int main(int, char **)
         int rightEdge = UiTheme::BadgeClusterRightX;
         rightEdge = DrawBadge(badgeSelect, rightEdge);
         rightEdge = DrawBadge(badgeBack, rightEdge);
-        DrawFooterDivider(rightEdge);
-    };
-
-    auto ShowMessage = [&](const std::string & titleKey, const std::string & noteKey)
-    {
-        RunDialog(DrawActions, titleKey, {}, noteKey, false);
+        DrawFooterDivider(renderer, rightEdge);
     };
 
     auto RunAction = [&](Action action) -> int
@@ -755,13 +630,22 @@ int main(int, char **)
         switch(action)
         {
         case Action::Backup:
-            if(RunDialog(DrawActions, "SAVE_MANAGER_BACKUP_CONFIRM", {}, "SAVE_MANAGER_BACKUP_DESC", true))
+        {
+            PanelDialogText text;
+            text.title = Translate("SAVE_MANAGER_BACKUP_CONFIRM");
+            text.note = Translate("SAVE_MANAGER_BACKUP_DESC");
+            const DialogResult answer = Confirm(DrawActions, text, true);
+            if(answer == DialogResult::Quit)
+                return ExitLeaveMenu;
+            if(answer == DialogResult::Confirmed)
             {
                 const bool ok = RunBusy(DrawActions, "sh " + ScriptLocation + "BackupSavesUsb.sh >/dev/null 2>&1");
                 RefreshStats();
-                ShowMessage(ok ? "BACKUP_SAVES_USB_DONE" : "BACKUP_SAVES_USB_FAILED", "");
+                if(ShowMessage(DrawActions, ok ? "BACKUP_SAVES_USB_DONE" : "BACKUP_SAVES_USB_FAILED") == DialogResult::Quit)
+                    return ExitLeaveMenu;
             }
             return -1;
+        }
         case Action::RestoreUsb:
         case Action::Clean:
         case Action::RestoreDeleted:
@@ -769,8 +653,8 @@ int main(int, char **)
             const int available = action == Action::RestoreUsb ? stats.backupSaves : action == Action::Clean ? stats.orphans : stats.deleted;
             if(available <= 0)
             {
-                ShowMessage(action == Action::RestoreUsb ? "RESTORE_SAVES_USB_NOT_FOUND" : action == Action::Clean ? "SAVE_MANAGER_NO_ORPHANS" : "SAVE_MANAGER_NO_DELETED", "");
-                return -1;
+                const std::string titleKey = action == Action::RestoreUsb ? "RESTORE_SAVES_USB_NOT_FOUND" : action == Action::Clean ? "SAVE_MANAGER_NO_ORPHANS" : "SAVE_MANAGER_NO_DELETED";
+                return ShowMessage(DrawActions, titleKey) == DialogResult::Quit ? ExitLeaveMenu : -1;
             }
             const int result = RunSaveList(action == Action::RestoreUsb ? RestoreBackupList : action == Action::Clean ? CleanList : RestoreDeletedList);
             SetTitle("SAVE_MANAGER");
