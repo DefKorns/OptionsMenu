@@ -458,8 +458,7 @@ int main(int argc, char * argv[])
         }
         if(!commands[currentCommandId].deleteCommand.empty() || !commands[currentCommandId].deleteBlockedKey.empty())
             rightEdge = DrawBadge(badgeHold, rightEdge);
-        int dividerX = rightEdge - UiTheme::BadgeDividerGapFromCluster;
-        DrawVLine(renderer, dividerX, UiTheme::FooterY + 10, UiTheme::FooterY + UiTheme::FooterH - 10, UiTheme::Border, 2);
+        DrawFooterDivider(renderer, rightEdge);
     };
 
     auto DrawScreen = [&]()
