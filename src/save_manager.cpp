@@ -183,10 +183,7 @@ int main(int, char **)
     const int RowTextMaxW = CheckboxX - 16 - UiTheme::RowTextX;
     const int displayCount = std::max(1, (UiTheme::FooterDividerY - UiTheme::ListBottomMargin - UiTheme::RowFirstY) / UiTheme::RowPitch);
 
-    Texture scrollUp(OptionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
-    SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
-    Texture scrollDown = scrollUp;
-    scrollDown.rect.y = UiTheme::ScrollDownY;
+    ScrollArrows scrollArrows(OptionsLocation, renderer);
 
     const int PanelPad = 16;
     const int PanelInnerX = DetailX + PanelPad;
@@ -342,10 +339,7 @@ int main(int, char **)
                 checkbox.rect.y = centerY - checkbox.rect.h/2;
                 checkbox.Draw(renderer);
             }
-            if(listOffset != 0)
-                scrollUp.Draw(renderer);
-            if(listOffset + displayCount < rowCount)
-                scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
+            scrollArrows.Draw(listOffset != 0, listOffset + displayCount < rowCount);
 
             DrawStrokeRect(renderer, summaryBox, UiTheme::Border, UiTheme::BorderWidth, UiTheme::BoxRadius);
             summaryHeader.Draw(renderer);

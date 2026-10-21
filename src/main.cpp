@@ -13,6 +13,7 @@
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
 #include "framework/draw_helpers.h"
+#include "framework/list_screen.h"
 #include "framework/utf8.h"
 #include "application_lifecycle.h"
 #include "back_stack.h"
@@ -197,11 +198,7 @@ int main(int argc, char * argv[])
     Texture titleText(titleString, UiTheme::SectionTitleFontSize, renderer, UiTheme::SectionTitleX, UiTheme::SectionTitleY, false, ToAbgr(UiTheme::Text), true);
     SDL_Rect selectedRowRect{ UiTheme::ListX, UiTheme::RowFirstY - 2, UiTheme::ListContentRightX - UiTheme::ListX, 0 };
     Texture CompComText("created by CompCom - Modern UI by DefKorns", 16, renderer, UiTheme::CreditX, UiTheme::CreditY, false, ToAbgr(UiTheme::Text), true);
-    Texture scrollUp(optionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
-    SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
-    scrollUp.rect.x -= scrollUp.rect.w / 2;
-    Texture scrollDown = scrollUp;
-    scrollDown.rect.y = UiTheme::ScrollDownY;
+    ScrollArrows scrollArrows(optionsLocation, renderer);
 
     BadgePainter badges(optionsLocation, renderer);
     auto MakeBadge = [&](const char * letter, const char * hintKey, Color rim, Color fill) -> Badge
@@ -444,10 +441,7 @@ int main(int argc, char * argv[])
 
         CompComText.Draw(renderer);
 
-        if(topListItemNumber != 0)
-            scrollUp.Draw(renderer);
-        if((topListItemNumber + DisplayItemCount) < commandCount)
-            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
+        scrollArrows.Draw(topListItemNumber != 0, (topListItemNumber + DisplayItemCount) < commandCount);
     };
 
     auto Confirm = [&](const std::string & title) -> bool

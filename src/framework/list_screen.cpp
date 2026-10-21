@@ -87,6 +87,24 @@ SDL_Rect DrawListRow(SDL_Renderer * renderer, int index, int rightX, int rowHeig
     return rowRect;
 }
 
+ScrollArrows::ScrollArrows(const std::string & optionsLocation, SDL_Renderer * renderer)
+    : renderer_(renderer)
+    , up_(optionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY)
+{
+    SetColorMod(up_.texture.get(), UiTheme::ScrollArrow);
+    up_.rect.x -= up_.rect.w / 2;
+    down_ = up_;
+    down_.rect.y = UiTheme::ScrollDownY;
+}
+
+void ScrollArrows::Draw(bool moreAbove, bool moreBelow)
+{
+    if(moreAbove)
+        up_.Draw(renderer_);
+    if(moreBelow)
+        down_.Draw(renderer_, SDL_FLIP_VERTICAL);
+}
+
 NoteBox::NoteBox(SDL_Renderer * renderer, SDL_Rect rect)
     : renderer_(renderer)
     , rect_(rect)

@@ -112,10 +112,7 @@ int main(int argc, char * argv[])
         mod.text = Texture(TruncateToWidth(mod.name, ListFontSize, RowTextMaxW), ListFontSize, renderer, UiTheme::RowTextX, 0, false, ToAbgr(White), true);
     Texture emptyText(Translate("MOD_UNINSTALL_EMPTY"), ListFontSize, renderer, UiTheme::RowTextX, UiTheme::RowFirstY, false, ToAbgr(UiTheme::TextDim), true);
 
-    Texture scrollUp(OptionsLocation + UiTheme::AssetChevronUp, renderer, UiTheme::ScrollX, UiTheme::ScrollUpY);
-    SetColorMod(scrollUp.texture.get(), UiTheme::ScrollArrow);
-    Texture scrollDown = scrollUp;
-    scrollDown.rect.y = UiTheme::ScrollDownY;
+    ScrollArrows scrollArrows(OptionsLocation, renderer);
 
     const int PanelPad = 16;
     const int PanelInnerX = UiTheme::DetailX + PanelPad;
@@ -209,10 +206,7 @@ int main(int argc, char * argv[])
             checkbox.rect.y = centerY - checkbox.rect.h/2;
             checkbox.Draw(renderer);
         }
-        if(listOffset != 0)
-            scrollUp.Draw(renderer);
-        if(listOffset + displayCount < modCount)
-            scrollDown.Draw(renderer, SDL_FLIP_VERTICAL);
+        scrollArrows.Draw(listOffset != 0, listOffset + displayCount < modCount);
     };
 
     auto DrawSummary = [&]()

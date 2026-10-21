@@ -45,6 +45,18 @@ void DrawFooterDivider(SDL_Renderer * renderer, int rightEdge);
 
 SDL_Rect DrawListRow(SDL_Renderer * renderer, int index, int rightX, int rowHeight, bool selected);
 
+class ScrollArrows
+{
+public:
+    ScrollArrows(const std::string & optionsLocation, SDL_Renderer * renderer);
+    void Draw(bool moreAbove, bool moreBelow);
+
+private:
+    SDL_Renderer * renderer_;
+    Texture up_;
+    Texture down_;
+};
+
 class NoteBox
 {
 public:
