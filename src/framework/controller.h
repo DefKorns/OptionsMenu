@@ -29,7 +29,7 @@ private:
     std::vector<int> fds;
     std::vector<std::string> openNodes;
     unsigned int lastScan = 0;
-    ButtonEvent buttonBuffer[10];
+    ButtonEvent buttonBuffer[10]{};
     std::map<GameButton,bool> buttons;
     std::map<GameButton,unsigned int> repeatPressedAt, repeatLastFired;
     std::map<GameButton,bool> repeatActive;

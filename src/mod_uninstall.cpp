@@ -63,7 +63,7 @@ namespace
 int main(int argc, char * argv[])
 {
     std::string folderLocation(argv[0]);
-    folderLocation = folderLocation.substr(0, folderLocation.find_last_of('/')+1);
+    folderLocation.resize(folderLocation.find_last_of('/')+1);
 
     std::vector<Mod> mods;
     {

@@ -24,7 +24,7 @@ struct Texture
     void Draw(SDL_Renderer* renderer, SDL_RendererFlip flip_enum);
 };
 
-SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, std::string file, SDL_Rect * rect = nullptr);
+SDL_Texture * LoadTexturePNG(SDL_Renderer *renderer, const std::string & file, SDL_Rect * rect = nullptr);
 SDL_Texture * WriteText(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color = 0xFFFFFF);
 SDL_Texture * WriteTextTTF(const std::string & text, int fontSize, SDL_Renderer* renderer, int & textureWidth, int & textureHeight, const int color = 0xFFFFFF);
 

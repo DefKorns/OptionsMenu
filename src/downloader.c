@@ -83,6 +83,8 @@ static void ensure_ca_bundle(void) {
     }
     f = fopen(CA_PATH, "wb");
     if (!f) return;
+    /* the linker places both symbols around the embedded file */
+    /* cppcheck-suppress subtractPointers */
     fwrite(_binary_cacert_pem_start, 1, (size_t)(_binary_cacert_pem_end - _binary_cacert_pem_start), f);
     fclose(f);
 }

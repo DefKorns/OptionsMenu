@@ -15,9 +15,8 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit) : fpsTime(fpsTime), powerButtonExit(powerButtonExit)
+SDL_Context::SDL_Context(std::chrono::milliseconds fpsTime, bool powerButtonExit) : fpsTime(fpsTime), powerwatch(std::make_unique<PowerWatch>()), powerButtonExit(powerButtonExit)
 {
-    powerwatch = std::make_unique<PowerWatch>();
     window = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_FULLSCREEN);
     renderer = SDL_CreateRenderer(window, -1, 0);
     if(renderer == NULL) {
