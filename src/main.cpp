@@ -8,6 +8,7 @@
   */
 
 #include "framework/badge.h"
+#include "framework/close_on_exec.h"
 #include "framework/dialog.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
@@ -142,6 +143,7 @@ int main(int argc, char * argv[])
                         if(!c.enableIfCommand.empty())
                         {
                             ExpandTemplates(c.enableIfCommand);
+                            MarkFdsCloseOnExec();
                             if(system(("source /etc/preinit; script_init; " + c.enableIfCommand).c_str()) != 0)
                                 continue;
                         }
@@ -188,6 +190,7 @@ int main(int argc, char * argv[])
     auto renderer = sdl_context.renderer;
     Controller controller(1);
 
+    MarkFdsCloseOnExec();
     system("touch /tmp/options.flag");
 
     const Color bg = UiTheme::Bg;
@@ -521,6 +524,7 @@ int main(int argc, char * argv[])
         if(!Confirm(Translate(confirmKey.empty() ? "DELETE_CONFIRM_GENERIC" : confirmKey)))
             return false;
         lifecycle.Decide(ExitAction::Leave);
+        MarkFdsCloseOnExec();
         system(commands[currentCommandId].deleteCommand.c_str());
         return true;
     };
@@ -608,6 +612,7 @@ int main(int argc, char * argv[])
             else if(confirmed)
             {
                 lifecycle.Decide(commands[currentCommandId].restartUI ? ExitAction::Resume : ExitAction::Leave);
+                MarkFdsCloseOnExec();
                 system(commands[currentCommandId].command.c_str());
                 break;
             }
@@ -637,7 +642,10 @@ int main(int argc, char * argv[])
             {
                 lifecycle.Decide(backCommand.empty() ? ExitAction::Resume : ExitAction::Leave);
                 if(!backCommand.empty())
+                {
+                    MarkFdsCloseOnExec();
                     system(backCommand.c_str());
+                }
                 break;
             }
             bHoldFired = false;

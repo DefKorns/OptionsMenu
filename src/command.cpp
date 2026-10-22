@@ -8,6 +8,7 @@
  */
 
 #include "command.h"
+#include "framework/close_on_exec.h"
 #include "framework/controller.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_screen.h"
@@ -34,6 +35,7 @@ static CommandProcess StartCommand(const std::string & command)
     int fds[2];
     if(pipe(fds) != 0)
         return { nullptr, -1 };
+    MarkFdsCloseOnExec();
     const pid_t pid = fork();
     if(pid < 0)
     {
@@ -279,7 +281,10 @@ void Command::RunCommand(SDL_Context & sdl_context, Controller * controller, Scr
 static std::vector<std::string> ReadLines(const std::string & command)
 {
     std::vector<std::string> lines;
-    FILE * pipe = command.empty() ? nullptr : popen(command.c_str(), "r");
+    if(command.empty())
+        return lines;
+    MarkFdsCloseOnExec();
+    FILE * pipe = popen(command.c_str(), "r");
     if(!pipe)
         return lines;
     std::string line;
@@ -342,6 +347,7 @@ void Command::SetChoice(const std::string & value)
     size_t pos;
     while((pos = set.find("%value%")) != std::string::npos)
         set.replace(pos, 7, value);
+    MarkFdsCloseOnExec();
     system(set.c_str());
     choiceValue = value;
     choiceResolved = value.empty() ? choiceAutoResolved : value;
@@ -361,6 +367,7 @@ void Command::UpdateState()
     if(stateCommand.empty())
         return;
 
+    MarkFdsCloseOnExec();
     FILE * pipe = popen(stateCommand.c_str(), "r");
     if(!pipe)
         return;

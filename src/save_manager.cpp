@@ -9,6 +9,7 @@
   */
 
 #include "framework/badge.h"
+#include "framework/close_on_exec.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
@@ -111,6 +112,7 @@ namespace
     std::vector<std::string> ReadLines(const std::string & command)
     {
         std::vector<std::string> lines;
+        MarkFdsCloseOnExec();
         FILE * pipe = popen(command.c_str(), "r");
         if(!pipe)
             return lines;
@@ -250,6 +252,7 @@ int main(int, char **)
     auto RunBusy = [&](const std::function<void()> & drawUnder, const std::string & command) -> bool
     {
         ShowBusy(sdl_context, drawUnder, Translate("SAVE_MANAGER_WORKING"));
+        MarkFdsCloseOnExec();
         const int status = system(command.c_str());
         DropPendingInput(controller);
         return status != -1 && WIFEXITED(status) && WEXITSTATUS(status) == 0;
