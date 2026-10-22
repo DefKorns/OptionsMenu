@@ -8,6 +8,7 @@
   */
 
 #include "download_screen.h"
+#include "framework/close_on_exec.h"
 #include "framework/draw_helpers.h"
 #include "framework/list_screen.h"
 #include "framework/text_layout.h"
@@ -45,6 +46,7 @@ namespace
             int fds[2];
             if(pipe(fds) != 0)
                 return;
+            MarkFdsCloseOnExec();
             pid_ = fork();
             if(pid_ < 0)
             {

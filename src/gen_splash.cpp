@@ -232,12 +232,12 @@ namespace
             close(devNull);
     }
 
-    int RunLoading()
+    int RunLoading(const std::vector<std::string> & keys)
     {
         const pid_t caller = getppid();
         if(caller <= 1)
             return 0;
-        const TextBlock block = RenderText({ "LOADING" }, true);
+        const TextBlock block = RenderText(keys, true);
         UiTheme::LoadThemeConfig(OptionsRoot);
         const int barY = block.bottomY + BarGap;
 
@@ -266,17 +266,18 @@ namespace
     void PrintUsage(const char * self)
     {
         std::cerr << "Usage: " << self << " <output.png> <line-key> [line-key...]\n"
-                  << "       " << self << " --loading\n";
+                  << "       " << self << " --loading [line-key...]\n";
     }
 }
 
 int main(int argc, char * argv[])
 {
     const std::vector<std::string> args(argv + 1, argv + argc);
-    if(args.size() == 1 && args[0] == "--loading")
+    if(!args.empty() && args[0] == "--loading")
     {
         LoadLanguageFromConfig(OptionsRoot);
-        return RunLoading();
+        const std::vector<std::string> keys(args.begin() + 1, args.end());
+        return RunLoading(keys.empty() ? std::vector<std::string>{ "LOADING" } : keys);
     }
     if(args.size() < 2)
     {

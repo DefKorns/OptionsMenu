@@ -55,7 +55,7 @@ restoreWifi() {
 
 case "$2" in
 backup)
-  omSplash WIFI_BACKUP_SPLASH_LINE1 WIFI_BACKUP_SPLASH_LINE2
+  omLoading WIFI_BACKUP_SPLASH_LINE1 WIFI_BACKUP_SPLASH_LINE2
   backupWifi
   echo "WIFI config backed up to $network"
   sleep 1

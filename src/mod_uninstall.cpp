@@ -8,6 +8,7 @@
   */
 
 #include "framework/badge.h"
+#include "framework/close_on_exec.h"
 #include "framework/sdl_helper.h"
 #include "framework/controller.h"
 #include "framework/powerwatch.h"
@@ -67,6 +68,7 @@ int main(int argc, char * argv[])
     std::vector<Mod> mods;
     {
         char buf[256];
+        MarkFdsCloseOnExec();
         auto pipe = popen("hakchi pack_list", "r");
         if(pipe)
         {
@@ -293,6 +295,7 @@ int main(int argc, char * argv[])
         for(const Mod * mod : marked)
             out << mod->name << " ";
         out.close();
+        MarkFdsCloseOnExec();
         system(("/bin/sh " + folderLocation + "/FinishUninstall.sh &").c_str());
         return DialogResult::Confirmed;
     };
