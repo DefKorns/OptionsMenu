@@ -285,7 +285,13 @@ Bug reports, ideas and pull requests are welcome.
   3. Run `tests/run_tests.sh`; it needs Docker.
   4. Open a pull request that says what changed and how you tested it.
 
-The C++ follows the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/) (C++14); shell scripts use `snake_case` variables and `camelCase` functions. Keep comments for constraints the code can't show.
+### Code style
+
+- **Formatting:** [`.editorconfig`](.editorconfig) sets it: UTF-8, LF line endings, a newline at the end of every file, no trailing whitespace, 4 spaces for C/C++, 2 spaces for shell scripts and YAML, tabs only in the Makefile. Most editors pick it up on their own; VS Code needs the EditorConfig extension. `.gitattributes` stores every text file with LF, whatever your `core.autocrlf`.
+- **Only change what you need:** don't reformat, re-indent or strip whitespace in lines you aren't changing. A pull request that touches unrelated lines will be asked to drop them. The **Style** check on pull requests looks only at the lines you add.
+- **C++:** the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/), C++14, and the layout of the code around yours: braces on their own line, `if(` with no space.
+- **Shell:** POSIX `sh` for BusyBox `ash`, `snake_case` variables, `camelCase` functions, `source` (not `.`) for other scripts. Run `shellcheck` on what you change.
+- **Comments:** only for constraints the code can't show.
 
 ## Credits
 
