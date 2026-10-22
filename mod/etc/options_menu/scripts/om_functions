@@ -219,6 +219,7 @@ omSplash() {
 
 # omLoading [key...]: omSplash plus a moving bar until the calling script exits; "Loading" without keys
 omLoading() {
+  om_loading_keys="$*"
   "$om_scripts/gen_splash" --loading "$@" 2>/dev/null
 }
 
@@ -250,7 +251,7 @@ omUnpack() {
 # omReloadMenuLater [command...]: the menu holds /dev/fb0 and uistop kills every holder,
 # so remote-exec runs omReloadMenu once the caller has exited
 omReloadMenuLater() {
-  echo "source $om_scripts/om_functions; omReloadMenu $*" >/var/exec.flag.tmp
+  echo "source $om_scripts/om_functions; om_loading_keys=\"$om_loading_keys\"; omReloadMenu $*" >/var/exec.flag.tmp
   mv /var/exec.flag.tmp /var/exec.flag
 }
 
@@ -262,7 +263,8 @@ omReloadMenu() {
   uistop
   uiresume
   timeout="" waittimeout 1500 '! lsof -n | grep -qF "/dev/fb0"' "framebuffer"
-  omLoading LOADING
+  # shellcheck disable=SC2086
+  omLoading ${om_loading_keys:-LOADING}
   [ $# -gt 0 ] && "$@"
   [ -f "$menu_state" ] && current_menu="$(cat "$menu_state")"
   echo reload >"$menu_state"
