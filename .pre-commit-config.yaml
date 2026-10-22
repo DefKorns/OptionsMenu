@@ -12,6 +12,8 @@ repos:
         args: [--fix=lf]
       - id: check-yaml
       - id: check-json
+        # VS Code settings are JSON with comments
+        exclude: ^\.vscode/
       - id: check-merge-conflict
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.11.0
