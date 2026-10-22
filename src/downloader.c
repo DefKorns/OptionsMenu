@@ -19,6 +19,7 @@
  * Batch line: <out_path>\t<url>[\t<fallback_url>...]; result on stdout: "<rc> <out_path>".
  * Progress on stderr: "\r<label> <pct>% (<done>/<total> MB)". */
 
+#include <ctype.h>
 #include <curl/curl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -86,11 +87,25 @@ static void ensure_ca_bundle(void) {
     fclose(f);
 }
 
-/* cut on a UTF-8 boundary */
+/* without an all-caps "SNES." prefix or the archive extension; cut on a UTF-8 boundary */
 static void make_label(char *dst, const char *out_path) {
+    static const char *const archive_exts[] = { ".tar.gz", ".tgz", ".gz", ".zip" };
     const char *base = strrchr(out_path, '/');
     base = base ? base + 1 : out_path;
+    const char *dot = strchr(base, '.');
+    if (dot && dot > base && dot[1]) {
+        const char *c = base;
+        while (c < dot && isupper((unsigned char)*c)) c++;
+        if (c == dot) base = dot + 1;
+    }
     size_t len = strlen(base);
+    for (size_t i = 0; i < sizeof archive_exts / sizeof *archive_exts; i++) {
+        const size_t ext_len = strlen(archive_exts[i]);
+        if (len > ext_len && strcmp(base + len - ext_len, archive_exts[i]) == 0) {
+            len -= ext_len;
+            break;
+        }
+    }
     if (len > LABEL_MAX_BYTES) {
         len = LABEL_MAX_BYTES;
         while (len > 0 && ((unsigned char)base[len] & 0xC0) == 0x80) len--;
