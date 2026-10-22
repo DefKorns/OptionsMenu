@@ -281,6 +281,7 @@ Packaging and versioning come from [hmod-build](https://github.com/DefKorns/hmod
 - **Advokaten** — Network commands
 - **ThanosRD** — layout and design of the original interface
 - **[MadFranko008](https://www.reddit.com/user/MadFranko008/)** — idea for the Saved Games backup
+- **[KMFDManic](https://github.com/KMFDManic)** and **[DanTheMan827](https://github.com/DanTheMan827)** — answers and help whenever I had questions about how things work
 
 ### Third-party assets
 

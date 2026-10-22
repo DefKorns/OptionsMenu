@@ -39,6 +39,7 @@ Every menu, step by step, and how to add your own entries from an hmod: [github.
   - Docker-based ARM cross-compile toolchain and build tooling
   - Redesigned "Modern UI" (dialog frame, selection highlight, toggle switches, button-hint badges)
 - **ThanosRD** — UI Layout/Design assistance (original Classic UI)
+- **KMFDManic** and **DanTheMan827** — answers and help whenever I had questions about how things work
 
 ### Testing
 
