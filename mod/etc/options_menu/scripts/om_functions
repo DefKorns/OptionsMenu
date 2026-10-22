@@ -249,7 +249,7 @@ omReloadMenuLater() {
   mv /var/exec.flag.tmp /var/exec.flag
 }
 
-# omReloadMenu [command...]: stops the UI, runs the command, then reloads the current folder;
+# omReloadMenu [command...]: stops the UI, shows Loading, runs the command, then reloads the current folder;
 # chmenu refuses the folder already shown unless its state says otherwise
 omReloadMenu() {
   local menu_state="/var/saves/$modname/menu" current_menu="000"
@@ -257,6 +257,7 @@ omReloadMenu() {
   uistop
   uiresume
   timeout="" waittimeout 1500 '! lsof -n | grep -qF "/dev/fb0"' "framebuffer"
+  "$om_scripts/gen_splash" --loading 2>/dev/null
   [ $# -gt 0 ] && "$@"
   [ -f "$menu_state" ] && current_menu="$(cat "$menu_state")"
   echo reload >"$menu_state"
