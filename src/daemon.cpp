@@ -51,7 +51,7 @@ int main()
     const auto waitTime = std::chrono::milliseconds(100);
     const short holdThreshold = 10;
     short holdCount = 0;
-    
+
     for(;;)
     {
         c.Update();
@@ -71,6 +71,6 @@ int main()
             holdCount = 0;
         std::this_thread::sleep_for(waitTime);
     }
-    
+
     return 0;
 }

@@ -17,5 +17,3 @@ sleep 5
     echo "Connection failed. Please connect your WiFi adapter."
   fi
 fi
-
-

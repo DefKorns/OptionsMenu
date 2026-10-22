@@ -62,10 +62,10 @@ hibernateReboot()
 
 reloadImagePayload()
 {
-  payload_count=$(find "$rootfs/etc/hibernate_mod/" -type f -name *.png.xz | wc -l) 
+  payload_count=$(find "$rootfs/etc/hibernate_mod/" -type f -name *.png.xz | wc -l)
   #echo $payload_count
   payload_count=$(($payload_count-1)) #Deduct 1 to account for the hibernate.png.xz
-  #echo $payload_count  
+  #echo $payload_count
   if [ $payload_count = 1 ]; then #lite version in play...
     #echo "Lite version in play"
     if [ ! -f /tmp/power_menu_screen ]; then
@@ -76,11 +76,11 @@ reloadImagePayload()
     #echo "Deluxe version in play"
     image_range=$(($payload_count-1+1))
     RANDOM=$$
-    
+
     selected_image="$rootfs/etc/hibernate_mod/"$(($(($RANDOM%$image_range))+1))".png.xz"
     #echo $selected_image
     rm -f /tmp/power_menu_screen #Just incase
-    
+
     xz -dc $selected_image > /tmp/power_menu_screen
   fi
 }
