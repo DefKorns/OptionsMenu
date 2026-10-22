@@ -88,6 +88,7 @@ AUTOFIRE_SPEED_NORMAL=Normal
 AUTOFIRE_SPEED_SLOW=Langsam
 AUTOFIRE_XY=X/Y als Turbo-A/B verwenden
 HOME_COMBO=Tastenkombination fürs Hauptmenü
+INGAME_MENU=Menü im Spiel öffnen
 FC_START=Start am 2. Controller
 EPILEPSY_PROTECTION=Epilepsieschutz (NES)
 SYSTEM_INFO=Systeminformationen

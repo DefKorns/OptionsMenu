@@ -88,6 +88,7 @@ AUTOFIRE_SPEED_NORMAL=ふつう
 AUTOFIRE_SPEED_SLOW=おそい
 AUTOFIRE_XY=X/YをA/Bのれんしゃにする
 HOME_COMBO=ホームメニューへのButtonくみあわせ
+INGAME_MENU=ゲーム中にメニューをひらく
 FC_START=2PコントローラーでStart
 EPILEPSY_PROTECTION=てんかんたいさく (NES)
 SYSTEM_INFO=システムじょうほう

@@ -1,0 +1,5 @@
+COMMAND_NAME=INGAME_MENU
+COMMAND_TYPE=INTERNAL
+COMMAND_STR=sh %script_dir%/ingame_menu.sh toggle
+STATE_STR=sh %script_dir%/ingame_menu.sh state
+PREVIEW_IMAGE=/etc/options_menu/images/preview_change_combo.png

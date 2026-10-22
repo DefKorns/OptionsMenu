@@ -88,6 +88,7 @@ AUTOFIRE_SPEED_NORMAL=Обычная скорость
 AUTOFIRE_SPEED_SLOW=Медленная скорость
 AUTOFIRE_XY=X/Y как турбо A/B
 HOME_COMBO=Комбинация для главного меню
+INGAME_MENU=Открывать меню в игре
 FC_START=Start на 2-м контроллере
 EPILEPSY_PROTECTION=Защита от эпилепсии (NES)
 SYSTEM_INFO=Информация о системе

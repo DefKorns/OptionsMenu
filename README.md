@@ -141,6 +141,7 @@ The names it sends are added to the ones already on the console.
 | Entry | What it does |
 | --- | --- |
 | Change Options Button Combo | Press the buttons you want to open the menu with. Restart the console afterwards. Overrides the automatic L+R / B+Down choice |
+| Open menu during games | Turn it off and the combo only opens the menu from the Home screen, so you can't open it by accident mid-game |
 | Autofire | Turbo for the controllers, with **Fast / Normal / Slow** speed |
 | Use X/Y as turbo A/B | X and Y act as turbo A and B |
 | Home menu button combo | Turns off the combo that sends you from a game back to the Home menu, so you can't press it by accident |

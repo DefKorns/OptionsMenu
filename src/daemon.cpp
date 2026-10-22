@@ -60,7 +60,7 @@ int main()
             ++holdCount;
             if(holdCount >= holdThreshold)
             {
-                if(system("[ ! -f \"/tmp/options.flag\" ] && [ $(free -m | awk 'NR==3 { print $4; }') -gt 35 ] && /bin/sh /etc/options_menu/scripts/PauseUI.sh") == 0)
+                if(system("[ ! -f \"/tmp/options.flag\" ] && ! /bin/sh /etc/options_menu/controller/scripts/ingame_menu.sh blocked && [ $(free -m | awk 'NR==3 { print $4; }') -gt 35 ] && /bin/sh /etc/options_menu/scripts/PauseUI.sh") == 0)
                     system("exec /etc/options_menu/options");
                 holdCount = 0;
                 c.Update();

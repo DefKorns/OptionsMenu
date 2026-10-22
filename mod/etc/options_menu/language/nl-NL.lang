@@ -88,6 +88,7 @@ AUTOFIRE_SPEED_NORMAL=Normaal
 AUTOFIRE_SPEED_SLOW=Langzaam
 AUTOFIRE_XY=X/Y als turbo-A/B gebruiken
 HOME_COMBO=Knoppencombinatie voor het hoofdmenu
+INGAME_MENU=Menu openen tijdens spel
 FC_START=Start op 2e controller
 EPILEPSY_PROTECTION=Epilepsiebescherming (NES)
 SYSTEM_INFO=Systeeminformatie
