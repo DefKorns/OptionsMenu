@@ -288,6 +288,7 @@ Bug reports, ideas and pull requests are welcome.
 ### Code style
 
 - **Formatting:** [`.editorconfig`](.editorconfig) sets it: UTF-8, LF line endings, a newline at the end of every file, no trailing whitespace, 4 spaces for C/C++, 2 spaces for shell scripts and YAML, tabs only in the Makefile. Most editors pick it up on their own; VS Code needs the EditorConfig extension. `.gitattributes` stores every text file with LF, whatever your `core.autocrlf`.
+- **Checks before each commit:** [pre-commit](https://pre-commit.com/) runs the same checks on the files you stage: whitespace and line endings (fixed for you), YAML and JSON, `shellcheck`, `markdownlint` and `cppcheck`. Set it up once per clone with `pip install pre-commit` and `pre-commit install`; `cppcheck` has to be installed separately and on your `PATH`. `pre-commit run --all-files` checks everything.
 - **Only change what you need:** don't reformat, re-indent or strip whitespace in lines you aren't changing. A pull request that touches unrelated lines will be asked to drop them. The **Style** check on pull requests looks only at the lines you add.
 - **C++:** the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/), C++14, and the layout of the code around yours: braces on their own line, `if(` with no space.
 - **Shell:** POSIX `sh` for BusyBox `ash`, `snake_case` variables, `camelCase` functions, `source` (not `.`) for other scripts. Run `shellcheck` on what you change.
