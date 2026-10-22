@@ -16,7 +16,7 @@ This is my continuation of [CompCom's Options Menu](https://github.com/CompCom/O
 
 ## Install
 
-**From my Mod Hub (recommended):** in hakchi open **Manage repositories**, add `https://defkorns.github.io/hakchi-repo/` and install **Options Menu** from it. Updates show up there automatically.
+**From my Mod Hub (recommended):** in hakchi choose **Modules → Manage mod repositories** and add `https://defkorns.github.io/hakchi-repo/`. Then open **Modules → DefKorns Store** and install **Options Menu** from the *Options Menu* tab. Updates show up there automatically.
 
 **By hand:** download `options_menu.hmod` from [Releases](https://github.com/DefKorns/OptionsMenu/releases), put it in hakchi's `user_mods` folder (or drag and drop it onto the hakchi window), then install it from hakchi (**Modules → Install extra modules**).
 
@@ -49,7 +49,7 @@ The footer always shows the buttons for the current screen.
 | RetroArch › | RetroArch settings, backups and BIOS files. Shown when RetroArch is installed |
 | Network › | IP address, Wi-Fi scan and Wi-Fi config backups |
 | Save Manager › | Back up, restore and clean up your saves. Needs a USB/SD drive |
-| Language › | Menu language; the menu restarts in the new language |
+| Language › | Menu language: *Automatic* follows the console's own language, or pick one. The menu restarts in the new language |
 | Advanced Options › | Controller, diagnostics and system tools |
 
 \*Don't shut down or restart from the menu while RetroArch is running: exit RetroArch first, or you may lose saves.
@@ -94,7 +94,7 @@ Restore entries only show up when there's a backup to restore.
 
 ### Save Manager
 
-Needs a USB/SD drive with your saves on it. One screen lists the actions on the left; the right panel explains the selected one and shows how many saves are on the console, in the USB backup, left over from removed games and moved aside. Every action asks for confirmation (**Start + Select**).
+Needs a USB/SD drive with your saves on it. One screen lists the actions on the left; the right panel explains the selected one and shows how many saves are on the console, in the USB backup, left over from removed games and moved aside. Every action asks for confirmation: **Start + Select** for the ones that overwrite or move saves, **A** for bringing back the saves of removed games, which never overwrites anything.
 
 | Action | What it does |
 | --- | --- |
@@ -107,7 +107,7 @@ In the long lists (here and in the Module Uninstaller), **Left**/**Right** page 
 
 #### Game names
 
-The two "Removed Games" lists show the names of the removed games instead of their codes (`CLV-H-ABCDE`). Every time the console starts, it remembers the names of the games installed at that moment in `game_names.txt` in your saves folder, and a name stays there after its game is removed. The backup keeps the file with your saves, and a restore adds its names without replacing newer ones. Saves without a known name keep showing their code. Getting the names never changes or moves a save.
+The two "Removed Games" lists show the names of the removed games instead of their codes (`CLV-H-ABCDE`). Every time the console starts, it remembers the names of the games installed at that moment in `game_names.txt` in your saves folder, and a name stays there after its game is removed. The backup keeps the file with your saves, and a restore adds its names without replacing newer ones. Saves without a known name keep showing their code, two games with the same name show their code too, and empty save folders aren't listed. Getting the names never changes or moves a save.
 
 Games removed before this version was installed were never seen on the console, so their names can only come from your Hakchi CE library. The console can't read your PC, so the PC sends them. With the console on and reachable by Hakchi CE (USB or Wi-Fi), run [`pc/push_game_names.ps1`](pc/push_game_names.ps1) from a PowerShell window:
 
@@ -184,7 +184,7 @@ One file per entry, named `cNNNN_Name`; entries are sorted by name. Each line is
 | Field | Description |
 | --- | --- |
 | `COMMAND_NAME` | Label shown, or a translation key |
-| `COMMAND_TYPE` | `INTERNAL` shows the command's output in the menu's console; `EXTERNAL` runs it with the menu paused; `DOWNLOAD` runs it on a progress screen with a bar (fed by the downloader's `--progress` lines on stdout) and a B to cancel, closing on its own when the command exits 0 |
+| `COMMAND_TYPE` | `INTERNAL` shows the command's output in the menu's console; `EXTERNAL` runs it with the menu paused; `DOWNLOAD` runs it on a progress screen with a bar (fed by the downloader's `--progress` lines on stdout) and a B to cancel, closing on its own when the command exits 0; `CHOICE` turns the entry into a value picker (see the `CHOICE_*` fields) |
 | `COMMAND_STR` | Single-line command to run. Use a script for anything longer |
 | `RESTART_UI` | External commands only. `FALSE` leaves the UI paused; resume it yourself with `/bin/sh /etc/options_menu/scripts/ResumeUI.sh` |
 | `IGNORE_INTERRUPT` | `TRUE`: B doesn't interrupt an internal command while it runs |
@@ -197,10 +197,32 @@ One file per entry, named `cNNNN_Name`; entries are sorted by name. Each line is
 | `DELETE_CONFIRM_KEY` | Translation key for that confirmation; defaults to a generic "Delete this item?" |
 | `DELETE_BLOCKED_KEY` | Translation key: holding B on the entry shows this message with a Back badge instead of asking to delete it, for entries that can't be removed right now |
 | `PREVIEW_IMAGE` | PNG shown in the detail panel, scaled to fit |
+| `CHOICE_LIST` | `CHOICE` only. Command printing one `value<TAB>label<TAB>preview` line per option; the label can be a translation key and the preview is optional |
+| `CHOICE_GET` | `CHOICE` only. Prints the stored value; empty means *Automatic* |
+| `CHOICE_SET` | `CHOICE` only. Stores the value picked, with `%value%` replaced by it (empty for *Automatic*) |
+| `CHOICE_AUTO` | `CHOICE` only. Translation key of the *Automatic* option, shown when no value is stored |
+| `CHOICE_RESOLVED` | `CHOICE` only. Prints the value *Automatic* stands for, so its label and preview can be shown |
 
 `COMMAND_STR`, `DELETE_STR` and `STATE_STR` can use `%options_path%` (the folder with the `options` binary) and `%script_dir%` (the current `--scriptPath`).
 
 The shared framework also reads a few grid-only fields (`PREVIEW_NEAREST`, `PREVIEW_SQUARE`, `PREVIEW_GRID_COLS`, `PREVIEW_FIT_CONTAIN`, `PREVIEW_HIDE_LABEL`). The menu itself always shows a list; they're for apps built on the shared framework that use a grid layout. `PREVIEW_IMAGE_X/Y/WIDTH/HEIGHT` from the original format are accepted and ignored.
+
+### Script helpers
+
+Your scripts can `source /etc/options_menu/scripts/om_functions` for the helpers the menu's own scripts use. The main ones:
+
+| Function | What it does |
+| --- | --- |
+| `translate <key>` | Prints the string for the menu's current language |
+| `omSplash <key...>` | Draws one translated line per key, full screen |
+| `omLoading [key...]` | Same, with a moving bar, until your script exits; "Loading" without keys |
+| `omDownload <out> <url> [fallback...]` | Downloads a file, printing progress for a `DOWNLOAD` entry; exit code 3 means no free space |
+| `omDownloadAll <list> <handler> [keep]` | Downloads a list of files over one connection |
+| `omUnpack <tar.gz> <dir>` | Unpacks an archive if it fits, then removes it |
+| `omReloadMenu` / `omReloadMenuLater` | Stops the UI and reloads the current Home folder, keeping your splash text on screen |
+| `enableCmds` / `disableCmds <name...>` | Show or hide entries by renaming `$enable_<name>` / `$disable_<name>` |
+
+Since 2.1.0, scripts started from the menu no longer hold `/dev/fb0`, so they can call `chmenu` (or anything else that runs `uistop`) without being killed. On 2.0.0 they still hold it: hand such a command to hakchi's `remote-exec` instead, by writing it to `/var/exec.flag`.
 
 ### Translations
 
