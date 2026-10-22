@@ -217,6 +217,11 @@ omSplash() {
   "$om_scripts/gen_splash" /tmp/om_splash.png "$@" && decodepng /tmp/om_splash.png >/dev/fb0
 }
 
+# omLoading [key...]: omSplash plus a moving bar until the calling script exits; "Loading" without keys
+omLoading() {
+  "$om_scripts/gen_splash" --loading "$@" 2>/dev/null
+}
+
 # omFreeKb <dir>
 omFreeKb() {
   df -Pk "$1" | awk 'NR==2 {print $4}'
@@ -257,7 +262,7 @@ omReloadMenu() {
   uistop
   uiresume
   timeout="" waittimeout 1500 '! lsof -n | grep -qF "/dev/fb0"' "framebuffer"
-  "$om_scripts/gen_splash" --loading 2>/dev/null
+  omLoading LOADING
   [ $# -gt 0 ] && "$@"
   [ -f "$menu_state" ] && current_menu="$(cat "$menu_state")"
   echo reload >"$menu_state"
