@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Wiki
+    url: https://github.com/DefKorns/OptionsMenu/wiki
+    about: Every menu step by step, the FAQ, and how to write an add-on.

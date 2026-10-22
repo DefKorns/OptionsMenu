@@ -1,6 +1,7 @@
 # Options Menu
 
 [![Build](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml/badge.svg)](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml)
+[![Issues](https://img.shields.io/github/issues/DefKorns/OptionsMenu.svg)](https://github.com/DefKorns/OptionsMenu/issues)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 A menu you can open at any moment on your NES, SNES, Famicom or Super Famicom Classic — on the Home screen or in the middle of a game — to power off, back up your saves and settings, manage Wi-Fi and RetroArch, tweak the controllers and more. Other hmods can add their own entries and screens to it.
@@ -272,26 +273,45 @@ cd OptionsMenu
 
 Packaging and versioning come from [hmod-build](https://github.com/DefKorns/hmod-build): the version is the latest `v*` git tag, and the `.hmod` name has no version, so hakchi sees every release as the same mod. Pushing a tag builds both variants and publishes a GitHub Release (a prerelease for tags with a hyphen, e.g. `v2.0.0-alpha5`).
 
+## Contributing
+
+Bug reports, ideas and pull requests are welcome.
+
+- **Found a bug?** [Open a bug report](https://github.com/DefKorns/OptionsMenu/issues/new?template=bug_report.yml). Say which console and build you have, and attach the logs from **Advanced Options → Diagnostics** (saved to `/media/data/log/`) when you can.
+- **Have an idea?** [Suggest a feature](https://github.com/DefKorns/OptionsMenu/issues/new?template=feature_request.yml). For anything big, open an issue before writing code, so we can agree on the approach first.
+- **Want to send code?**
+  1. Fork the repository and create a branch from `master` (`git checkout -b fix/my-change`).
+  2. Build with `./build.sh` (and `./build.sh FIX_LIBSTDCXX=1` for the compat build) and test on a console.
+  3. Run `tests/run_tests.sh`; it needs Docker.
+  4. Open a pull request that says what changed and how you tested it.
+
+The C++ follows the [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/) (C++14); shell scripts use `snake_case` variables and `camelCase` functions. Keep comments for constraints the code can't show.
+
 ## Credits
 
 - **[CompCom](https://github.com/CompCom)** — the original Options Menu
 - **[DefKorns](https://github.com/DefKorns)** — version 2: the new interface, TTF text, theme colors and icons, translations, Network (with Advokaten), Wi-Fi backups, Save Manager, Controller and Diagnostics menus, build tooling
 - **Swingflip** — Hibernate Mod and Hakchi-Option-Pack scripts
 - **[BsLeNuL](https://github.com/bslenul)** — RetroArch configuration scripts
-- **Advokaten** — Network commands
+- **[Advokaten](https://github.com/advokaten)** — Network commands
 - **ThanosRD** — layout and design of the original interface
 - **[MadFranko008](https://www.reddit.com/user/MadFranko008/)** — idea for the Saved Games backup
 - **[KMFDManic](https://github.com/KMFDManic)** and **[DanTheMan827](https://github.com/DanTheMan827)** — answers and help whenever I had questions about how things work
 
-### Third-party assets
-
-- [Bootstrap Icons](https://icons.getbootstrap.com/) — preview icons and UI glyphs (MIT License)
-- [Noto Sans JP](https://fonts.google.com/noto/specimen/Noto+Sans+JP) — UI font, subset (SIL Open Font License, see `fonts/OFL.txt`)
-- [Misaki font](http://littlelimit.net/misaki.htm) by Num Kadoma — 8×8 kana and kanji glyphs
-
 ### Testing
 
 Thanks to DNA64 (viral_dna) and Swingflip for always testing, and to Aranthys, AxelStone, BsLeNuL, DR1001, Patton Plays and ThanosRD.
+
+## Acknowledgments
+
+- [hakchi2 CE](https://github.com/TeamShinkansen/hakchi2) — the platform every mod here runs on
+- [CompCom's Options Menu](https://github.com/CompCom/OptionsMenu) — where this menu started
+- [SDL2](https://www.libsdl.org/), [SDL2_ttf](https://github.com/libsdl-org/SDL_ttf) and [FreeType](https://freetype.org/) — drawing and text
+- [libpng](http://www.libpng.org/pub/png/libpng.html) — images
+- [libcurl](https://curl.se/libcurl/) and its CA certificate bundle — downloads
+- [Bootstrap Icons](https://icons.getbootstrap.com/) — preview icons and UI glyphs (MIT License)
+- [Noto Sans JP](https://fonts.google.com/noto/specimen/Noto+Sans+JP) — UI font, subset (SIL Open Font License, see `fonts/OFL.txt`)
+- [Misaki font](http://littlelimit.net/misaki.htm) by Num Kadoma — 8×8 kana and kanji glyphs
 
 ## License
 
