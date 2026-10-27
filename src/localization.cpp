@@ -74,14 +74,11 @@ namespace
         return "";
     }
 
-    // Console Language shows its language in the Japanese slot, so lang.txt still says ja then
+    // Console Language's language when it has set one, else the console's
     std::string ConsoleLangCode(const std::string & optionsRoot)
     {
-        const std::string console = FirstLine("/var/lib/clover/profiles/0/lang.txt");
         const std::string replaced = FirstLine("/var/console_language_ui");
-        if(console.compare(0, 2, "ja") == 0 && !replaced.empty())
-            return LangCodeFor(optionsRoot, replaced);
-        return LangCodeFor(optionsRoot, console);
+        return LangCodeFor(optionsRoot, replaced.empty() ? FirstLine("/var/lib/clover/profiles/0/lang.txt") : replaced);
     }
 }
 

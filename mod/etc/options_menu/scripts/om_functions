@@ -71,15 +71,15 @@ rename() {
   [ -f "$1" ] && mv "$1" "$2"
 }
 
-# language.cfg, else the console's (Console Language's when it fills the Japanese slot)
+# language.cfg, else Console Language's, else the console's
 omLangCode() {
   local code
   local lang_file
   code="$(cat "$options_menu/language.cfg" 2>/dev/null)"
   if [ -z "$code" ]; then
-    code="$(cat /var/lib/clover/profiles/0/lang.txt 2>/dev/null)"
-    case "$code" in ja*) [ -s /var/console_language_ui ] && code="$(cat /var/console_language_ui)" ;; esac
-    lang_file="$(ls "$options_menu/language/$(echo "$code" | cut -c1-2)"-*.lang 2>/dev/null | head -n 1)"
+    code="$(cat /var/console_language_ui 2>/dev/null)"
+    [ -n "$code" ] || code="$(cat /var/lib/clover/profiles/0/lang.txt 2>/dev/null)"
+    lang_file="$(find "$options_menu/language" -maxdepth 1 -name "$(echo "$code" | cut -c1-2)-*.lang" 2>/dev/null | sort | head -n 1)"
     code="$(basename "$lang_file" .lang)"
   fi
   echo "${code:-en-US}"
