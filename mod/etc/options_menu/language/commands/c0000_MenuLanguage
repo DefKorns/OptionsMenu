@@ -3,5 +3,5 @@ COMMAND_TYPE=CHOICE
 CHOICE_AUTO=LANGUAGE_AUTOMATIC
 CHOICE_LIST=source %options_path%/scripts/om_functions && omLangList
 CHOICE_GET=cat %options_path%/language.cfg 2>/dev/null
-CHOICE_RESOLVED=source %options_path%/scripts/om_functions && omLangCode
+CHOICE_RESOLVED=source %options_path%/scripts/om_functions && omLangAuto
 CHOICE_SET=if [ -n "%value%" ]; then echo "%value%" >%options_path%/language.cfg; else rm -f %options_path%/language.cfg; fi
