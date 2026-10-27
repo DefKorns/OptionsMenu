@@ -325,7 +325,7 @@ int main(int argc, char * argv[])
             LayoutRows();
 
         if(currentCommand.isChoice && !currentCommand.choiceAutoKey.empty())
-            badgeAuto = MakeBadge("Y", currentCommand.choiceAutoKey.c_str(), UiTheme::BadgeYDark, UiTheme::BadgeY);
+            badgeAuto = badges.MakePill("SELECT", Translate(currentCommand.choiceAutoKey));
 
         selectedRowRect.y = currentCommand.texture.rect.y - 2;
         selectedRowRect.h = currentCommand.texture.rect.h + 4;
@@ -581,7 +581,7 @@ int main(int argc, char * argv[])
             CycleChoice(-1);
         else if(onPicker && controller.HeldRepeat(RIGHT))
             CycleChoice(1);
-        else if(onPicker && controller.GetButtonStatus(Y))
+        else if(onPicker && (controller.GetButtonStatus(SELECT) || controller.GetButtonStatus(Y)))
         {
             const Command & current = commands[currentCommandId];
             if(!current.choiceAutoKey.empty() && !current.choiceValue.empty())
