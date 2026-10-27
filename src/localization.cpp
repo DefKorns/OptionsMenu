@@ -9,10 +9,12 @@
 
 #include "localization.h"
 
+#include <cctype>
 #include <dirent.h>
 #include <fstream>
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 namespace
@@ -56,22 +58,39 @@ namespace
         return line;
     }
 
-    // the xx-YY.lang whose language is the first two letters of code (ja_JPN, pt, pt_br...)
+    std::string Upper(std::string text)
+    {
+        for(char & c : text)
+            c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        return text;
+    }
+
+    // the xx-YY.lang for a console language code (ja_JPN, pt_br, pt_EUR, sv...): the region the code
+    // names (pt_br is pt-BR), else the language's own (pt-PT), else the first
     std::string LangCodeFor(const std::string & optionsRoot, const std::string & code)
     {
         if(code.size() < 2)
             return "";
-        const std::string prefix = code.substr(0, 2) + "-";
+        const std::string lang = code.substr(0, 2);
+        const std::string prefix = lang + "-";
         const DirHandle dir(opendir((optionsRoot + "language/").c_str()), &closedir);
         if(!dir)
             return "";
+        std::set<std::string> found;
         while(const dirent * entry = readdir(dir.get()))
         {
             const std::string name = entry->d_name;
             if(name.compare(0, prefix.size(), prefix) == 0 && name.size() > 5 && name.compare(name.size() - 5, 5, ".lang") == 0)
-                return name.substr(0, name.size() - 5);
+                found.insert(name.substr(0, name.size() - 5));
         }
-        return "";
+        if(found.empty())
+            return "";
+        const size_t sep = code.find('_');
+        if(sep != std::string::npos && found.count(prefix + Upper(code.substr(sep + 1))) != 0)
+            return prefix + Upper(code.substr(sep + 1));
+        if(found.count(prefix + Upper(lang)) != 0)
+            return prefix + Upper(lang);
+        return *found.begin();
     }
 
     // Console Language's language when it has set one, else the console's
