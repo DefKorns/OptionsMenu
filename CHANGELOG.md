@@ -2,6 +2,11 @@
 
 Releases before v2.0.0 belong to CompCom's original Options Menu and are not listed here.
 
+## v2.1.2-beta
+
+- **Boot crash fix (testing):** the startup tasks now wait for the console's own startup to finish before syncing game names, which should stop the occasional crash right after boot
+- **Menu language:** *Automatic* resolves from the console language, including the one set by Console Language
+
 ## v2.1.1
 
 - **Open menu during games:** new toggle in Controller. Turn it off and the button combo only opens the menu from the Home screen. On by default, so nothing changes until you turn it off

@@ -28,7 +28,9 @@ cleanRetroarchDefaults() {
 }
 
 # the console restarts after every Hakchi sync, so each new game is seen before it can be removed
+# $1 is rcS's pid
 rememberGameNames() {
+  timeout=120000 waittimeout 120000 "! kill -0 $1 2>/dev/null"
   sh /etc/options_menu/scripts/OrphanSaves.sh sync-names
 }
 
@@ -38,12 +40,12 @@ tasks() {
 
   cleanExtraCovers
   cleanRetroarchDefaults
-  rememberGameNames
+  rememberGameNames "$1"
 }
 
 case "$1" in
 start)
-	tasks &
+	tasks "$PPID" &
 ;;
 stop|restart)
 ;;
