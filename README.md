@@ -3,6 +3,7 @@
 [![Build](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml/badge.svg)](https://github.com/DefKorns/OptionsMenu/actions/workflows/build.yml)
 [![Issues](https://img.shields.io/github/issues/DefKorns/OptionsMenu.svg)](https://github.com/DefKorns/OptionsMenu/issues)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
 A menu you can open at any moment on your NES, SNES, Famicom or Super Famicom Classic — on the Home screen or in the middle of a game — to power off, back up your saves and settings, manage Wi-Fi and RetroArch, tweak the controllers and more. Other hmods can add their own entries and screens to it.
 
